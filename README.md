@@ -58,6 +58,8 @@ pnpm start
 
 Le build locali non sono disponibili sull'host auditato. I profili EAS sono pronti in `eas.json`; per questa milestone sono autorizzati login Expo, linking, upload e una build cloud Android `development-android` entro la quota Free. iOS, submission e spese restano esclusi. Vedere `docs/runbooks/NATIVE_AND_EAS_GATES.md`.
 
+Il progetto EAS collegato e `@robert-fulton-studio/app-relax` (`e1d77255-66f4-45c1-b1fa-c503a088b30f`). L'account e l'organizzazione sono sul piano Free; nessuna credenziale e salvata nel repository.
+
 `.easignore` esclude credenziali, dipendenze, output generati, documentazione/test e i flussi paralleli `output/`/`tmp/` dall'archivio cloud.
 
 ## Struttura

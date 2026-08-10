@@ -99,7 +99,7 @@ Stato: configurato; esecuzione Android autorizzata, iOS esclusa
 
 [F] `.easignore` prevale su `.gitignore` durante la preparazione dell'upload. Il file replica le esclusioni essenziali e rimuove dall'archivio `.git`, dipendenze, output nativi/generati, credenziali locali, documentazione, test e i flussi paralleli `output/`/`tmp/`. Il validator config rende obbligatorie le regole di sicurezza critiche.
 
-[F] Il piano EAS Free corrente include una quantita limitata di build a bassa priorita; la pagina pricing mostrava 15 Android e 15 iOS al mese al controllo del 10 agosto 2026. Quota e condizioni vanno riconfermate subito prima della build.
+[F] Il piano EAS Free corrente include una quantita limitata di build a bassa priorita. La CLI ha verificato sull'organizzazione `robert-fulton-studio` quota Android `0/15`, quota totale `0/30`, nessun add-on, overage e costo stimato pari a zero nel ciclo corrente. Quota e condizioni vanno riconfermate subito prima della build.
 
 Fonti primarie: [EAS Build](https://docs.expo.dev/build/), [infrastruttura EAS](https://docs.expo.dev/build-reference/infrastructure/), [regole `.easignore`](https://docs.expo.dev/build-reference/easignore/), [piani EAS](https://docs.expo.dev/billing/plans/), [pricing Expo](https://expo.dev/pricing).
 
@@ -117,9 +117,9 @@ Fonti primarie: [setup development build iOS](https://docs.expo.dev/get-started/
 ## D-013 - Identificativi e project linking
 
 Data: 10 agosto 2026
-Stato: provvisorio
+Stato: collegato e verificato
 
-[F] `com.robertfultonstudio.apprelax` e sintatticamente valido e condiviso tra iOS/Android. [U] `NON DETERMINATO — EVIDENZA INSUFFICIENTE`: disponibilita negli account Apple/Google. `extra.eas.projectId` resta assente fino all'esecuzione del linking ora autorizzato; owner e UUID devono provenire da EAS, non essere inventati.
+[F] `com.robertfultonstudio.apprelax` e sintatticamente valido e condiviso tra iOS/Android. [U] `NON DETERMINATO — EVIDENZA INSUFFICIENTE`: disponibilita negli account Apple/Google per la distribuzione store. Il progetto EAS e `@robert-fulton-studio/app-relax`, owner `robert-fulton-studio`, project ID `e1d77255-66f4-45c1-b1fa-c503a088b30f`; `eas project:info` ha confermato entrambi dopo il linking.
 
 ## D-014 - Evidenze locali
 
@@ -152,9 +152,18 @@ Stato: autorizzato entro confini espliciti
 
 [F] Restano esclusi: push o PR GitHub, build iOS, login Apple, registrazione dispositivi, submission store, pubblicazione, acquisti e upgrade di piano. Un prompt che richieda un costo o una scelta di account non dimostrabile interrompe il gate.
 
+## D-017 - Account Expo e organizzazione
+
+Data: 10 agosto 2026
+Stato: creati e verificati
+
+[F] Su autorizzazione esplicita dell'utente e stato completato l'onboarding Expo tramite l'account Google indicato dall'utente. Sono stati creati il profilo personale `robertfultonstudio`, l'organizzazione commerciale `Robert Fulton Studio` con slug `robert-fulton-studio` e il progetto `App Relax` con slug `app-relax`. Non sono stati invitati membri, caricati avatar, aggiunti metodi di pagamento o attivati piani a pagamento.
+
+[F] La CLI `eas whoami` conferma il ruolo Owner su profilo e organizzazione. Nessuna password, token o credenziale e stata letta, stampata o aggiunta al repository.
+
 ## Attivita aperte
 
-- Eseguire account linking, controllo quota e una build EAS Android gia autorizzati.
+- Ispezionare l'archivio e avviare una build EAS Android gia autorizzata entro quota Free.
 - Riverificare `security:audit` e rimuovere l'allowlist `image-size` non appena esiste una release corretta.
 - Installare la development build su un telefono Android gia disponibile e svolgere lo smoke test.
 - Autorizzare EAS iOS solo con programma Apple e iPhone disponibili.

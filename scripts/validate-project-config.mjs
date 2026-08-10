@@ -130,17 +130,17 @@ assert(
 
 const projectId = appConfig.extra?.eas?.projectId;
 assert(
-  projectId === undefined ||
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-      projectId,
-    ),
-  "EAS projectId must be absent before linking or a valid UUID assigned by EAS",
+  projectId === "e1d77255-66f4-45c1-b1fa-c503a088b30f",
+  "unexpected EAS projectId",
 );
+assert(
+  appConfig.owner === "robert-fulton-studio",
+  "unexpected EAS project owner",
+);
+assert(appConfig.slug === "app-relax", "unexpected EAS project slug");
 console.log(
   `Project config: PASS (SDK 57, ${appleIdentifier}, RNAA plugin, separate EAS profiles).`,
 );
 console.log(
-  projectId
-    ? `EAS projectId: linked (${projectId}).`
-    : "EAS projectId: pending the authorized account linking gate.",
+  `EAS project: @${appConfig.owner}/${appConfig.slug} (${projectId}).`,
 );

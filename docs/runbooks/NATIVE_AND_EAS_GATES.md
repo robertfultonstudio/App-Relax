@@ -75,19 +75,27 @@ Gia completato:
 - bundle/package `com.robertfultonstudio.apprelax`;
 - config plugin RNAA e permessi;
 - `.easignore` esplicito con esclusione di credenziali, output generati e flussi paralleli;
-- nessun `owner` Expo o `extra.eas.projectId` inventato.
+- owner EAS `robert-fulton-studio` e project ID `e1d77255-66f4-45c1-b1fa-c503a088b30f` assegnati e verificati dalla CLI.
 
-Disponibilita del bundle identifier negli account: `NON DETERMINATO — EVIDENZA INSUFFICIENTE` fino al login.
+Disponibilita del bundle identifier negli account Apple/Google per la distribuzione: `NON DETERMINATO — EVIDENZA INSUFFICIENTE` fino ai rispettivi gate store.
 
 ## Gate 3A - Account e build Android cloud
 
 L'approvazione esplicita e stata ricevuta per: login Expo, creazione/collegamento progetto EAS, upload del sorgente validato e consumo della sola quota Free. Non richiede Apple Developer Program, Android Studio locale o Play Store account per produrre un APK interno. Se la quota Free non e disponibile o compare un costo, arrestarsi senza confermare.
 
-Comandi autorizzati per questo gate, ancora da eseguire:
+Comandi di account/linking gia eseguiti e verificati:
 
 ```bash
 pnpm dlx eas-cli@21.7.1 login
-pnpm dlx eas-cli@21.7.1 init
+pnpm dlx eas-cli@21.7.1 whoami
+pnpm dlx eas-cli@21.7.1 account:usage robert-fulton-studio --json --non-interactive
+pnpm dlx eas-cli@21.7.1 init --id e1d77255-66f4-45c1-b1fa-c503a088b30f
+pnpm dlx eas-cli@21.7.1 project:info --json
+```
+
+Build autorizzata e ancora da eseguire:
+
+```bash
 pnpm dlx eas-cli@21.7.1 build \
   --platform android \
   --profile development-android
