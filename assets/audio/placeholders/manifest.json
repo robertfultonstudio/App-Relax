@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "placeholderPack": "LOCAL_PLACEHOLDER_PACK_01",
+  "deterministic": true,
+  "assets": [
+    {
+      "id": "sleep-drone-placeholder",
+      "role": "drone",
+      "filename": "sleep-drone-placeholder.wav",
+      "placeholder": true,
+      "generator": {
+        "script": "scripts/generate-placeholder-audio.mjs",
+        "version": 1,
+        "algorithm": "periodic harmonic drone",
+        "seed": null
+      },
+      "format": {
+        "container": "WAV",
+        "codec": "PCM",
+        "bitDepth": 16,
+        "sampleRate": 48000,
+        "channels": 2,
+        "durationSeconds": 8,
+        "loop": true
+      },
+      "provenance": "Generated locally from mathematical functions; no third-party audio used.",
+      "usage": "Technical placeholder only; not an approved creative master.",
+      "sha256": "ec3c53131ac6b5bcc533a3e6ae3d3aeb8bf6ba0cd1faab717fe1b1bbc180a262"
+    },
+    {
+      "id": "sleep-ambience-placeholder",
+      "role": "ambience",
+      "filename": "sleep-ambience-placeholder.wav",
+      "placeholder": true,
+      "generator": {
+        "script": "scripts/generate-placeholder-audio.mjs",
+        "version": 1,
+        "algorithm": "seeded periodic sine field",
+        "seed": 4399105
+      },
+      "format": {
+        "container": "WAV",
+        "codec": "PCM",
+        "bitDepth": 16,
+        "sampleRate": 48000,
+        "channels": 2,
+        "durationSeconds": 8,
+        "loop": true
+      },
+      "provenance": "Generated locally from mathematical functions; no third-party audio used.",
+      "usage": "Technical placeholder only; not an approved creative master.",
+      "sha256": "32332d46d1520287726715f55b89c0e65a23c03cc363fca16648069458bf89d0"
+    },
+    {
+      "id": "sleep-texture-placeholder",
+      "role": "texture",
+      "filename": "sleep-texture-placeholder.wav",
+      "placeholder": true,
+      "generator": {
+        "script": "scripts/generate-placeholder-audio.mjs",
+        "version": 1,
+        "algorithm": "periodic pulsed harmonic texture",
+        "seed": null
+      },
+      "format": {
+        "container": "WAV",
+        "codec": "PCM",
+        "bitDepth": 16,
+        "sampleRate": 48000,
+        "channels": 2,
+        "durationSeconds": 8,
+        "loop": true
+      },
+      "provenance": "Generated locally from mathematical functions; no third-party audio used.",
+      "usage": "Technical placeholder only; not an approved creative master.",
+      "sha256": "756c6623dc23698fd7c5ffbd34a0ca0190cad30f5727cb4c43605a1d5ad4e6ef"
+    }
+  ]
+}
