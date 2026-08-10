@@ -28,6 +28,7 @@ expo-env.d.ts
 .env.*
 
 # local tooling and logs
+/.vscode/
 .metro-health-check*
 npm-debug.*
 yarn-debug.*
@@ -37,7 +38,13 @@ yarn-error.*
 /coverage/
 
 # non-build repository material
+/AGENTS.md
+/README.md
+/STATO.md
 /docs/
+/scripts/
 /tests/
+/eslint.config.js
+/jest.config.js
 /output/
 /tmp/

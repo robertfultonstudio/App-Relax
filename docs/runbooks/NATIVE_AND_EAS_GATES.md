@@ -75,6 +75,7 @@ Gia completato:
 - bundle/package `com.robertfultonstudio.apprelax`;
 - config plugin RNAA e permessi;
 - `.easignore` esplicito con esclusione di credenziali, output generati e flussi paralleli;
+- `cli.requireCommit: false` e invocazione con `EAS_NO_VCS=1` per impedire che EAS reintroduca `.git` e il path locale nell'archivio; pulizia e commit sono verificati manualmente;
 - owner EAS `robert-fulton-studio` e project ID `e1d77255-66f4-45c1-b1fa-c503a088b30f` assegnati e verificati dalla CLI.
 
 Disponibilita del bundle identifier negli account Apple/Google per la distribuzione: `NON DETERMINATO — EVIDENZA INSUFFICIENTE` fino ai rispettivi gate store.
@@ -96,19 +97,20 @@ pnpm dlx eas-cli@21.7.1 project:info --json
 Build autorizzata e ancora da eseguire:
 
 ```bash
-pnpm dlx eas-cli@21.7.1 build \
+EAS_NO_VCS=1 pnpm dlx eas-cli@21.7.1 build \
   --platform android \
   --profile development-android
 ```
 
 Prima di confermare la build:
 
-1. verificare l'account/owner Expo mostrato;
-2. verificare che il nuovo `projectId` appartenga al progetto corretto;
-3. controllare quota e prezzo correnti;
-4. rieseguire `pnpm security:audit` e il raw `pnpm audit --audit-level high`;
-5. controllare l'archivio upload e verificare che `.easignore` escluda `.git/`, `output/`, `tmp/`, test, documentazione e file credenziali;
-6. non includere segreti, `output/` o `tmp/` paralleli.
+1. verificare `git status --short --branch`, assenza di diff staged/unstaged e hash del commit corrente;
+2. verificare l'account/owner Expo mostrato;
+3. verificare che il `projectId` appartenga al progetto corretto;
+4. controllare quota e prezzo correnti;
+5. rieseguire `pnpm security:audit` e il raw `pnpm audit --audit-level high`;
+6. generare lo stage `archive` con `EAS_NO_VCS=1`, eseguire `pnpm eas:validate-archive <directory>` e verificare che `.easignore` escluda `.git/`, path locali, `output/`, `tmp/`, test, documentazione e file credenziali;
+7. non includere segreti, `output/` o `tmp/` paralleli.
 
 Post-build:
 

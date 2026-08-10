@@ -22,10 +22,11 @@ Vertical slice placeholder `Deep Sleep 432` fino al gate `AUDIO TEST PACK 01`.
 - [x] Prebuild isolato `--no-install`: iOS `UIBackgroundModes=audio`; Android permessi, foreground service e `mediaPlayback` presenti.
 - [x] Account Expo personale `robertfultonstudio`, organizzazione `robert-fulton-studio` e progetto `@robert-fulton-studio/app-relax` creati tramite Google; linking verificato dalla CLI con project ID `e1d77255-66f4-45c1-b1fa-c503a088b30f`.
 - [x] Piano EAS Free verificato sull'organizzazione: quota Android `0/15`, nessun add-on, overage e costo stimato pari a zero prima della build.
+- [x] Archivio Android no-VCS ispezionato e validato: 49 file / 6.143.006 byte, nessun Git metadata, path locale, segreto, symlink, docs/test/tooling o flusso parallelo; esattamente tre WAV placeholder.
 
 ## Gate aperti
 
-- [ ] EAS cloud build Android `development-android`: autorizzata entro la quota Free, senza acquisti o submission; archivio da ispezionare prima dell'upload.
+- [ ] EAS cloud build Android `development-android`: autorizzata entro la quota Free, senza acquisti o submission; archivio validato e pronto all'upload no-VCS.
 - [ ] Installazione APK e smoke test su telefono Android reale: disponibilita del dispositivo `NON DETERMINATO — EVIDENZA INSUFFICIENTE`.
 - [ ] EAS cloud build iOS `development-ios`: richiede approvazione, account Apple Developer attivo, credenziali e registrazione iPhone.
 - [ ] Smoke test audio su telefono reale; background, lock-screen, Bluetooth, interruzioni, latenza, batteria e qualita restano `NON DETERMINATO — EVIDENZA INSUFFICIENTE`.
@@ -43,7 +44,7 @@ Vertical slice placeholder `Deep Sleep 432` fino al gate `AUDIO TEST PACK 01`.
 
 ## Prossimo gate
 
-Ispezionare l'archivio EAS e avviare esclusivamente la build Android `development-android` gia autorizzata. Non eseguire iOS, registrazione dispositivi, submission, push o acquisti.
+Riconfermare worktree, audit e quota, quindi avviare esclusivamente la build Android `development-android` gia autorizzata con `EAS_NO_VCS=1`. Non eseguire iOS, registrazione dispositivi, submission, push o acquisti.
 
 ## Lavoro parallelo escluso
 

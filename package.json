@@ -59,6 +59,7 @@
     "assets:validate-safety": "node scripts/validate-asset-safety.mjs",
     "security:audit": "node scripts/validate-asset-safety.mjs && node scripts/validate-dependency-audit.mjs",
     "config:validate": "node scripts/validate-project-config.mjs",
+    "eas:validate-archive": "node scripts/validate-eas-archive.mjs",
     "expo:doctor": "expo-doctor",
     "config:public": "expo config --type public",
     "build:ios": "expo run:ios --no-bundler",

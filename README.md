@@ -60,7 +60,7 @@ Le build locali non sono disponibili sull'host auditato. I profili EAS sono pron
 
 Il progetto EAS collegato e `@robert-fulton-studio/app-relax` (`e1d77255-66f4-45c1-b1fa-c503a088b30f`). L'account e l'organizzazione sono sul piano Free; nessuna credenziale e salvata nel repository.
 
-`.easignore` esclude credenziali, dipendenze, output generati, documentazione/test e i flussi paralleli `output/`/`tmp/` dall'archivio cloud.
+`.easignore` esclude credenziali, Git metadata, dipendenze, output generati, documentazione/test/tooling e i flussi paralleli `output/`/`tmp/` dall'archivio cloud. La build usa `EAS_NO_VCS=1` per evitare il bug EAS che reintroduce `.git`; la worktree pulita e il commit corrente sono verificati esplicitamente prima dell'upload. L'archivio si valida con `pnpm eas:validate-archive <directory>`.
 
 ## Struttura
 

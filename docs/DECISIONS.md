@@ -161,6 +161,19 @@ Stato: creati e verificati
 
 [F] La CLI `eas whoami` conferma il ruolo Owner su profilo e organizzazione. Nessuna password, token o credenziale e stata letta, stampata o aggiunta al repository.
 
+## D-018 - Archivio EAS senza Git metadata
+
+Data: 10 agosto 2026
+Stato: mitigazione verificata sull'archivio locale
+
+[F] `eas build:inspect --stage archive` con `cli.requireCommit: true` ha reintrodotto un repository `.git` shallow nonostante la regola `/.git/` in `.easignore`. Il relativo `.git/config` conteneva un remote `file://` con il path locale del workspace. Non conteneva credenziali, ma la divulgazione del path e inutile.
+
+[F] Il comportamento corrisponde a un bug aperto nel repository ufficiale `expo/eas-cli`: le varianti `.git`, `.git/**` e `/.git/**` non rimuovono i metadata nel flusso osservato. Anche `requireCommit: false` da solo non e stato sufficiente. La mitigazione verificata e `EAS_NO_VCS=1` insieme a `requireCommit: false`, con worktree pulita, commit e hash controllati esplicitamente prima della build; `.easignore` resta il confine dell'upload.
+
+[F] L'ispezione no-VCS ha prodotto 49 file per 6.132 KiB: nessun `.git`, path locale, segreto, symlink, docs, test, tooling o flusso parallelo; presenti esattamente i tre WAV placeholder e tutti i file essenziali di build. `scripts/validate-eas-archive.mjs` rende ripetibile il controllo.
+
+Fonte primaria: [issue Expo EAS CLI #2875](https://github.com/expo/eas-cli/issues/2875), [documentazione `.easignore`](https://docs.expo.dev/build-reference/easignore/).
+
 ## Attivita aperte
 
 - Ispezionare l'archivio e avviare una build EAS Android gia autorizzata entro quota Free.

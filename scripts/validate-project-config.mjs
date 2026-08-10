@@ -10,6 +10,7 @@ const appConfig = JSON.parse(
 const packageJson = JSON.parse(
   readFileSync(join(projectRoot, "package.json"), "utf8"),
 );
+const easJson = JSON.parse(readFileSync(join(projectRoot, "eas.json"), "utf8"));
 const easIgnore = readFileSync(join(projectRoot, ".easignore"), "utf8");
 
 function assert(condition, message) {
@@ -42,12 +43,24 @@ for (const requiredIgnore of [
   ".env.*",
   "/output/",
   "/tmp/",
+  "/.vscode/",
+  "/AGENTS.md",
+  "/README.md",
+  "/STATO.md",
+  "/scripts/",
+  "/eslint.config.js",
+  "/jest.config.js",
 ]) {
   assert(
     easIgnore.split("\n").includes(requiredIgnore),
     `.easignore must contain ${requiredIgnore}`,
   );
 }
+
+assert(
+  easJson.cli?.requireCommit === false,
+  "requireCommit must stay false for the validated EAS_NO_VCS build path",
+);
 
 const appleIdentifier = appConfig.ios?.bundleIdentifier;
 const androidIdentifier = appConfig.android?.package;
