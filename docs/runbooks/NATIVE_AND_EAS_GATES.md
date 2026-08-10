@@ -1,6 +1,6 @@
 # Runbook build native ed EAS
 
-Stato: gate Android autorizzato; iOS, push, submission e costi non autorizzati
+Stato: build Android completata; installazione fisica aperta; iOS, push, submission e costi non autorizzati
 Ultima verifica fonti: 10 agosto 2026
 
 ## Obiettivo economico
@@ -17,7 +17,7 @@ Produrre e provare development build iOS/Android senza rendere obbligatorio l'ac
 | iOS locale     | Xcode 15.2, nessun runtime, CocoaPods assente                 | bloccato                                         |
 | Android locale | SDK/JDK/Studio/emulator assenti                               | bloccato                                         |
 | Expo SDK 57    | Node 22.13.x, Xcode 26.4+, iOS 16.4+, API Android 36          | fonte Expo                                       |
-| EAS Android    | `ubuntu-26.04-jdk-17-ndk-r27b-sdk-57`, Node 22.23.1, JDK 17   | profilo configurato                              |
+| EAS Android    | `ubuntu-26.04-jdk-17-ndk-r27b-sdk-57`, Node 22.23.1, JDK 17   | build `FINISHED`, APK verificato                 |
 | EAS iOS        | `macos-tahoe-26.5-xcode-26.6`, Node 22.23.1, CocoaPods 1.16.2 | profilo configurato                              |
 
 Fonti: [versioni Expo](https://docs.expo.dev/versions/latest/), [infrastruttura EAS](https://docs.expo.dev/build-reference/infrastructure/).
@@ -94,7 +94,7 @@ pnpm dlx eas-cli@21.7.1 init --id e1d77255-66f4-45c1-b1fa-c503a088b30f
 pnpm dlx eas-cli@21.7.1 project:info --json
 ```
 
-Build autorizzata e ancora da eseguire:
+Build autorizzata ed eseguita una sola volta:
 
 ```bash
 EAS_NO_VCS=1 pnpm dlx eas-cli@21.7.1 build \
@@ -114,12 +114,16 @@ Prima di confermare la build:
 
 Post-build:
 
-- stato EAS `finished`;
-- log con immagine Android configurata;
-- artifact APK e checksum registrati;
-- installazione su telefono Android 7+ tramite URL/QR o metodo autorizzato;
-- avvio development client e collegamento a Metro;
-- checklist reale in `docs/TEST_PLAN.md`.
+- [x] stato EAS `FINISHED`, ID `73cd8dfc-4692-4d85-84e7-a3be7b0d3ed7`, completata `2026-08-10T21:00:58.407Z`;
+- [x] Expo SDK 57.0.0, app 1.0.0 (1), fingerprint `0d061b3ea48ae2044f80a75a232326e3cf6eee7b`;
+- [x] artifact APK 299.803.135 byte, SHA-256 `d54a5333b40574baeb6560879a743ad1722619df6f6c676669e62bf7feff4ae7`;
+- [x] `unzip -t` verde, manifest, otto DEX e quattro ABI presenti; scan mirato di path/segreti verde;
+- [x] quota Free dopo build `1/15` Android, overage e costo zero;
+- [ ] installazione su un telefono Android compatibile con l'APK tramite URL/QR o metodo autorizzato;
+- [ ] avvio development client e collegamento a Metro;
+- [ ] checklist reale in `docs/TEST_PLAN.md`.
+
+Pagina stabile dell'evidenza: [build EAS Android](https://expo.dev/accounts/robert-fulton-studio/projects/app-relax/builds/73cd8dfc-4692-4d85-84e7-a3be7b0d3ed7). L'URL diretto firmato dell'artefatto non viene registrato nel repository.
 
 ## Gate 3B - Account e build iOS cloud
 
@@ -161,11 +165,11 @@ Richiede almeno un telefono reale, non un nuovo computer.
 | Latenza, batteria, temperatura |                     no |   obbligatorio |
 | Qualita e loop                 |                     no |   obbligatorio |
 
-Disponibilita dei telefoni: `NON DETERMINATO — EVIDENZA INSUFFICIENTE`.
+Disponibilita dei telefoni: `NON DETERMINATO — EVIDENZA INSUFFICIENTE`. Nessun dispositivo Android e stato rilevato via USB sulla macchina e `adb` non e installato; non installare toolchain solo per aggirare questo gate.
 
 ## Gate 5 - AUDIO TEST PACK 01
 
-Non aprire finche Gate 3 e primo smoke test del Gate 4 non sono verdi. La richiesta resta limitata a:
+Non aprire finche Gate 3A e il primo smoke test Android del Gate 4 non sono verdi. La richiesta resta limitata a:
 
 1. `SLEEP_DRONE_001.wav`
 2. `SLEEP_AMBIENCE_001.wav`
@@ -175,7 +179,7 @@ Nessun altro asset o catalogo e autorizzato.
 
 ## Confine di autorizzazione corrente
 
-Autorizzati solo per questa milestone: commit locali necessari al gate, `eas login`, `eas init` e una `eas build --platform android --profile development-android`, senza auto-submit e solo entro quota Free.
+Gia autorizzati ed eseguiti per questa milestone: commit locali necessari al gate, `eas login`, `eas init` e una sola `eas build --platform android --profile development-android`, senza auto-submit e solo entro quota Free. Una seconda build richiede nuova approvazione.
 
 Vietati senza nuova approvazione:
 

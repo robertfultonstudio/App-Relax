@@ -1,6 +1,6 @@
 # Piano operativo - Vertical slice Deep Sleep 432
 
-Stato: gate repository chiuso; gate nativo in attesa di approvazione
+Stato: gate repository e compilazione EAS Android chiusi; gate device aperto; iOS in attesa di approvazione
 Data: 10 agosto 2026
 
 ## Risultato finale
@@ -37,7 +37,7 @@ Schema versionato, unico preset, tuning/carrier/beat separati e mix conservativo
 
 Tre buffer loopabili, oscillatori stereo, brown noise, gain per sorgente, master fade, stop schedulato sul clock audio e cleanup transazionale. Prova: test fake/DSP, validator WAV, bundle Metro e prebuild config plugin.
 
-La compatibilita nativa RNAA 0.13.2 con RN 0.86 resta `NON DETERMINATO — EVIDENZA INSUFFICIENTE` fino alla build cloud e allo smoke test.
+[F] La compilazione nativa Android di RNAA 0.13.2 con RN 0.86.2 e dimostrata dalla build EAS `FINISHED`. [U] `NON DETERMINATO — EVIDENZA INSUFFICIENTE`: avvio, playback e lifecycle audio fino allo smoke test su telefono reale; iOS resta non compilato.
 
 ### WP4 - Esperienza verticale — completato a livello repository
 
@@ -51,15 +51,15 @@ Deadline assoluta, fade terminale, stop audio nativo, persistenza senza autoplay
 
 - install frozen e peer dependency;
 - lint e typecheck;
-- 23 test;
+- 30 test in 8 suite, inclusi 19 test audio;
 - validatori audio e progetto;
 - Expo Doctor 20/20;
 - export Hermes iOS e Android;
 - prebuild isolato senza installazioni native.
 
-### Gate B - EAS cloud Android — in attesa di approvazione
+### Gate B - EAS cloud Android — completato
 
-Profilo `development-android`, immagine SDK 57 e APK internal distribution gia configurati. Richiede account Expo, project linking, upload e consumo quota. E il primo percorso consigliato perche non richiede Apple Developer Program o toolchain Android locale.
+Profilo `development-android`, SDK 57 e APK internal distribution verificati nella build `73cd8dfc-4692-4d85-84e7-a3be7b0d3ed7`, stato `FINISHED`. APK integro e checksum registrato; quota Free dopo build `1/15`, costo zero. Il gate di compilazione nativa Android e verde, mentre l'esecuzione audio richiede Gate C.
 
 ### Gate C - Telefono Android reale — non determinato
 
@@ -75,4 +75,4 @@ Aprire solo dopo una development build placeholder funzionante e il primo smoke 
 
 ## Condizione di arresto
 
-Il lavoro autonomo si arresta al termine del Gate A. I Gate B-D producono effetti esterni o richiedono account/credenziali e devono essere autorizzati singolarmente. Nessuna richiesta audio viene anticipata.
+Il Gate B e stato autorizzato e completato. Il lavoro autonomo si arresta ora prima dell'installazione fisica se non e disponibile un telefono Android e prima di qualunque seconda build, iOS o submission, che richiedono nuova approvazione. Nessuna richiesta audio viene anticipata.

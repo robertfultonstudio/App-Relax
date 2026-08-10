@@ -73,13 +73,13 @@ I profili sono separati per evitare autorizzazioni implicite.
 
 ### Android prima
 
-Comando proposto, non autorizzato:
+Comando autorizzato ed eseguito una sola volta:
 
 ```bash
-pnpm dlx eas-cli@21.7.1 build --platform android --profile development-android
+EAS_NO_VCS=1 pnpm dlx eas-cli@21.7.1 build --platform android --profile development-android
 ```
 
-Accettazione: build `finished`, immagine EAS prevista nel log, APK internal distribution installabile e nessun segreto nel repository.
+Esito cloud: build `73cd8dfc-4692-4d85-84e7-a3be7b0d3ed7` `FINISHED`, Expo SDK 57.0.0; APK 299.803.135 byte con SHA-256 `d54a5333b40574baeb6560879a743ad1722619df6f6c676669e62bf7feff4ae7`; ZIP, manifest, otto DEX, quattro ABI e scan mirato di leakage/segreti verdi. La compilazione nativa e accettata; installabilita e runtime restano aperti fino al telefono reale.
 
 ### iOS dopo
 
@@ -110,19 +110,19 @@ Non usare `--platform all`, `--auto-submit` o `eas submit`.
 
 ## Matrice di accettazione
 
-| Area                         |    Locale statico |                  EAS cloud |           Telefono reale |
-| ---------------------------- | ----------------: | -------------------------: | -----------------------: |
-| UI, route e copy             |  richiesto, verde |           bundle richiesto |          smoke richiesto |
-| Wiring cinque sorgenti       |    contratti/fake |        compilazione nativa |       audio obbligatorio |
-| Timer e persistenza          | fake clock, verde |        compilazione nativa |   lifecycle obbligatorio |
-| Config background            |   prebuild, verde | manifest/entitlement build | lock-screen obbligatorio |
-| Bluetooth, latenza, batteria |  non verificabile |           non verificabile |             obbligatorio |
-| Qualita sonora               |  non verificabile |           non verificabile |   obbligatorio dopo pack |
+| Area                         |    Locale statico |                 EAS cloud |           Telefono reale |
+| ---------------------------- | ----------------: | ------------------------: | -----------------------: |
+| UI, route e copy             |  richiesto, verde |              bundle verde |          smoke richiesto |
+| Wiring cinque sorgenti       |    contratti/fake | compilazione nativa verde |       audio obbligatorio |
+| Timer e persistenza          | fake clock, verde | compilazione nativa verde |   lifecycle obbligatorio |
+| Config background            |   prebuild, verde |      manifest build verde | lock-screen obbligatorio |
+| Bluetooth, latenza, batteria |  non verificabile |          non verificabile |             obbligatorio |
+| Qualita sonora               |  non verificabile |          non verificabile |   obbligatorio dopo pack |
 
 ## Evidenze di chiusura
 
 - Exit code e output dei gate locali.
-- Log EAS, URL/artifact id e immagine builder, solo dopo autorizzazione.
+- Build EAS Android ID, stato, fingerprint, artifact checksum e quota gia registrati dopo autorizzazione; non registrare URL firmati temporanei.
 - Device/OS e checklist smoke, solo quando disponibili.
 - Diff, `git status`, secret scan e dipendenze.
 - Audit raw, policy audit e verifica signature degli asset.

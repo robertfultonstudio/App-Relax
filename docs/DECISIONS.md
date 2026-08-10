@@ -16,14 +16,14 @@ Stato: accettata; sostituisce la precedente ipotesi SDK 56
 
 [F] I gate locali eseguiti con Node 24.14.0 sono verdi. Il target riproducibile e Node 22.23.1, presente nelle immagini EAS SDK 57 e registrato nei file di versione.
 
-[U] `NON DETERMINATO — EVIDENZA INSUFFICIENTE`: compatibilita nativa di RNAA 0.13.2 con RN 0.86 fino alla prima build iOS/Android e allo smoke test. Il package RNAA usa peer aperti ma il suo sviluppo e la matrice pubblica arrivano a RN 0.85; questa assenza non e un blocker dimostrato.
+[F] La build EAS Android `FINISHED` dimostra la compilazione di RNAA 0.13.2 con RN 0.86.2 per le quattro ABI previste. [U] `NON DETERMINATO — EVIDENZA INSUFFICIENTE`: comportamento runtime Android fino allo smoke test e compatibilita iOS fino a una build autorizzata. Il package RNAA usa peer aperti ma la sua matrice pubblica arriva a RN 0.85; questa assenza non e da sola un blocker dimostrato.
 
 Fonti primarie: [tabella versioni Expo](https://docs.expo.dev/versions/latest/), [metadata SDK Expo](https://github.com/expo/expo/blob/main/docs/ui/components/SDKTables/sdk-versions.json), [template SDK 57](https://github.com/expo/expo/blob/sdk-57/templates/expo-template-default/package.json), [compatibilita RNAA](https://docs.swmansion.com/react-native-audio-api/docs/other/compatibility/), [package RNAA 0.13.2](https://github.com/software-mansion/react-native-audio-api/blob/0.13.2/packages/react-native-audio-api/package.json).
 
 ## D-003 - Motore audio primario
 
 Data: 10 agosto 2026
-Stato: accettata, da provare nativamente
+Stato: compilazione Android verificata; runtime da provare su device
 
 [F] `react-native-audio-api` 0.13.2 offre AudioContext, buffer source, oscillator, gain, stereo panner, decoding, session management, playback notifications e config Expo per background. E il motore primario dietro `AudioGraphDriver`.
 
@@ -93,13 +93,13 @@ Stato: accettata
 ## D-011 - EAS cloud al posto della toolchain locale
 
 Data: 10 agosto 2026
-Stato: configurato; esecuzione Android autorizzata, iOS esclusa
+Stato: Android completata; iOS esclusa
 
-[F] EAS Build e un servizio hosted che produce binari Android e iOS senza toolchain native locali. I profili sono separati: Android usa `ubuntu-26.04-jdk-17-ndk-r27b-sdk-57`; iOS usa `macos-tahoe-26.5-xcode-26.6`; entrambi Node 22.23.1. L'Android APK e il primo gate proposto.
+[F] EAS Build e un servizio hosted che produce binari Android e iOS senza toolchain native locali. I profili sono separati: Android usa `ubuntu-26.04-jdk-17-ndk-r27b-sdk-57`; iOS usa `macos-tahoe-26.5-xcode-26.6`; entrambi Node 22.23.1. Il primo gate Android e stato completato; iOS resta separato e non autorizzato.
 
 [F] `.easignore` prevale su `.gitignore` durante la preparazione dell'upload. Il file replica le esclusioni essenziali e rimuove dall'archivio `.git`, dipendenze, output nativi/generati, credenziali locali, documentazione, test e i flussi paralleli `output/`/`tmp/`. Il validator config rende obbligatorie le regole di sicurezza critiche.
 
-[F] Il piano EAS Free corrente include una quantita limitata di build a bassa priorita. La CLI ha verificato sull'organizzazione `robert-fulton-studio` quota Android `0/15`, quota totale `0/30`, nessun add-on, overage e costo stimato pari a zero nel ciclo corrente. Quota e condizioni vanno riconfermate subito prima della build.
+[F] Il piano EAS Free corrente include una quantita limitata di build a bassa priorita. La CLI ha verificato sull'organizzazione `robert-fulton-studio` quota Android `0/15`, quota totale `0/30`, nessun add-on, overage e costo stimato pari a zero prima della build. Dopo l'unica build autorizzata la quota e `1/15` Android e `1/30` totale, con overage e costo ancora pari a zero.
 
 Fonti primarie: [EAS Build](https://docs.expo.dev/build/), [infrastruttura EAS](https://docs.expo.dev/build-reference/infrastructure/), [regole `.easignore`](https://docs.expo.dev/build-reference/easignore/), [piani EAS](https://docs.expo.dev/billing/plans/), [pricing Expo](https://expo.dev/pricing).
 
@@ -126,7 +126,7 @@ Stato: collegato e verificato
 Data: 10 agosto 2026
 Stato: verificata
 
-[F] Install frozen e peer check verdi; lint e typecheck verdi; 8 suite/30 test verdi (subset audio 19/19); placeholder, asset safety e project config verdi; Expo Doctor 20/20; export Hermes iOS/Android completati; prebuild isolato config plugin completato. Nessuna compilazione nativa o build cloud e stata eseguita.
+[F] Install frozen e peer check verdi; lint e typecheck verdi; 8 suite/30 test verdi (subset audio 19/19); placeholder, asset safety e project config verdi; Expo Doctor 20/20; export Hermes iOS/Android completati; prebuild isolato config plugin completato. La successiva EAS Android ha compilato con successo il progetto e le librerie native; il comportamento runtime resta separato e richiede un telefono reale.
 
 ## D-015 - Audit dipendenze e asset non fidati
 
@@ -170,13 +170,25 @@ Stato: mitigazione verificata sull'archivio locale
 
 [F] Il comportamento corrisponde a un bug aperto nel repository ufficiale `expo/eas-cli`: le varianti `.git`, `.git/**` e `/.git/**` non rimuovono i metadata nel flusso osservato. Anche `requireCommit: false` da solo non e stato sufficiente. La mitigazione verificata e `EAS_NO_VCS=1` insieme a `requireCommit: false`, con worktree pulita, commit e hash controllati esplicitamente prima della build; `.easignore` resta il confine dell'upload.
 
-[F] L'ispezione no-VCS ha prodotto 49 file per 6.132 KiB: nessun `.git`, path locale, segreto, symlink, docs, test, tooling o flusso parallelo; presenti esattamente i tre WAV placeholder e tutti i file essenziali di build. `scripts/validate-eas-archive.mjs` rende ripetibile il controllo.
+[F] L'ispezione no-VCS finale ha prodotto 49 file per 6.143.075 byte, manifest SHA-256 `4c8769a5608b328a45c0ac55be4e8a84a6d835769dc8149866366843cbef8fd4`: nessun `.git`, path locale, segreto, symlink, docs, test, tooling o flusso parallelo; presenti esattamente i tre WAV placeholder e tutti i file essenziali di build. `scripts/validate-eas-archive.mjs` rende ripetibile il controllo.
 
 Fonte primaria: [issue Expo EAS CLI #2875](https://github.com/expo/eas-cli/issues/2875), [documentazione `.easignore`](https://docs.expo.dev/build-reference/easignore/).
 
+## D-019 - Prima build Android EAS
+
+Data: 10 agosto 2026
+Stato: completata e verificata; smoke test fisico aperto
+
+[F] L'unica build cloud autorizzata, profilo `development-android`, e terminata `FINISHED`: ID `73cd8dfc-4692-4d85-84e7-a3be7b0d3ed7`, Expo SDK 57.0.0, app 1.0.0 (1), fingerprint `0d061b3ea48ae2044f80a75a232326e3cf6eee7b`, completata il 10 agosto 2026 alle 21:00:58 UTC. La coda Free e durata circa 68 minuti e la build circa 24 minuti. Nessun retry, iOS, submit o upgrade e stato avviato.
+
+[F] L'APK scaricato misura 299.803.135 byte e ha SHA-256 `d54a5333b40574baeb6560879a743ad1722619df6f6c676669e62bf7feff4ae7`. `unzip -t` e verde; sono presenti `AndroidManifest.xml`, otto DEX e librerie per `arm64-v8a`, `armeabi-v7a`, `x86` e `x86_64`. Lo scan mirato non rileva path locali, traversal, file credenziali o token evidenti. Il file e in `dist/eas/`, ignorato da Git.
+
+[F] Il completamento della build dimostra che RNAA 0.13.2 e il config plugin compilano con Expo 57 / RN 0.86.2 su Android. [U] `NON DETERMINATO — EVIDENZA INSUFFICIENTE`: avvio, playback, background, lock-screen, Bluetooth, interruzioni, latenza, batteria e qualita fino all'installazione e allo smoke test su telefono reale.
+
+Evidenza primaria: [build EAS Android](https://expo.dev/accounts/robert-fulton-studio/projects/app-relax/builds/73cd8dfc-4692-4d85-84e7-a3be7b0d3ed7).
+
 ## Attivita aperte
 
-- Ispezionare l'archivio e avviare una build EAS Android gia autorizzata entro quota Free.
 - Riverificare `security:audit` e rimuovere l'allowlist `image-size` non appena esiste una release corretta.
 - Installare la development build su un telefono Android gia disponibile e svolgere lo smoke test.
 - Autorizzare EAS iOS solo con programma Apple e iPhone disponibili.
