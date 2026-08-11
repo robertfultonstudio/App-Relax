@@ -32,11 +32,10 @@ export default function LegalScreen() {
       </View>
 
       <View style={styles.placeholderBox}>
-        <Text style={styles.placeholderTitle}>MVP PLACEHOLDERS</Text>
+        <Text style={styles.placeholderTitle}>MVP AUDIO STATUS</Text>
         <Text style={styles.placeholderText}>
-          The three stem files in this build are deterministic technical
-          placeholders generated locally. They are not final creative assets or
-          an approved audio master.
+          This preset uses the three stems from Audio Test Pack 01. Device
+          listening and final-master approval remain pending before release.
         </Text>
       </View>
       <Text style={styles.reviewNote}>

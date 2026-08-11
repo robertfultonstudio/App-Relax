@@ -40,7 +40,7 @@ export default function HomeScreen() {
         <View style={styles.heroTop}>
           <Text style={styles.heroEyebrow}>TONIGHT&apos;S RITUAL</Text>
           <View style={styles.placeholderBadge}>
-            <Text style={styles.placeholderText}>PLACEHOLDER</Text>
+            <Text style={styles.placeholderText}>EARLY ACCESS</Text>
           </View>
         </View>
         <View style={styles.moon}>

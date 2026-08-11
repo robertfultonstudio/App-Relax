@@ -102,8 +102,12 @@ const profileNames = (
 ).sort();
 assert(
   JSON.stringify(profileNames) ===
-    JSON.stringify(["development-android", "development-ios"]),
-  "expected exactly two separated development profiles",
+    JSON.stringify([
+      "development-android",
+      "development-ios",
+      "preview-android",
+    ]),
+  "expected the two development profiles and one Android preview profile",
 );
 
 const android = await EasJsonUtils.getBuildProfileAsync(
@@ -116,16 +120,29 @@ const ios = await EasJsonUtils.getBuildProfileAsync(
   Platform.IOS,
   "development-ios",
 );
+const previewAndroid = await EasJsonUtils.getBuildProfileAsync(
+  accessor,
+  Platform.ANDROID,
+  "preview-android",
+);
 assert(
   android.developmentClient && ios.developmentClient,
   "both profiles must build a dev client",
 );
 assert(
-  android.distribution === "internal" && ios.distribution === "internal",
+  previewAndroid.developmentClient === false,
+  "Android preview must embed the app instead of requiring Metro",
+);
+assert(
+  android.distribution === "internal" &&
+    ios.distribution === "internal" &&
+    previewAndroid.distribution === "internal",
   "distribution must be internal",
 );
 assert(
-  android.node === "22.23.1" && ios.node === "22.23.1",
+  android.node === "22.23.1" &&
+    ios.node === "22.23.1" &&
+    previewAndroid.node === "22.23.1",
   "EAS Node version must be pinned",
 );
 assert(
@@ -135,6 +152,14 @@ assert(
 assert(
   android.buildType === "apk",
   "Android development artifact must be an APK",
+);
+assert(
+  previewAndroid.image === "ubuntu-26.04-jdk-17-ndk-r27b-sdk-57",
+  "unexpected Android preview build image",
+);
+assert(
+  previewAndroid.buildType === "apk",
+  "Android preview artifact must be an APK",
 );
 assert(
   ios.image === "macos-tahoe-26.5-xcode-26.6",
@@ -152,7 +177,7 @@ assert(
 );
 assert(appConfig.slug === "app-relax", "unexpected EAS project slug");
 console.log(
-  `Project config: PASS (SDK 57, ${appleIdentifier}, RNAA plugin, separate EAS profiles).`,
+  `Project config: PASS (SDK 57, ${appleIdentifier}, RNAA plugin, dev-client and standalone preview profiles).`,
 );
 console.log(
   `EAS project: @${appConfig.owner}/${appConfig.slug} (${projectId}).`,

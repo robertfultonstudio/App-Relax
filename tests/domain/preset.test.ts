@@ -24,6 +24,14 @@ describe("Deep Sleep 432 preset contract", () => {
     expect(Object.keys(DEEP_SLEEP_432.defaultMix).sort()).toEqual(
       [...AUDIO_SOURCE_IDS].sort(),
     );
+    expect(DEEP_SLEEP_432.stems.map((stem) => stem.assetKey)).toEqual([
+      "sleepDrone001",
+      "sleepAmbience001",
+      "sleepTexture001",
+    ]);
+    expect(
+      new Set(DEEP_SLEEP_432.stems.map((stem) => stem.assetKey)).size,
+    ).toBe(3);
     expect(validatePreset(DEEP_SLEEP_432)).toEqual({ valid: true, errors: [] });
   });
 

@@ -36,7 +36,7 @@ export default function SettingsScreen() {
         <View>
           <Text style={styles.linkTitle}>Legal & sound labels</Text>
           <Text style={styles.linkBody}>
-            Claims, placeholder status and listening note
+            Claims, audio status and listening note
           </Text>
         </View>
         <Text style={styles.arrow}>→</Text>

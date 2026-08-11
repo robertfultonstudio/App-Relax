@@ -39,6 +39,7 @@ export function SourceControl({
         accessibilityState={{ disabled: unavailable, selected: source.muted }}
         disabled={unavailable}
         onPress={onToggleMuted}
+        testID={`source-${source.id}-mute`}
         style={({ pressed }) => [
           styles.mute,
           source.muted && styles.muted,
@@ -57,6 +58,7 @@ export function SourceControl({
           accessibilityRole="button"
           disabled={unavailable || source.gain <= 0}
           onPress={() => onGainChange(Math.max(0, source.gain - 0.05))}
+          testID={`source-${source.id}-lower`}
           style={({ pressed }) => [
             styles.stepButton,
             pressed && styles.pressed,
@@ -67,6 +69,7 @@ export function SourceControl({
         <Text
           accessibilityLabel={`${source.label} level ${formatGain(source.gain)}`}
           style={styles.value}
+          testID={`source-${source.id}-level`}
         >
           {formatGain(source.gain)}
         </Text>
@@ -75,6 +78,7 @@ export function SourceControl({
           accessibilityRole="button"
           disabled={unavailable || source.gain >= 1}
           onPress={() => onGainChange(Math.min(1, source.gain + 0.05))}
+          testID={`source-${source.id}-raise`}
           style={({ pressed }) => [
             styles.stepButton,
             pressed && styles.pressed,

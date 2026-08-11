@@ -87,11 +87,11 @@ const requiredFiles = [
   "tsconfig.json",
 ];
 const expectedAudioFiles = [
-  "assets/audio/placeholders/manifest.json",
-  "assets/audio/placeholders/sleep-ambience-placeholder.wav",
-  "assets/audio/placeholders/sleep-drone-placeholder.wav",
-  "assets/audio/placeholders/sleep-texture-placeholder.wav",
-];
+  "assets/audio/test-pack-01/SLEEP_AMBIENCE_001.wav",
+  "assets/audio/test-pack-01/SLEEP_DRONE_001.wav",
+  "assets/audio/test-pack-01/SLEEP_TEXTURE_001.wav",
+  "assets/audio/test-pack-01/manifest.json",
+].sort((left, right) => left.localeCompare(right));
 const secretPatterns = [
   /-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----/,
   /A[KS]IA[0-9A-Z]{16}/,
@@ -133,12 +133,14 @@ for (const { absolutePath, archivePath } of files) {
     `credential extension: ${archivePath}`,
   );
 
-  const contents = readFileSync(absolutePath).toString("utf8");
-  for (const pattern of secretPatterns) {
-    assert(
-      !pattern.test(contents),
-      `secret or local path pattern in ${archivePath}`,
-    );
+  if (!archivePath.toLowerCase().endsWith(".wav")) {
+    const contents = readFileSync(absolutePath).toString("utf8");
+    for (const pattern of secretPatterns) {
+      assert(
+        !pattern.test(contents),
+        `secret or local path pattern in ${archivePath}`,
+      );
+    }
   }
 }
 
@@ -151,5 +153,5 @@ assert(
 );
 
 console.log(
-  `EAS archive: PASS (${files.length} files, ${totalBytes} bytes, no Git metadata/secrets/local paths, 3 placeholder WAV files).`,
+  `EAS archive: PASS (${files.length} files, ${totalBytes} bytes, no Git metadata/secrets/local paths, 3 AUDIO TEST PACK 01 WAV files).`,
 );

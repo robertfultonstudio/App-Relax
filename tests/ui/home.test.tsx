@@ -10,13 +10,13 @@ jest.mock("expo-linear-gradient", () => ({
 }));
 
 describe("home vertical slice", () => {
-  it("renders four categories and the single placeholder hero", async () => {
+  it("renders four categories and the single early-access hero", async () => {
     const screen = await render(<HomeScreen />);
     expect(screen.getByText("Sleep")).toBeTruthy();
     expect(screen.getByText("Calm")).toBeTruthy();
     expect(screen.getByText("Focus")).toBeTruthy();
     expect(screen.getByText("Meditate")).toBeTruthy();
     expect(screen.getByText("Deep Sleep 432")).toBeTruthy();
-    expect(screen.getByText("PLACEHOLDER")).toBeTruthy();
+    expect(screen.getByText("EARLY ACCESS")).toBeTruthy();
   });
 });

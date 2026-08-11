@@ -43,7 +43,7 @@ Specifiche obbligatorie:
 - confronto tra testa e coda per individuare discontinuita di loop;
 - hash SHA-256 e manifest deterministico.
 
-Le soglie finali di loudness, true peak, DC e loop click sono `NON DETERMINATO — EVIDENZA INSUFFICIENTE` fino a una prima misurazione del pack. Non si rifiuta un file con soglie inventate: i valori misurati vengono riportati e sottoposti ad ascolto.
+La prima misurazione del pack e registrata in `assets/audio/test-pack-01/manifest.json`. I tre file superano formato, integrita, clipping, DC e confronto testa/coda. Questi valori costituiscono la baseline del pack, non soglie universali per asset futuri. Loudness percepito, true peak e loop click restano `NON DETERMINATO — EVIDENZA INSUFFICIENTE` fino all'ascolto e al test su telefono.
 
 ## Manifest
 
@@ -61,7 +61,7 @@ Il manifest deve registrare almeno:
 
 ## Placeholder
 
-I placeholder sono generati localmente con codice deterministico e non derivano da registrazioni o opere di terzi. Il relativo manifest deve indicare `placeholder: true`, algoritmo, seed, formato e durata. Non costituiscono qualita audio approvata e vanno rimossi o esclusi dalle build di release dopo l'integrazione degli asset reali.
+I placeholder sono generati localmente con codice deterministico e non derivano da registrazioni o opere di terzi. Restano nel repository come fixture tecniche, ma sono esclusi dagli archivi EAS dopo l'integrazione degli asset reali e non sono piu referenziati dal preset.
 
 ## Gate di integrazione
 

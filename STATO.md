@@ -1,10 +1,10 @@
 # Stato progetto
 
-Aggiornato: 10 agosto 2026
+Aggiornato: 11 agosto 2026
 
 ## Milestone attiva
 
-Vertical slice placeholder `Deep Sleep 432` fino al gate `AUDIO TEST PACK 01`.
+Vertical slice `Deep Sleep 432` con `AUDIO TEST PACK 01` e APK Android standalone verificati; gate telefono e qualita aperti.
 
 ## Completato e verificato localmente
 
@@ -14,38 +14,51 @@ Vertical slice placeholder `Deep Sleep 432` fino al gate `AUDIO TEST PACK 01`.
 - [x] Documentazione base e decision log.
 - [x] Expo SDK 57 / React Native 0.86.2 / Expo Router / TypeScript strict.
 - [x] Home, quattro categorie, lista Sleep, player, Settings e Legal.
-- [x] Preset unico `Deep Sleep 432`, tre WAV placeholder deterministici, binaural e brown noise generati.
+- [x] Preset unico `Deep Sleep 432`, tre stem reali di `AUDIO TEST PACK 01`, binaural e brown noise generati; i placeholder restano soltanto fixture di test.
 - [x] Controller idempotente, timer assoluto, stop sorgenti sul clock audio, fade, mute/gain, persistenza, interruzioni serializzate, focus e cleanup notification.
-- [x] Profili EAS Android e iOS separati, identificativo provvisorio `com.robertfultonstudio.apprelax`, config plugin e archivio `.easignore` validati offline.
+- [x] Profili EAS separati per development Android/iOS e preview Android autonoma, identificativo provvisorio `com.robertfultonstudio.apprelax`, config plugin e archivio `.easignore` validati offline.
 - [x] Dipendenze allineate e peer dependency verdi.
-- [x] Lint, TypeScript, 8 suite/30 test (audio 19/19), validatori audio/config/asset safety, policy audit dipendenze ed Expo Doctor 20/20 verdi.
+- [x] Lint, TypeScript, 9 suite/37 test (audio 26/26), validatori audio/config/asset safety, policy audit dipendenze ed Expo Doctor 20/20 verdi.
 - [x] Prebuild isolato `--no-install`: iOS `UIBackgroundModes=audio`; Android permessi, foreground service e `mediaPlayback` presenti.
 - [x] Account Expo personale `robertfultonstudio`, organizzazione `robert-fulton-studio` e progetto `@robert-fulton-studio/app-relax` creati tramite Google; linking verificato dalla CLI con project ID `e1d77255-66f4-45c1-b1fa-c503a088b30f`.
 - [x] Piano EAS Free verificato sull'organizzazione: quota Android `0/15` prima e `1/15` dopo la build; nessun add-on, overage o costo.
 - [x] Archivio Android no-VCS ispezionato e validato: 49 file / 6.143.075 byte, SHA-256 manifest `4c8769a5608b328a45c0ac55be4e8a84a6d835769dc8149866366843cbef8fd4`; nessun Git metadata, path locale, segreto, symlink, docs/test/tooling o flusso parallelo; esattamente tre WAV placeholder.
 - [x] EAS Android `development-android` completata: build `73cd8dfc-4692-4d85-84e7-a3be7b0d3ed7`, SDK 57, fingerprint `0d061b3ea48ae2044f80a75a232326e3cf6eee7b`, stato `FINISHED` il 10 agosto 2026 alle 21:00:58 UTC.
 - [x] APK scaricato in `dist/eas/` e verificato: 299.803.135 byte, SHA-256 `d54a5333b40574baeb6560879a743ad1722619df6f6c676669e62bf7feff4ae7`, ZIP integro, manifest, otto DEX e quattro ABI presenti; nessun path locale, file credenziale o token evidente rilevato. L'artefatto e ignorato da Git.
+- [x] `AUDIO TEST PACK 01` ricevuto su istruzione esplicita: tre WAV PCM24 stereo 48 kHz da 180 secondi, hash e metriche registrati nel manifest; formato, clipping, DC e raccordi automatici verdi.
+- [x] Preset e driver cablati ai tre stem reali distinti; placeholder non piu referenziati ed esclusi dagli archivi EAS.
+- [x] Export Metro locali iOS e Android completati con esattamente i tre WAV reali; gli SHA-256 degli asset esportati coincidono con il manifest e nessun placeholder audio e incluso.
+- [x] Android Emulator API 34 x86_64 avviato con l'APK EAS esistente e bundle corrente via Metro: Home -> Sleep -> player, UI `EARLY ACCESS`/`3 sleep layers`, cache di esattamente tre WAV con SHA-256 attesi, stato Ready e selezione timer 15 minuti verificati.
+- [x] Un'esecuzione precedente dello stesso motore streaming ha raggiunto Play con AAudio attivo senza riprodurre il precedente OOM full-buffer; RSS osservato circa 602-605 MB in Ready e 631-695 MB in Play. Questa prova emulatore non certifica un telefono.
+- [x] Il setup notification Android e stato rimosso dal percorso critico di Play: il rerun ha mostrato `RITUAL IN PROGRESS`, timer in decremento e AAudio stereo 48 kHz attivo. L'utente ha confermato di sentire il suono dagli altoparlanti del Mac.
+- [x] EAS Android `preview-android` autonoma completata: build `c3a39414-d156-4373-810a-0011296b51f8`, SDK 57, fingerprint `92f6d62d3eb36db3d9eef3db223d6552c86af6f6`, stato `FINISHED` l'11 agosto 2026 alle 19:56:53 UTC; coda Free circa 87 minuti e compilazione circa 28 minuti.
+- [x] APK preview scaricato in `dist/eas/`: 289.861.086 byte, SHA-256 `47a6603108f6aee3464f6a63ae00f0b0fdb287d375a391d1a9210043e6b0a2a6`, ZIP integro, 1.328 entry, bundle Android incorporato da 3.216.244 byte, quattro DEX e 27 librerie per ciascuna delle quattro ABI.
+- [x] I tre WAV incorporati nell'APK coincidono byte per byte con gli SHA-256 del Test Pack; nessun placeholder, path locale, filename credenziale o pattern segreto mirato rilevato.
+- [x] Smoke standalone su emulatore API 34 dopo cancellazione dei dati app e con Metro spento: Home, player `READY WHEN YOU ARE`, `RITUAL IN PROGRESS`, timer 28:55 e AAudio avviato. Screenshot verificabile in `dist/eas/`, ignorato da Git.
+- [x] Piano EAS Free dopo la preview: Android `2/15`, iOS `0/15`, totale `2/30`, overage 0, add-on assenti e costo totale stimato 0 centesimi.
 
 ## Gate aperti
 
 - [ ] Installazione APK e smoke test su telefono Android reale: disponibilita del dispositivo `NON DETERMINATO — EVIDENZA INSUFFICIENTE`.
 - [ ] EAS cloud build iOS `development-ios`: richiede approvazione, account Apple Developer attivo, credenziali e registrazione iPhone.
 - [ ] Smoke test audio su telefono reale; background, lock-screen, Bluetooth, interruzioni, latenza, batteria e qualita restano `NON DETERMINATO — EVIDENZA INSUFFICIENTE`.
-- [ ] `AUDIO TEST PACK 01`: resta bloccato finche la development build placeholder non passa lo smoke test.
+- [x] I glitch percepiti nell'emulatore sono stati localizzati dopo l'HAL Android, nel ponte QEMU -> CoreAudio: AAudio e AudioFlinger hanno mantenuto frame e segnale continui con zero underrun, mentre CoreAudio ha riaperto due volte `AppleHDAEngineOutput` con gap di circa 22 ms e 11 ms. Il trigger esatto delle riaperture resta `NON DETERMINATO — EVIDENZA INSUFFICIENTE`.
+- [ ] Presenza dei glitch e comportamento su telefono: `NON DETERMINATO — EVIDENZA INSUFFICIENTE`; nessuna accettazione di qualita audio e implicita.
+- [ ] Memoria/startup dei tre WAV reali su hardware ARM, loop percepito, bilanciamento e qualita: `NON DETERMINATO — EVIDENZA INSUFFICIENTE` fino al test su telefono.
 
 ## Limiti locali verificati
 
 - [F] Node di sistema 18.20.8 e insufficiente; il target di progetto e Node 22.23.1. I gate di questa sessione sono stati eseguiti con il runtime isolato Codex Node 24.14.0.
 - [F] macOS 13.7.8 e Xcode 15.2 non soddisfano Expo SDK 57, che richiede Node 22.13.x e Xcode 26.4+.
 - [F] Nessun runtime/device iOS Simulator e installato; CocoaPods e assente.
-- [F] Android Studio, Android SDK, emulator, JDK e AVD sono assenti.
-- [F] Questi limiti impediscono build native locali, non le build EAS cloud.
+- [F] Sono installati, su autorizzazione esplicita, Android SDK Platform Tools 37.0.1, Emulator 37.1.11, system image API 34 x86_64 e AVD `AppRelax_API_34_x86_64`. Emulator, Metro e server ADB sono spenti a chiusura test.
+- [F] Android Studio, un JDK generico, SDK Platform e Build Tools restano assenti. Questi limiti impediscono build native locali, non Metro, l'APK esistente o build EAS cloud.
 - [F] Nessun acquisto hardware e necessario per produrre i binari cloud; almeno un telefono fisico resta necessario per il gate audio reale.
 - [U] `pnpm audit --audit-level high` segnala due DoS transitive high in `image-size` senza release corretta pubblicata. Nessun input immagine remoto e presente; il validatore vieta i formati vulnerabili per estensione e signature. La policy allowlistata e stata riverificata prima dell'upload EAS e resta un residuo upstream accettato, non un gate verde del raw audit.
 
 ## Prossimo gate
 
-Collegare un telefono Android reale, installare l'APK verificato e svolgere lo smoke test placeholder. Fino ad allora il comportamento runtime audio resta `NON DETERMINATO — EVIDENZA INSUFFICIENTE` e `AUDIO TEST PACK 01` non va richiesto. Non eseguire altre build, iOS, submission, push o acquisti senza nuova approvazione.
+I gate repository, la build Android standalone e lo smoke autonomo su emulatore sono completi. Il prossimo gate di prodotto e installare lo stesso APK su un telefono Android reale. Glitch su hardware ARM, memoria/startup, loop, background, Bluetooth e qualita vanno verificati sul telefono. Non eseguire altre build, iOS, submission, push o acquisti senza nuova approvazione.
 
 ## Lavoro parallelo escluso
 

@@ -18,15 +18,13 @@ export type PlaybackStatus =
   "idle" | "loading" | "ready" | "playing" | "paused" | "fadingOut" | "error";
 
 export type Goal = "sleep" | "calm" | "focus" | "meditate";
-export type PlaceholderAssetKey =
-  | "sleepDronePlaceholder"
-  | "sleepAmbiencePlaceholder"
-  | "sleepTexturePlaceholder";
+export type StemAssetKey =
+  "sleepDrone001" | "sleepAmbience001" | "sleepTexture001";
 
 export interface StemDefinition {
   id: StemSourceId;
   label: string;
-  assetKey: PlaceholderAssetKey;
+  assetKey: StemAssetKey;
   required: true;
 }
 

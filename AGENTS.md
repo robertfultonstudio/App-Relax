@@ -2,7 +2,7 @@
 
 ## Ambito
 
-Questo repository contiene una vera app mobile consumer iOS/Android basata su React Native ed Expo. La milestone attiva e una sola vertical slice: `Deep Sleep 432`, inizialmente con tre stem placeholder, binaural beat e brown noise generati.
+Questo repository contiene una vera app mobile consumer iOS/Android basata su React Native ed Expo. La milestone attiva e una sola vertical slice: `Deep Sleep 432`, ora con i tre stem reali di `AUDIO TEST PACK 01`, binaural beat e brown noise generati.
 
 Il materiale in `output/strategia-app-audio/` e `tmp/strategia-app-audio/` appartiene a un flusso parallelo e non va modificato, spostato, cancellato, staged o assorbito senza istruzione esplicita.
 
@@ -25,7 +25,7 @@ In caso di conflitto, fermarsi, registrare il conflitto e non inventare una solu
 - `tuningLabel`, `carrierHz` e `beatHz` sono concetti distinti.
 - Nessun claim medico, terapeutico o clinico.
 - Nessun backend, login, billing, community, marketplace o catalogo esteso nella prima milestone.
-- Nessun file audio reale oltre `AUDIO TEST PACK 01` prima del relativo gate.
+- Nessun file audio reale oltre i tre stem di `AUDIO TEST PACK 01` prima del relativo gate.
 - Non dichiarare background audio o qualita sonora validati senza prove su telefono reale.
 - Usare le etichette `[F]`, `[I]`, `[U]`; quando manca evidenza scrivere `NON DETERMINATO — EVIDENZA INSUFFICIENTE`.
 - Nessun nuovo Mac o altro acquisto hardware e un prerequisito di progetto.
@@ -60,14 +60,14 @@ Il gate repository/non nativo e chiuso solo quando:
 
 - Home, lista Sleep, player, Settings e Legal sono implementati;
 - esiste un solo preset `Deep Sleep 432`;
-- tre stem placeholder separati, binaural e brown noise sono cablati senza playback duplicato;
+- tre stem reali separati, binaural e brown noise sono cablati senza playback duplicato;
 - gain, mute, loading, error e fade sono esposti per ogni sorgente;
 - timer assoluto, fade, stop nativo schedulato e persistenza minima sono coperti da test;
 - lint, typecheck, test, validatori, Expo Doctor ed export Metro iOS/Android sono verdi;
 - `eas.json`, config plugin e identificativi sono validati offline;
-- nessun segreto o asset audio reale e presente.
+- nessun segreto o asset audio reale oltre `AUDIO TEST PACK 01` e presente.
 
-La milestone prodotto non e completa finche una development build cloud o locale non viene installata e provata. I test su telefono reale restano obbligatori per speaker, cuffie/Bluetooth, background/lock-screen, interruzioni, latenza, batteria e qualita sonora. Solo dopo questo smoke test si puo aprire `AUDIO TEST PACK 01`.
+La milestone prodotto non e completa finche una development build contenente il Test Pack non viene installata e provata. I test su telefono reale restano obbligatori per memoria/startup, speaker, cuffie/Bluetooth, background/lock-screen, interruzioni, latenza, batteria e qualita sonora. Nessun asset ulteriore puo essere richiesto prima dell'approvazione umana del pack.
 
 ## Autorizzazioni
 

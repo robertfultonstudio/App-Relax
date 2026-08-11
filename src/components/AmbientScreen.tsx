@@ -1,4 +1,4 @@
-import type { PropsWithChildren, ReactNode } from "react";
+import type { PropsWithChildren, ReactNode, RefObject } from "react";
 import {
   ScrollView,
   StyleSheet,
@@ -11,12 +11,14 @@ import { colors, spacing } from "@/design/theme";
 
 interface AmbientScreenProps extends PropsWithChildren {
   footer?: ReactNode;
+  scrollRef?: RefObject<ScrollView | null>;
   scrollProps?: Omit<ScrollViewProps, "contentContainerStyle">;
 }
 
 export function AmbientScreen({
   children,
   footer,
+  scrollRef,
   scrollProps,
 }: AmbientScreenProps) {
   return (
@@ -32,6 +34,7 @@ export function AmbientScreen({
         <ScrollView
           {...scrollProps}
           contentContainerStyle={styles.content}
+          ref={scrollRef}
           showsVerticalScrollIndicator={false}
         >
           {children}

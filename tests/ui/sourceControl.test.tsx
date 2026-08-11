@@ -21,5 +21,9 @@ describe("SourceControl", () => {
     );
     expect(screen.getByText("fading out")).toBeTruthy();
     expect(screen.getByLabelText("Moon drone level 25%")).toBeTruthy();
+    expect(screen.getByTestId("source-drone-mute")).toBeTruthy();
+    expect(screen.getByTestId("source-drone-lower")).toBeTruthy();
+    expect(screen.getByTestId("source-drone-level")).toBeTruthy();
+    expect(screen.getByTestId("source-drone-raise")).toBeTruthy();
   });
 });

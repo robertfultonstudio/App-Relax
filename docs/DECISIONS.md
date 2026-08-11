@@ -3,9 +3,9 @@
 ## D-001 - Milestone singola
 
 Data: 10 agosto 2026
-Stato: accettata
+Stato: superata da D-020 per autorizzazione esplicita dell'utente
 
-[F] Il brief definisce la vertical slice placeholder e il gate `AUDIO TEST PACK 01`. La milestone copre solo questo risultato e si arresta prima dell'integrazione dei WAV reali.
+[F] Il brief originario definiva la vertical slice placeholder e il gate `AUDIO TEST PACK 01`. D-020 registra la successiva autorizzazione esplicita a integrare i tre WAV reali; il limite a un preset e tre file resta invariato.
 
 ## D-002 - Expo SDK 57 come baseline
 
@@ -16,18 +16,18 @@ Stato: accettata; sostituisce la precedente ipotesi SDK 56
 
 [F] I gate locali eseguiti con Node 24.14.0 sono verdi. Il target riproducibile e Node 22.23.1, presente nelle immagini EAS SDK 57 e registrato nei file di versione.
 
-[F] La build EAS Android `FINISHED` dimostra la compilazione di RNAA 0.13.2 con RN 0.86.2 per le quattro ABI previste. [U] `NON DETERMINATO — EVIDENZA INSUFFICIENTE`: comportamento runtime Android fino allo smoke test e compatibilita iOS fino a una build autorizzata. Il package RNAA usa peer aperti ma la sua matrice pubblica arriva a RN 0.85; questa assenza non e da sola un blocker dimostrato.
+[F] La build EAS Android `FINISHED` dimostra la compilazione di RNAA 0.13.2 con RN 0.86.2 per le quattro ABI previste. L'emulatore API 34 ha inoltre dimostrato bundle Metro, cache dei tre stem, Ready e almeno un avvio AAudio sul percorso streaming. [U] `NON DETERMINATO — EVIDENZA INSUFFICIENTE`: affidabilita Play sul bundle finale, comportamento su telefono e compatibilita iOS fino a una build autorizzata. Il package RNAA usa peer aperti ma la sua matrice pubblica arriva a RN 0.85; questa assenza non e da sola un blocker dimostrato.
 
 Fonti primarie: [tabella versioni Expo](https://docs.expo.dev/versions/latest/), [metadata SDK Expo](https://github.com/expo/expo/blob/main/docs/ui/components/SDKTables/sdk-versions.json), [template SDK 57](https://github.com/expo/expo/blob/sdk-57/templates/expo-template-default/package.json), [compatibilita RNAA](https://docs.swmansion.com/react-native-audio-api/docs/other/compatibility/), [package RNAA 0.13.2](https://github.com/software-mansion/react-native-audio-api/blob/0.13.2/packages/react-native-audio-api/package.json).
 
 ## D-003 - Motore audio primario
 
 Data: 10 agosto 2026
-Stato: compilazione Android verificata; runtime da provare su device
+Stato: implementazione streaming verificata staticamente; runtime emulatore parziale
 
 [F] `react-native-audio-api` 0.13.2 offre AudioContext, buffer source, oscillator, gain, stereo panner, decoding, session management, playback notifications e config Expo per background. E il motore primario dietro `AudioGraphDriver`.
 
-[I] I tre stem brevi placeholder possono essere decodificati in memoria. I futuri WAV stereo da circa 180 secondi potrebbero usare circa 207 MB come float32 complessivi, escluso overhead; memoria e startup sono gate del pack. Se emerge un blocker riproducibile, `expo-audio` puo essere un fallback solo-stem dietro la stessa interfaccia. Nessun cambio silenzioso.
+[F] Il precedente percorso full-buffer con tre WAV da 180 secondi ha riprodotto un `OutOfMemoryError` Android. E stato sostituito da download su file locale e tre file source incrementali distinti, instradati tramite media-element prima dello start per evitare il bypass del gain. La versione RNAA resta fissata a 0.13.2 e l'adapter ha un contract test dedicato. [U] Memoria, stabilita e qualita su telefono reale restano aperte.
 
 ## D-004 - Sintesi e peer worklets
 
@@ -126,7 +126,7 @@ Stato: collegato e verificato
 Data: 10 agosto 2026
 Stato: verificata
 
-[F] Install frozen e peer check verdi; lint e typecheck verdi; 8 suite/30 test verdi (subset audio 19/19); placeholder, asset safety e project config verdi; Expo Doctor 20/20; export Hermes iOS/Android completati; prebuild isolato config plugin completato. La successiva EAS Android ha compilato con successo il progetto e le librerie native; il comportamento runtime resta separato e richiede un telefono reale.
+[F] Install frozen e peer check verdi; lint e typecheck verdi; 9 suite/37 test verdi (subset audio 26/26); placeholder, Test Pack, asset safety e project config verdi; Expo Doctor 20/20; export Hermes iOS/Android completati; prebuild isolato config plugin completato. La successiva EAS Android ha compilato con successo il progetto e le librerie native; l'accettazione runtime resta separata e richiede un telefono reale.
 
 ## D-015 - Audit dipendenze e asset non fidati
 
@@ -183,7 +183,7 @@ Stato: completata e verificata; smoke test fisico aperto
 
 [F] L'APK scaricato misura 299.803.135 byte e ha SHA-256 `d54a5333b40574baeb6560879a743ad1722619df6f6c676669e62bf7feff4ae7`. `unzip -t` e verde; sono presenti `AndroidManifest.xml`, otto DEX e librerie per `arm64-v8a`, `armeabi-v7a`, `x86` e `x86_64`. Lo scan mirato non rileva path locali, traversal, file credenziali o token evidenti. Il file e in `dist/eas/`, ignorato da Git.
 
-[F] Il completamento della build dimostra che RNAA 0.13.2 e il config plugin compilano con Expo 57 / RN 0.86.2 su Android. [U] `NON DETERMINATO — EVIDENZA INSUFFICIENTE`: avvio, playback, background, lock-screen, Bluetooth, interruzioni, latenza, batteria e qualita fino all'installazione e allo smoke test su telefono reale.
+[F] Il completamento della build dimostra che RNAA 0.13.2 e il config plugin compilano con Expo 57 / RN 0.86.2 su Android. L'APK e stato installato su emulatore API 34 x86_64 e ha caricato il bundle e gli asset correnti via Metro. [U] `NON DETERMINATO — EVIDENZA INSUFFICIENTE`: affidabilita playback, background, lock-screen, Bluetooth, interruzioni, latenza, batteria e qualita fino allo smoke test su telefono reale.
 
 Evidenza primaria: [build EAS Android](https://expo.dev/accounts/robert-fulton-studio/projects/app-relax/builds/73cd8dfc-4692-4d85-84e7-a3be7b0d3ed7).
 
@@ -195,3 +195,48 @@ Evidenza primaria: [build EAS Android](https://expo.dev/accounts/robert-fulton-s
 - Misurare headroom, memoria e loop dopo il gate `AUDIO TEST PACK 01`.
 - Confermare bundle identifier e naming commerciale prima della distribuzione.
 - Ottenere revisione legale/store prima del rilascio pubblico.
+
+## D-020 - Integrazione AUDIO TEST PACK 01
+
+Data: 10 agosto 2026
+Stato: integrato localmente; ascolto e runtime device aperti
+
+[F] L'utente ha fornito e autorizzato per l'uso nell'app esattamente tre WAV: drone A=432, ambience river e texture air. L'istruzione esplicita sblocca la loro validazione e integrazione locale nonostante lo smoke test placeholder non fosse ancora documentato; non autorizza una nuova build cloud, pubblicazione o ulteriori asset.
+
+[F] I tre file sono PCM WAV stereo 24 bit / 48 kHz, lunghi esattamente 180 secondi. La validazione non rileva clipping, campioni non finiti, DC problematico, silenzi anomali o raccordi superiori ai transienti interni. Hash, metriche e punti di loop sono registrati in `assets/audio/test-pack-01/manifest.json` e verificati da `pnpm audio:validate-test-pack`.
+
+[F] `Deep Sleep 432` usa ora tre chiavi reali distinte. I placeholder non sono piu referenziati e vengono esclusi dagli archivi EAS. Binaural beat e brown noise restano generati a runtime e non sono incorporati negli stem.
+
+[F] Lint, typecheck, 9 suite/37 test, subset audio 26/26, validatori audio/config/asset safety, audit dipendenze con residui accettati ed Expo Doctor 20/20 sono verdi. Gli export Metro locali iOS e Android contengono esattamente i tre WAV reali con SHA-256 identici al manifest e nessun placeholder audio.
+
+[U] `NON DETERMINATO — EVIDENZA INSUFFICIENTE`: startup e memoria su hardware ARM, loop percepito, bilanciamento, speaker, cuffie/Bluetooth e background fino al test su telefono.
+
+## D-021 - Smoke Android emulatore e confine di prova
+
+Data: 11 agosto 2026
+Stato: ascolto base emulatore completato; qualita device aperta
+
+[F] Su autorizzazione esplicita sono stati installati Platform Tools 37.0.1, Emulator 37.1.11, una system image API 34 x86_64 e l'AVD `AppRelax_API_34_x86_64`. L'APK EAS esistente e stato installato e ha caricato da Metro il bundle corrente e i tre WAV reali. Home -> Sleep -> player, copy corrente, cache di esattamente tre WAV, SHA-256 attesi, Ready e timer 15 minuti sono stati verificati.
+
+[F] Dopo la sostituzione del full decode, un'esecuzione ha raggiunto Play con AAudio attivo senza riprodurre l'OOM; RSS osservato circa 602-605 MB in Ready e 631-695 MB in Play. Il blocco UI successivo era nel setup asincrono della notifica Android, accessorio al graph: rendendolo best-effort e non bloccante, il rerun ha mostrato `RITUAL IN PROGRESS`, timer in decremento e AAudio stereo 48 kHz. Un test impedisce che una notifica pendente blocchi di nuovo l'avvio udibile.
+
+[F] L'utente ha confermato di sentire il suono dagli altoparlanti interni del Mac e ha segnalato molti glitch. La diagnosi live ha mantenuto AAudio `started`, frame e potenza HAL continui, zero underrun mixer/track e nessun errore RNAA o decoder. CoreAudio ha invece chiuso e riaperto `AppleHDAEngineOutput` due volte durante Play, con gap di circa 22 ms e 11 ms. Il difetto osservato e quindi localizzato dopo l'HAL Android, nel ponte QEMU -> CoreAudio; il trigger preciso delle riaperture resta `NON DETERMINATO — EVIDENZA INSUFFICIENTE`.
+
+[U] `NON DETERMINATO — EVIDENZA INSUFFICIENTE`: presenza dei glitch su hardware ARM, navigazione mixer completa, gain, pausa/stop, lifecycle e tutte le proprieta audio reali. Emulator, Metro e server ADB sono stati spenti a fine test. Il gate di prodotto resta un telefono Android reale; l'emulatore non certifica speaker, cuffie/Bluetooth, background/lock-screen, interruzioni, latenza, batteria o qualita.
+
+## D-022 - Preview Android standalone e link condivisibile
+
+Data: 11 agosto 2026
+Stato: build e smoke autonomo completati; telefono reale aperto
+
+[F] Su autorizzazione esplicita e stata eseguita una sola build EAS `preview-android`, senza development client, retry, iOS o submit. La build `c3a39414-d156-4373-810a-0011296b51f8` e terminata `FINISHED` alle `2026-08-11T19:56:53.613Z`: Expo SDK 57.0.0, app 1.0.0 (1), fingerprint `92f6d62d3eb36db3d9eef3db223d6552c86af6f6`. La coda Free e durata circa 87 minuti e la compilazione circa 28 minuti.
+
+[F] L'APK misura 289.861.086 byte e ha SHA-256 `47a6603108f6aee3464f6a63ae00f0b0fdb287d375a391d1a9210043e6b0a2a6`. `unzip -t` e verde; contiene 1.328 entry, `assets/index.android.bundle` da 3.216.244 byte, quattro DEX e 27 librerie per ciascuna ABI `arm64-v8a`, `armeabi-v7a`, `x86`, `x86_64`. I tre WAV incorporati hanno esattamente gli SHA-256 del Test Pack. Nessun placeholder, traversal, path locale, filename credenziale o pattern segreto mirato e stato rilevato.
+
+[F] Dopo installazione con dati app puliti su emulatore API 34, Metro e porta 8081 sono rimasti spenti. La preview ha mostrato Home, player `READY WHEN YOU ARE`, `RITUAL IN PROGRESS`, timer 28:55 e Pause; AAudio ha completato `requestStart`. App, emulatore e ADB sono stati spenti. APK e screenshot sono in `dist/eas/`, ignorati da Git; lo screenshot ha SHA-256 `3b1852e346ce7cfbc9121b925e03f239959bf4e4bd441f2384fae6f4d8948b7a`.
+
+[F] Il piano resta Free: Android `2/15`, iOS `0/15`, totale `2/30`, overage 0, nessun add-on e costo totale stimato 0 centesimi. Nessun commit, push, PR, pubblicazione store o spesa e stato eseguito in questo gate.
+
+[U] `NON DETERMINATO — EVIDENZA INSUFFICIENTE`: installazione sul telefono dell'amico, glitch su hardware ARM, speaker/cuffie/Bluetooth, background/lock-screen, interruzioni, latenza, batteria, memoria e qualita. Questi punti richiedono lo smoke su telefono reale.
+
+Evidenza primaria: [build EAS Android preview](https://expo.dev/accounts/robert-fulton-studio/projects/app-relax/builds/c3a39414-d156-4373-810a-0011296b51f8).

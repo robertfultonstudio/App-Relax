@@ -1,4 +1,5 @@
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { Buffer } from "node:buffer";
+import { closeSync, openSync, readSync, readdirSync, statSync } from "node:fs";
 import { extname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -53,7 +54,13 @@ function hasRejectedSignature(filePath) {
     return undefined;
   }
 
-  const header = readFileSync(filePath).subarray(0, 64);
+  const header = Buffer.alloc(Math.min(size, 64));
+  const descriptor = openSync(filePath, "r");
+  try {
+    readSync(descriptor, header, 0, header.length, 0);
+  } finally {
+    closeSync(descriptor);
+  }
   if (
     header.length >= 4 &&
     header.subarray(0, 4).toString("ascii") === "icns"

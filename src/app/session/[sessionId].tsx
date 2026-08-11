@@ -1,6 +1,12 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useLocalSearchParams } from "expo-router";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  type ScrollView,
+} from "react-native";
 import { AmbientScreen } from "@/components/AmbientScreen";
 import { SourceControl } from "@/components/SourceControl";
 import { TopBar } from "@/components/TopBar";
@@ -37,6 +43,8 @@ export default function SessionScreen() {
   const { sessionId } = useLocalSearchParams<{ sessionId: string }>();
   const preset = getPreset(sessionId);
   const { controller, snapshot } = useAudioSession();
+  const scrollRef = useRef<ScrollView>(null);
+  const mixOffsetY = useRef(0);
 
   useEffect(() => {
     if (preset) {
@@ -59,7 +67,10 @@ export default function SessionScreen() {
   const timerLocked = isPlaying || isFading;
 
   return (
-    <AmbientScreen>
+    <AmbientScreen
+      scrollProps={{ testID: "session-scroll" }}
+      scrollRef={scrollRef}
+    >
       <TopBar label="SLEEP RITUAL" showBack />
 
       <View
@@ -85,7 +96,7 @@ export default function SessionScreen() {
       <View style={styles.tags}>
         <Text style={styles.tag}>{preset.tuningLabel} label</Text>
         <Text style={styles.tag}>{preset.beatHz} Hz beat</Text>
-        <Text style={styles.tag}>placeholder stems</Text>
+        <Text style={styles.tag}>3 sleep layers</Text>
       </View>
 
       <Text
@@ -105,6 +116,7 @@ export default function SessionScreen() {
             disabled={timerLocked}
             key={minutes}
             onPress={() => void controller.setTimer(minutes)}
+            testID={`timer-${minutes}`}
             style={({ pressed }) => [
               styles.duration,
               snapshot.selectedDurationMinutes === minutes &&
@@ -144,6 +156,7 @@ export default function SessionScreen() {
           accessibilityRole="button"
           disabled={snapshot.status === "loading" || snapshot.status === "idle"}
           onPress={() => void controller.stop()}
+          testID="player-stop"
           style={({ pressed }) => [
             styles.secondaryButton,
             pressed && styles.pressed,
@@ -159,6 +172,7 @@ export default function SessionScreen() {
           onPress={() =>
             void (isPlaying ? controller.pause() : controller.play())
           }
+          testID="player-play-pause"
           style={({ pressed }) => [
             styles.primaryButton,
             pressed && styles.pressed,
@@ -166,17 +180,44 @@ export default function SessionScreen() {
         >
           <Text style={styles.primaryGlyph}>{isPlaying ? "Ⅱ" : "▶"}</Text>
         </Pressable>
-        <View style={styles.secondaryButton}>
-          <Text style={styles.headphoneGlyph}>⌁</Text>
-        </View>
+        <Pressable
+          accessibilityLabel="Open mixer"
+          accessibilityRole="button"
+          onPress={() =>
+            scrollRef.current?.scrollTo({
+              y: mixOffsetY.current,
+              animated: false,
+            })
+          }
+          style={({ pressed }) => [
+            styles.secondaryButton,
+            pressed && styles.pressed,
+          ]}
+          testID="player-open-mixer"
+        >
+          <Text style={styles.headphoneGlyph}>≋</Text>
+        </Pressable>
       </View>
 
-      <View style={styles.mixHeader}>
+      <View
+        onLayout={(event) => {
+          mixOffsetY.current = event.nativeEvent.layout.y;
+        }}
+        style={styles.mixHeader}
+      >
         <View>
           <Text style={styles.mixTitle}>The living mix</Text>
           <Text style={styles.mixSubtitle}>Fine-tune only if you want to.</Text>
         </View>
-        <Text style={styles.mixCount}>5 SOURCES</Text>
+        <Pressable
+          accessibilityLabel="Return to player controls"
+          accessibilityRole="button"
+          onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: false })}
+          style={({ pressed }) => pressed && styles.pressed}
+          testID="player-return-controls"
+        >
+          <Text style={styles.mixCount}>PLAYER ↑</Text>
+        </Pressable>
       </View>
       <View style={styles.mixCard}>
         {AUDIO_SOURCE_IDS.map((sourceId) => (

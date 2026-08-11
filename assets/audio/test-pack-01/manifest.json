@@ -1,0 +1,117 @@
+{
+  "schemaVersion": 1,
+  "packId": "AUDIO_TEST_PACK_01",
+  "presetId": "deep-sleep-432",
+  "placeholder": false,
+  "validatedAt": "2026-08-10",
+  "validationTool": "codex-pcm24-validator/1",
+  "automaticValidation": "pass",
+  "listeningApproval": "pending",
+  "deviceValidation": "pending",
+  "decodedFloat32EstimateBytes": 207360000,
+  "rightsStatement": "The user supplied these files and explicitly instructed Codex to use them in this app; independent ownership verification was not performed.",
+  "assets": [
+    {
+      "id": "sleep-drone-001",
+      "role": "drone",
+      "filename": "SLEEP_DRONE_001.wav",
+      "sourceFilename": "SLEEP_DRONE_001_A432.wav",
+      "description": "User-produced A=432 Hz sleep drone.",
+      "format": {
+        "container": "WAV",
+        "codec": "PCM",
+        "bitDepth": 24,
+        "sampleRate": 48000,
+        "channels": 2,
+        "frames": 8640000,
+        "durationSeconds": 180,
+        "loopStartFrame": 0,
+        "loopEndFrameExclusive": 8640000
+      },
+      "metrics": {
+        "peakDbfsLR": [-3.18, -2.336],
+        "rmsDbfsLR": [-14.787, -14.242],
+        "dcDbfsLR": [-100.43, -91.44],
+        "stereoCorrelation": 0.894482,
+        "monoLossDb": 0.239,
+        "clippedSamples": 0,
+        "nonfiniteSamples": 0
+      },
+      "loop": {
+        "boundaryStepLR": [0.03885304927825928, 0.029720187187194824],
+        "boundaryRatioToInternalP999LR": [0.613, 0.472],
+        "slopeResidualRatioLR": [0.43, 0.391],
+        "automaticResult": "pass"
+      },
+      "sha256": "7d5e9fb340a3273f9e75496900bb59ba20b056b54af6b0ad479883d2ca07e8f3"
+    },
+    {
+      "id": "sleep-ambience-001",
+      "role": "ambience",
+      "filename": "SLEEP_AMBIENCE_001.wav",
+      "sourceFilename": "SLEEP_AMBIENCE_001_RIVER.wav",
+      "description": "User-produced and processed river field recording.",
+      "format": {
+        "container": "WAV",
+        "codec": "PCM",
+        "bitDepth": 24,
+        "sampleRate": 48000,
+        "channels": 2,
+        "frames": 8640000,
+        "durationSeconds": 180,
+        "loopStartFrame": 0,
+        "loopEndFrameExclusive": 8640000
+      },
+      "metrics": {
+        "peakDbfsLR": [-8.013, -8.023],
+        "rmsDbfsLR": [-23.518, -23.42],
+        "dcDbfsLR": [-108.85, -131.57],
+        "stereoCorrelation": 0.65968,
+        "monoLossDb": 0.81,
+        "clippedSamples": 0,
+        "nonfiniteSamples": 0
+      },
+      "loop": {
+        "boundaryStepLR": [0.003275156021118164, 0.010875463485717773],
+        "boundaryRatioToInternalP999LR": [0.043, 0.144],
+        "slopeResidualRatioLR": [0.023, 0.026],
+        "automaticResult": "pass"
+      },
+      "sha256": "796b1109753fa68257a5a01cedbbd3e8159d0bd8ad5a15d15354ce3785093761"
+    },
+    {
+      "id": "sleep-texture-001",
+      "role": "texture",
+      "filename": "SLEEP_TEXTURE_001.wav",
+      "sourceFilename": "SLEEP_TEXTURE_001_AIR.wav",
+      "description": "User-produced low-density air texture.",
+      "format": {
+        "container": "WAV",
+        "codec": "PCM",
+        "bitDepth": 24,
+        "sampleRate": 48000,
+        "channels": 2,
+        "frames": 8640000,
+        "durationSeconds": 180,
+        "loopStartFrame": 0,
+        "loopEndFrameExclusive": 8640000
+      },
+      "metrics": {
+        "peakDbfsLR": [-2.021, -2.023],
+        "rmsDbfsLR": [-14.497, -14.523],
+        "dcDbfsLR": [-99.83, -101.36],
+        "stereoCorrelation": 0.817682,
+        "monoLossDb": 0.415,
+        "clippedSamples": 0,
+        "nonfiniteSamples": 0
+      },
+      "loop": {
+        "boundaryStepLR": [0.006578207015991211, 0.010034918785095215],
+        "boundaryRatioToInternalP999LR": [0.213, 0.316],
+        "slopeResidualRatioLR": [0.02, 0.125],
+        "automaticResult": "pass"
+      },
+      "sha256": "92c8e9e655cddeec002652e49bb51b0a9f47865fe684bb47600dd1485079107f"
+    }
+  ]
+}

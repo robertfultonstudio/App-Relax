@@ -5,9 +5,9 @@ Data: 10 agosto 2026
 
 ## Risultato finale
 
-Una development build Expo installabile su telefono reale che permetta Home -> Sleep -> `Deep Sleep 432` -> player e riproduca una sola sessione composta da tre stem placeholder, binaural beat e brown noise, con mix, timer, fade e persistenza minima.
+Una development build Expo installabile che permetta Home -> Sleep -> `Deep Sleep 432` -> player e riproduca una sola sessione composta dai tre stem reali di `AUDIO TEST PACK 01`, binaural beat e brown noise, con mix, timer, fade e persistenza minima.
 
-La milestone termina al gate `AUDIO TEST PACK 01`; non integra ancora i WAV reali.
+Il Test Pack e integrato localmente su autorizzazione esplicita. La milestone termina ora al gate device/ascolto, senza ampliare catalogo o richiedere altri asset.
 
 ## Vincoli
 
@@ -33,11 +33,11 @@ SDK 57, Router, strict TypeScript, dev client, AsyncStorage, RNAA e config plugi
 
 Schema versionato, unico preset, tuning/carrier/beat separati e mix conservativo. Prova: unit test.
 
-### WP3 - Motore audio placeholder — completato a livello repository
+### WP3 - Motore audio streaming — completato a livello repository; runtime Android parziale verificato
 
-Tre buffer loopabili, oscillatori stereo, brown noise, gain per sorgente, master fade, stop schedulato sul clock audio e cleanup transazionale. Prova: test fake/DSP, validator WAV, bundle Metro e prebuild config plugin.
+Tre file source incrementali e distinti, instradati via media-element verso gain separati, oscillatori stereo, brown noise, master fade, stop schedulato sul clock audio e cleanup transazionale. Prova: test fake/DSP, validator WAV, bundle Metro e avvio su emulatore Android.
 
-[F] La compilazione nativa Android di RNAA 0.13.2 con RN 0.86.2 e dimostrata dalla build EAS `FINISHED`. [U] `NON DETERMINATO — EVIDENZA INSUFFICIENTE`: avvio, playback e lifecycle audio fino allo smoke test su telefono reale; iOS resta non compilato.
+[F] La compilazione nativa Android di RNAA 0.13.2 con RN 0.86.2 e dimostrata dalla build EAS `FINISHED`. [F] L'emulatore API 34 x86_64 ha raggiunto Ready e Play con i tre hash reali e AAudio attivo senza riprodurre il precedente OOM. [U] Telefono reale e iOS restano aperti.
 
 ### WP4 - Esperienza verticale — completato a livello repository
 
@@ -51,17 +51,25 @@ Deadline assoluta, fade terminale, stop audio nativo, persistenza senza autoplay
 
 - install frozen e peer dependency;
 - lint e typecheck;
-- 30 test in 8 suite, inclusi 19 test audio;
+- 37 test in 9 suite, inclusi 26 test audio;
 - validatori audio e progetto;
 - Expo Doctor 20/20;
 - export Hermes iOS e Android;
 - prebuild isolato senza installazioni native.
 
-### Gate B - EAS cloud Android — completato
+### Gate B1 - EAS cloud Android development client — completato
 
 Profilo `development-android`, SDK 57 e APK internal distribution verificati nella build `73cd8dfc-4692-4d85-84e7-a3be7b0d3ed7`, stato `FINISHED`. APK integro e checksum registrato; quota Free dopo build `1/15`, costo zero. Il gate di compilazione nativa Android e verde, mentre l'esecuzione audio richiede Gate C.
 
-### Gate C - Telefono Android reale — non determinato
+### Gate B2 - EAS cloud Android standalone preview — completato
+
+Profilo `preview-android`, bundle e Test Pack incorporati nella build `c3a39414-d156-4373-810a-0011296b51f8`, stato `FINISHED`. APK 289.861.086 byte, SHA-256 `47a6603108f6aee3464f6a63ae00f0b0fdb287d375a391d1a9210043e6b0a2a6`; ZIP, quattro ABI, bundle e tre WAV verificati. Quota Free dopo build `2/15` Android, costo zero.
+
+### Gate C1 - Emulatore Android API 34 — completato entro i confini emulatore
+
+Il development client ha caricato via Metro il bundle corrente: navigazione, cache dei tre stem, hash, Ready e timer sono verificati. Dopo aver reso la notifica Android best-effort e non bloccante, il rerun ha raggiunto `RITUAL IN PROGRESS`, timer in decremento e AAudio stereo 48 kHz; l'utente ha confermato suono udibile. La preview standalone e stata poi reinstallata con dati app puliti e Metro spento: Home, Ready, Play e timer 28:55 sono verdi. Durante un ascolto successivo AAudio e AudioFlinger sono rimasti continui e senza underrun, mentre QEMU ha riaperto due volte l'output CoreAudio con gap di circa 22 ms e 11 ms: i glitch osservati sono quindi localizzati nel ponte emulatore/host. Trigger preciso e comportamento su telefono restano `NON DETERMINATO — EVIDENZA INSUFFICIENTE`.
+
+### Gate C2 - Telefono Android reale — non determinato
 
 Installare l'APK e provare navigazione, cinque sorgenti, timer, speaker, cuffie/Bluetooth, background, lock-screen e interruzioni. Disponibilita device: `NON DETERMINATO — EVIDENZA INSUFFICIENTE`.
 
@@ -69,10 +77,10 @@ Installare l'APK e provare navigazione, cinque sorgenti, timer, speaker, cuffie/
 
 Profilo `development-ios` gia configurato. Richiede account Expo, Apple Developer Program attivo, credenziali di firma e registrazione iPhone. Non richiede un nuovo Mac.
 
-### Gate E - AUDIO TEST PACK 01 — bloccato
+### Gate E - AUDIO TEST PACK 01 — integrato localmente
 
-Aprire solo dopo una development build placeholder funzionante e il primo smoke test su telefono reale. Chiedere esclusivamente i tre WAV gia elencati in `docs/AUDIO_REQUESTS.md`.
+Ricevuti e cablati esclusivamente i tre WAV elencati in `docs/AUDIO_REQUESTS.md`. Nessun asset ulteriore prima dell'approvazione umana del preset.
 
 ## Condizione di arresto
 
-Il Gate B e stato autorizzato e completato. Il lavoro autonomo si arresta ora prima dell'installazione fisica se non e disponibile un telefono Android e prima di qualunque seconda build, iOS o submission, che richiedono nuova approvazione. Nessuna richiesta audio viene anticipata.
+I Gate B1/B2 e l'ascolto base su emulatore sono completati. Il lavoro si arresta prima di qualunque ulteriore build, iOS, submission o richiesta di altri asset. Il prossimo gate di prodotto e il telefono Android reale.

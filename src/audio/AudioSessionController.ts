@@ -21,8 +21,8 @@ const SOURCE_METADATA: Record<
   { label: string; kind: SourceKind }
 > = {
   drone: { label: "Moon drone", kind: "stem" },
-  ambience: { label: "Night air", kind: "stem" },
-  texture: { label: "Soft grain", kind: "stem" },
+  ambience: { label: "Deep river", kind: "stem" },
+  texture: { label: "Air texture", kind: "stem" },
   binaural: { label: "Binaural pulse", kind: "binaural" },
   brownNoise: { label: "Brown noise", kind: "noise" },
 };

@@ -11,12 +11,13 @@ function listFiles(directory: string): string[] {
 }
 
 describe("product and asset request contracts", () => {
-  it("keeps AUDIO TEST PACK 01 locked to exactly three requested files", () => {
+  it("keeps AUDIO TEST PACK 01 integrated and limited to exactly three canonical files", () => {
     const request = readFileSync(
       join(projectRoot, "docs", "AUDIO_REQUESTS.md"),
       "utf8",
     );
-    expect(request).toContain("LOCKED");
+    expect(request).toContain("RICEVUTO E INTEGRATO LOCALMENTE");
+    expect(request).toContain("Non richiedere cover");
     const names = [...request.matchAll(/`(SLEEP_[A-Z]+_001\.wav)`/g)].map(
       (match) => match[1],
     );
@@ -52,6 +53,13 @@ describe("product and asset request contracts", () => {
     expect(registry).not.toMatch(
       /Yoga Flow|Wellness Session|Meditation Background/,
     );
+
+    const player = readFileSync(
+      join(projectRoot, "src", "app", "session", "[sessionId].tsx"),
+      "utf8",
+    );
+    expect(player).toContain('testID="player-open-mixer"');
+    expect(player).toContain('testID="player-return-controls"');
   });
 
   it("does not introduce prohibited affirmative marketing phrases", () => {
@@ -63,6 +71,7 @@ describe("product and asset request contracts", () => {
     expect(copy).not.toMatch(
       /repair DNA|tinnitus treatment|clinically proven|guaranteed healing/i,
     );
+    expect(copy).not.toContain("placeholder stems");
     expect(copy).toContain("does not diagnose, treat, cure or prevent");
   });
 });

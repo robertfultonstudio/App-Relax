@@ -11,15 +11,16 @@ La milestone usa cinque livelli distinti: test puri, integrazione con driver fak
 - Schema preset valido e versione supportata.
 - `tuningLabel`, `carrierHz` e `beatHz` separati.
 - Un solo preset registrato e quattro categorie esatte.
-- Richiesta `AUDIO TEST PACK 01` bloccata e limitata a tre nomi.
+- `AUDIO TEST PACK 01` integrato e limitato a tre nomi canonici.
 - Copy senza promesse mediche affermative.
 
-### DSP e placeholder
+### DSP e asset audio
 
 - Binaural: frequenze sinistra/destra con differenza uguale a `beatHz`.
 - Brown noise: output deterministico con RNG seeded, centrato e normalizzato.
 - Placeholder: esattamente tre WAV PCM 16-bit, 48 kHz, stereo, 8 secondi, manifest e SHA-256 coerenti.
-- I placeholder sono tecnici e non simulano le specifiche 24-bit/180 s del pack reale.
+- Test Pack: esattamente tre WAV PCM 24-bit, 48 kHz, stereo, 180 secondi, metriche, loop, manifest e SHA-256 coerenti.
+- I placeholder restano fixture tecniche e non sono referenziati dal preset.
 
 ### Controller
 
@@ -38,7 +39,7 @@ La milestone usa cinque livelli distinti: test puri, integrazione con driver fak
 ### UI
 
 - Home mostra Sleep, Calm, Focus e Meditate.
-- Hero unico `Deep Sleep 432` e badge placeholder.
+- Hero unico `Deep Sleep 432` e badge Early Access.
 - Stato fade di ogni sorgente e esposto testualmente insieme a gain/mute.
 
 ## Gate locali
@@ -52,6 +53,7 @@ pnpm typecheck
 pnpm test
 pnpm test:audio
 pnpm audio:validate-placeholders
+pnpm audio:validate-test-pack
 pnpm assets:validate-safety
 pnpm security:audit
 pnpm config:validate
@@ -63,7 +65,7 @@ pnpm exec expo export --platform android --output-dir dist/android-bundle
 
 `security:audit` accetta soltanto i due advisory `image-size` esplicitamente documentati in D-015 e fallisce su qualsiasi altro advisory o cambio di versione. Il comando raw `pnpm audit --audit-level high` resta atteso exit 1 finche non esiste una release corretta; entrambi gli esiti vanno riportati.
 
-Ultima esecuzione verificata il 10 agosto 2026: 8 suite/30 test, subset audio 19/19, Expo Doctor 20/20, entrambi gli export Hermes completati.
+Ultima esecuzione verificata l'11 agosto 2026: 9 suite/37 test, subset audio 26/26, lint/typecheck/Prettier verdi; i test aggiunti provano che la notifica Android non blocchi l'avvio udibile, che un permesso risolto in ritardo non ripristini controlli `playing` dopo pausa o stop e che un aggiornamento `playing` gia in volo venga riconciliato allo stato `paused`. Expo Doctor 20/20 ed export Hermes iOS/Android rigenerati dopo il fix finale sono verdi; ogni output contiene esattamente tre asset da 51.840.044 byte con gli SHA-256 del Test Pack.
 
 Il prebuild di verifica va eseguito soltanto in una copia temporanea e con `--no-install`; non deve generare `ios/` o `android/` nel checkout.
 
@@ -71,7 +73,7 @@ Il prebuild di verifica va eseguito soltanto in una copia temporanea e con `--no
 
 I profili sono separati per evitare autorizzazioni implicite.
 
-### Android prima
+### Android development client
 
 Comando autorizzato ed eseguito una sola volta:
 
@@ -79,7 +81,17 @@ Comando autorizzato ed eseguito una sola volta:
 EAS_NO_VCS=1 pnpm dlx eas-cli@21.7.1 build --platform android --profile development-android
 ```
 
-Esito cloud: build `73cd8dfc-4692-4d85-84e7-a3be7b0d3ed7` `FINISHED`, Expo SDK 57.0.0; APK 299.803.135 byte con SHA-256 `d54a5333b40574baeb6560879a743ad1722619df6f6c676669e62bf7feff4ae7`; ZIP, manifest, otto DEX, quattro ABI e scan mirato di leakage/segreti verdi. La compilazione nativa e accettata; installabilita e runtime restano aperti fino al telefono reale.
+Esito cloud: build `73cd8dfc-4692-4d85-84e7-a3be7b0d3ed7` `FINISHED`, Expo SDK 57.0.0; APK 299.803.135 byte con SHA-256 `d54a5333b40574baeb6560879a743ad1722619df6f6c676669e62bf7feff4ae7`; ZIP, manifest, otto DEX, quattro ABI e scan mirato di leakage/segreti verdi. L'APK contiene il development client e ha caricato via Metro il JavaScript e i tre WAV correnti.
+
+### Android standalone preview
+
+Comando autorizzato ed eseguito una sola volta:
+
+```bash
+EAS_NO_VCS=1 pnpm dlx eas-cli@21.7.1 build --platform android --profile preview-android --freeze-credentials --no-wait
+```
+
+Esito cloud: build `c3a39414-d156-4373-810a-0011296b51f8` `FINISHED`, APK 289.861.086 byte con SHA-256 `47a6603108f6aee3464f6a63ae00f0b0fdb287d375a391d1a9210043e6b0a2a6`. Sono verdi ZIP, manifest, quattro DEX, quattro ABI, bundle incorporato, hash dei tre WAV, assenza placeholder e scan mirato di leakage/segreti. Dopo installazione pulita su emulatore API 34, Home, player Ready e Play hanno funzionato con Metro spento; screenshot `RITUAL IN PROGRESS` con timer 28:55 registrato in `dist/eas/`.
 
 ### iOS dopo
 
@@ -95,7 +107,7 @@ Non usare `--platform all`, `--auto-submit` o `eas submit`.
 
 ## Smoke test su telefono reale
 
-- Installazione e avvio development build.
+- Installazione e avvio dell'APK standalone verificato.
 - Navigazione Home -> Sleep -> player -> Settings/Legal.
 - Play, pausa, stop, timer e fade.
 - Mute/gain di ciascuna delle cinque sorgenti.
