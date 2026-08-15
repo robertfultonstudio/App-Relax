@@ -30,7 +30,9 @@ export function TopBar({
         </Pressable>
       ) : (
         <View style={styles.mark} accessibilityElementsHidden>
-          <View style={styles.markInner} />
+          <View style={[styles.markStroke, styles.markStrokeTop]} />
+          <View style={[styles.markStroke, styles.markStrokeMiddle]} />
+          <View style={[styles.markStroke, styles.markStrokeBottom]} />
         </View>
       )}
       <Text style={styles.label}>{label}</Text>
@@ -59,21 +61,20 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   mark: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    borderWidth: 1,
-    borderColor: colors.moon,
-    alignItems: "center",
+    width: 40,
+    height: 36,
     justifyContent: "center",
   },
-  markInner: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+  markStroke: {
+    position: "absolute",
+    height: 2,
+    borderRadius: 2,
     backgroundColor: colors.moon,
-    opacity: 0.8,
+    transform: [{ rotate: "-9deg" }],
   },
+  markStrokeTop: { width: 30, left: 1, top: 10, opacity: 0.48 },
+  markStrokeMiddle: { width: 37, left: 0, top: 17, opacity: 0.9 },
+  markStrokeBottom: { width: 24, left: 8, top: 24, opacity: 0.62 },
   back: {
     width: 44,
     height: 44,
@@ -96,10 +97,11 @@ const styles = StyleSheet.create({
   },
   action: {
     color: colors.moon,
-    fontFamily: fonts.sans,
+    fontFamily: fonts.sansSemiBold,
     fontSize: 13,
-    fontWeight: "600",
+    minHeight: 44,
+    textAlignVertical: "center",
   },
-  actionSpacer: { width: 34 },
+  actionSpacer: { width: 44 },
   pressed: { opacity: 0.55 },
 });

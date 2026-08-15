@@ -11,8 +11,8 @@ export default function LegalScreen() {
         A clear listening note.
       </Text>
       <Text style={styles.intro}>
-        Ritual Audio offers ambient sound experiences for personal atmosphere,
-        rest routines and focused moments.
+        Ritual Audio is building consumer rituals, yoga journeys and soundscapes
+        for personal atmosphere. Those sections contain no playable audio yet.
       </Text>
 
       <View style={styles.card}>
@@ -21,9 +21,10 @@ export default function LegalScreen() {
           Frequency, tuning, binaural and noise labels describe sound-design
           choices, not proven health outcomes.
         </Section>
-        <Section title="432 Hz label">
-          The label belongs to the preset metadata. It is independent from the
-          180 Hz carrier and the 3.5 Hz left/right binaural difference.
+        <Section title="Technical Audio Test">
+          Moon Current, the 432 Hz tuning label and the three ATP01 WAV files
+          belong only to engine validation. They are outside the consumer
+          catalogue.
         </Section>
         <Section title="Listen safely" last>
           Keep volume comfortable. Do not use sound sessions when full attention
@@ -32,10 +33,11 @@ export default function LegalScreen() {
       </View>
 
       <View style={styles.placeholderBox}>
-        <Text style={styles.placeholderTitle}>MVP AUDIO STATUS</Text>
+        <Text style={styles.placeholderTitle}>ANDROID EVIDENCE SO FAR</Text>
         <Text style={styles.placeholderText}>
-          This preset uses the three stems from Audio Test Pack 01. Device
-          listening and final-master approval remain pending before release.
+          A previous APK was installed, opened and produced sound on a real
+          Android phone. Bluetooth, background, lock screen, interruptions,
+          battery, long listening and sound quality remain untested.
         </Text>
       </View>
       <Text style={styles.reviewNote}>

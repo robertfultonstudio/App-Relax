@@ -20,7 +20,7 @@ function assert(condition, message) {
 }
 
 assert(
-  packageJson.dependencies.expo === "~57.0.12",
+  packageJson.dependencies.expo === "~57.0.13",
   "Expo SDK 57 must remain pinned",
 );
 assert(
@@ -34,6 +34,7 @@ assert(
 
 for (const requiredIgnore of [
   "/.git/",
+  "/.pnpm-store/",
   "node_modules/",
   "/ios/",
   "/android/",

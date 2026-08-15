@@ -3,8 +3,8 @@ import type { AudioPreset } from "@/domain/audio/types";
 export const DEEP_SLEEP_432: AudioPreset = {
   schemaVersion: 1,
   id: "deep-sleep-432",
-  title: "Deep Sleep 432",
-  subtitle: "432 drone · deep river · air texture",
+  title: "Audio Test — Moon Current",
+  subtitle: "Test only: engine validation with three authorised WAV stems.",
   goal: "sleep",
   tuningLabel: "432 Hz",
   carrierHz: 180,

@@ -1,16 +1,12 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useLocalSearchParams } from "expo-router";
-import {
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-  type ScrollView,
-} from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { AmbientScreen } from "@/components/AmbientScreen";
+import { RitualArtwork } from "@/components/RitualArtwork";
 import { SourceControl } from "@/components/SourceControl";
 import { TopBar } from "@/components/TopBar";
 import { useAudioSession } from "@/audio/AudioProvider";
+import { getRitualForPreset, requireRitualTheme } from "@/content/rituals";
 import { AUDIO_SOURCE_IDS } from "@/domain/audio/types";
 import { getPreset } from "@/presets/presetRegistry";
 import { colors, fonts, radii, spacing } from "@/design/theme";
@@ -25,79 +21,77 @@ function formatRemaining(milliseconds: number): string {
 function statusLabel(status: string): string {
   switch (status) {
     case "loading":
-      return "PREPARING LAYERS";
+      return "PREPARING TEST AUDIO";
     case "playing":
-      return "RITUAL IN PROGRESS";
+      return "PLAYING TEST";
     case "paused":
-      return "PAUSED";
+      return "TEST PAUSED";
     case "fadingOut":
-      return "DRIFTING TO QUIET";
+      return "STOPPING TEST";
     case "error":
-      return "AUDIO NEEDS ATTENTION";
+      return "TEST AUDIO NEEDS ATTENTION";
     default:
-      return "READY WHEN YOU ARE";
+      return "ENGINE READY";
   }
 }
 
 export default function SessionScreen() {
   const { sessionId } = useLocalSearchParams<{ sessionId: string }>();
   const preset = getPreset(sessionId);
+  const ritual = preset ? getRitualForPreset(preset.id) : undefined;
   const { controller, snapshot } = useAudioSession();
-  const scrollRef = useRef<ScrollView>(null);
-  const mixOffsetY = useRef(0);
+  const [mixerOpen, setMixerOpen] = useState(false);
+  const [aboutOpen, setAboutOpen] = useState(false);
 
   useEffect(() => {
-    if (preset) {
+    if (preset && ritual?.availability === "test-only") {
       void controller.loadPreset(preset);
     }
-  }, [controller, preset]);
+  }, [controller, preset, ritual]);
 
-  if (!preset) {
+  if (!preset || !ritual || ritual.availability !== "test-only") {
     return (
       <AmbientScreen>
         <TopBar showBack />
-        <Text style={styles.title}>This ritual is not available.</Text>
+        <Text style={styles.unavailableTitle}>
+          This audio test is unavailable.
+        </Text>
       </AmbientScreen>
     );
   }
 
+  const theme = requireRitualTheme(ritual.themeId);
   const isPlaying = snapshot.status === "playing";
   const isFading = snapshot.status === "fadingOut";
   const canPlay = snapshot.status === "ready" || snapshot.status === "paused";
   const timerLocked = isPlaying || isFading;
+  const stopDisabled =
+    snapshot.status === "loading" || snapshot.status === "idle";
 
   return (
-    <AmbientScreen
-      scrollProps={{ testID: "session-scroll" }}
-      scrollRef={scrollRef}
-    >
-      <TopBar label="SLEEP RITUAL" showBack />
+    <AmbientScreen scrollProps={{ testID: "session-scroll" }} theme={theme}>
+      <TopBar label="AUDIO TEST" showBack />
 
-      <View
-        style={styles.visual}
-        accessibilityLabel={`Player status: ${statusLabel(snapshot.status)}`}
-      >
-        <View style={styles.outerOrbit} />
-        <View style={styles.middleOrbit} />
-        <View
-          style={[styles.core, (isPlaying || isFading) && styles.coreActive]}
-        >
-          <View style={styles.coreCutout} />
-        </View>
-        <View style={styles.dotOne} />
-        <View style={styles.dotTwo} />
+      <View accessibilityRole="summary" style={styles.testBanner}>
+        <Text style={styles.testLabel}>TEST ONLY</Text>
+        <Text style={styles.testCopy}>
+          Engine validation. This material is outside the consumer catalogue.
+        </Text>
       </View>
 
-      <Text style={styles.status}>{statusLabel(snapshot.status)}</Text>
-      <Text accessibilityRole="header" style={styles.title}>
-        {preset.title}
+      <RitualArtwork
+        active={isPlaying || isFading}
+        ritual={ritual}
+        theme={theme}
+      />
+
+      <Text style={[styles.status, { color: theme.palette.accent }]}>
+        {statusLabel(snapshot.status)}
       </Text>
-      <Text style={styles.subtitle}>{preset.subtitle}</Text>
-      <View style={styles.tags}>
-        <Text style={styles.tag}>{preset.tuningLabel} label</Text>
-        <Text style={styles.tag}>{preset.beatHz} Hz beat</Text>
-        <Text style={styles.tag}>3 sleep layers</Text>
-      </View>
+      <Text accessibilityRole="header" style={styles.title}>
+        {ritual.title}
+      </Text>
+      <Text style={styles.subtitle}>{ritual.shortDescription}</Text>
 
       <Text
         accessibilityLabel={`${formatRemaining(snapshot.remainingMs)} remaining`}
@@ -105,9 +99,10 @@ export default function SessionScreen() {
       >
         {formatRemaining(snapshot.remainingMs)}
       </Text>
-      <View style={styles.durationRow}>
+      <View accessibilityLabel="Audio test duration" style={styles.durationRow}>
         {preset.durationOptionsMinutes.map((minutes) => (
           <Pressable
+            accessibilityLabel={`${minutes} minutes`}
             accessibilityRole="button"
             accessibilityState={{
               disabled: timerLocked,
@@ -142,30 +137,35 @@ export default function SessionScreen() {
         <View accessibilityRole="alert" style={styles.errorBox}>
           <Text style={styles.errorText}>{snapshot.error}</Text>
           <Pressable
+            accessibilityRole="button"
             onPress={() => void controller.loadPreset(preset)}
             style={styles.retry}
           >
-            <Text style={styles.retryText}>Retry load</Text>
+            <Text style={styles.retryText}>Retry</Text>
           </Pressable>
         </View>
       ) : null}
 
       <View style={styles.transport}>
         <Pressable
-          accessibilityLabel="Stop session"
+          accessibilityLabel="Stop audio test"
           accessibilityRole="button"
-          disabled={snapshot.status === "loading" || snapshot.status === "idle"}
+          accessibilityState={{ disabled: stopDisabled }}
+          disabled={stopDisabled}
           onPress={() => void controller.stop()}
           testID="player-stop"
           style={({ pressed }) => [
             styles.secondaryButton,
+            stopDisabled && styles.disabled,
             pressed && styles.pressed,
           ]}
         >
-          <Text style={styles.stopGlyph}>■</Text>
+          <Text style={styles.secondaryButtonText}>Stop</Text>
         </Pressable>
         <Pressable
-          accessibilityLabel={isPlaying ? "Pause session" : "Play session"}
+          accessibilityLabel={
+            isPlaying ? "Pause audio test" : "Play audio test"
+          }
           accessibilityRole="button"
           accessibilityState={{ disabled: !isPlaying && !canPlay }}
           disabled={!isPlaying && !canPlay}
@@ -175,186 +175,155 @@ export default function SessionScreen() {
           testID="player-play-pause"
           style={({ pressed }) => [
             styles.primaryButton,
+            !isPlaying && !canPlay && styles.disabled,
             pressed && styles.pressed,
           ]}
         >
-          <Text style={styles.primaryGlyph}>{isPlaying ? "Ⅱ" : "▶"}</Text>
-        </Pressable>
-        <Pressable
-          accessibilityLabel="Open mixer"
-          accessibilityRole="button"
-          onPress={() =>
-            scrollRef.current?.scrollTo({
-              y: mixOffsetY.current,
-              animated: false,
-            })
-          }
-          style={({ pressed }) => [
-            styles.secondaryButton,
-            pressed && styles.pressed,
-          ]}
-          testID="player-open-mixer"
-        >
-          <Text style={styles.headphoneGlyph}>≋</Text>
+          <Text style={styles.primaryButtonText}>
+            {isPlaying ? "Pause" : "Play"}
+          </Text>
         </Pressable>
       </View>
 
-      <View
-        onLayout={(event) => {
-          mixOffsetY.current = event.nativeEvent.layout.y;
-        }}
-        style={styles.mixHeader}
+      <Disclosure
+        label="Volume & mute"
+        onPress={() => setMixerOpen((open) => !open)}
+        open={mixerOpen}
+        testID="player-open-mixer"
       >
-        <View>
-          <Text style={styles.mixTitle}>The living mix</Text>
-          <Text style={styles.mixSubtitle}>Fine-tune only if you want to.</Text>
-        </View>
-        <Pressable
-          accessibilityLabel="Return to player controls"
-          accessibilityRole="button"
-          onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: false })}
-          style={({ pressed }) => pressed && styles.pressed}
-          testID="player-return-controls"
-        >
-          <Text style={styles.mixCount}>PLAYER ↑</Text>
-        </Pressable>
-      </View>
-      <View style={styles.mixCard}>
-        {AUDIO_SOURCE_IDS.map((sourceId) => (
-          <SourceControl
-            key={sourceId}
-            onGainChange={(gain) =>
-              void controller.setSourceGain(sourceId, gain)
-            }
-            onToggleMuted={() =>
-              void controller.setSourceMuted(
-                sourceId,
-                !snapshot.sources[sourceId].muted,
-              )
-            }
-            source={snapshot.sources[sourceId]}
-          />
-        ))}
-      </View>
-
-      <View style={styles.note}>
-        <Text style={styles.noteTitle}>STEREO NOTE</Text>
-        <Text style={styles.noteText}>
-          Headphones reveal the left/right binaural separation. This session is
-          for atmosphere and personal ritual, not medical treatment.
+        <Text style={styles.disclosureIntro}>
+          Technical controls for the five engine layers. This panel is not part
+          of the consumer product.
         </Text>
-      </View>
+        <View style={styles.mixCard}>
+          {AUDIO_SOURCE_IDS.map((sourceId) => (
+            <SourceControl
+              displayLabel={ritual.mixerLabels[sourceId]}
+              key={sourceId}
+              onGainChange={(gain) =>
+                void controller.setSourceGain(sourceId, gain)
+              }
+              onToggleMuted={() =>
+                void controller.setSourceMuted(
+                  sourceId,
+                  !snapshot.sources[sourceId].muted,
+                )
+              }
+              source={snapshot.sources[sourceId]}
+            />
+          ))}
+        </View>
+      </Disclosure>
+
+      <Disclosure
+        label="Test details"
+        onPress={() => setAboutOpen((open) => !open)}
+        open={aboutOpen}
+        testID="player-about-sound"
+      >
+        <Text style={styles.aboutText}>{ritual.aboutSound?.summary}</Text>
+        {ritual.aboutSound?.details.map((detail) => (
+          <Text key={detail} style={styles.aboutDetail}>
+            {detail}
+          </Text>
+        ))}
+      </Disclosure>
     </AmbientScreen>
   );
 }
 
+function Disclosure({
+  children,
+  label,
+  onPress,
+  open,
+  testID,
+}: {
+  children: React.ReactNode;
+  label: string;
+  onPress: () => void;
+  open: boolean;
+  testID: string;
+}) {
+  return (
+    <View style={styles.disclosure}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
+        onPress={onPress}
+        style={({ pressed }) => [
+          styles.disclosureButton,
+          pressed && styles.pressed,
+        ]}
+        testID={testID}
+      >
+        <Text style={styles.disclosureLabel}>{label}</Text>
+        <Text style={styles.disclosureGlyph}>{open ? "−" : "+"}</Text>
+      </Pressable>
+      {open ? <View style={styles.disclosureBody}>{children}</View> : null}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  visual: {
-    height: 238,
-    alignItems: "center",
+  unavailableTitle: {
+    color: colors.text,
+    fontFamily: fonts.serif,
+    fontSize: 40,
+  },
+  testBanner: {
+    minHeight: 64,
     justifyContent: "center",
-    marginTop: spacing.xs,
-  },
-  outerOrbit: {
-    position: "absolute",
-    width: 224,
-    height: 224,
-    borderRadius: 112,
+    marginBottom: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.md,
+    backgroundColor: "rgba(196, 175, 211, 0.13)",
     borderWidth: 1,
-    borderColor: "rgba(142, 168, 200, 0.19)",
+    borderColor: "rgba(196, 175, 211, 0.38)",
   },
-  middleOrbit: {
-    position: "absolute",
-    width: 174,
-    height: 174,
-    borderRadius: 87,
-    borderWidth: 1,
-    borderColor: "rgba(212, 185, 124, 0.17)",
+  testLabel: {
+    color: "#DAC9E6",
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 9,
+    letterSpacing: 1.5,
   },
-  core: {
-    width: 118,
-    height: 118,
-    borderRadius: 59,
-    backgroundColor: "rgba(142, 168, 200, 0.22)",
-    borderWidth: 1,
-    borderColor: "rgba(243, 233, 216, 0.26)",
-    overflow: "hidden",
-  },
-  coreActive: {
-    backgroundColor: "rgba(145, 183, 163, 0.34)",
-    borderColor: colors.moss,
-  },
-  coreCutout: {
-    position: "absolute",
-    width: 104,
-    height: 104,
-    borderRadius: 52,
-    left: 28,
-    top: -8,
-    backgroundColor: colors.backgroundSoft,
-  },
-  dotOne: {
-    position: "absolute",
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: colors.moon,
-    top: 38,
-    right: 78,
-  },
-  dotTwo: {
-    position: "absolute",
-    width: 5,
-    height: 5,
-    borderRadius: 3,
-    backgroundColor: colors.dusk,
-    bottom: 34,
-    left: 86,
+  testCopy: {
+    color: colors.textMuted,
+    fontFamily: fonts.sans,
+    fontSize: 10,
+    lineHeight: 16,
+    marginTop: 4,
   },
   status: {
-    color: colors.moss,
-    fontFamily: fonts.sans,
+    fontFamily: fonts.sansSemiBold,
     fontSize: 9,
     letterSpacing: 1.8,
-    fontWeight: "700",
+    marginTop: spacing.lg,
     textAlign: "center",
   },
   title: {
     color: colors.text,
     fontFamily: fonts.serif,
-    fontSize: 35,
+    fontSize: 39,
+    lineHeight: 42,
     textAlign: "center",
-    marginTop: spacing.sm,
+    marginTop: spacing.xs,
   },
   subtitle: {
     color: colors.textMuted,
     fontFamily: fonts.sans,
-    fontSize: 12,
+    fontSize: 13,
+    lineHeight: 20,
     textAlign: "center",
-    marginTop: 7,
-  },
-  tags: {
-    flexDirection: "row",
-    justifyContent: "center",
-    flexWrap: "wrap",
-    gap: 7,
-    marginTop: spacing.md,
-  },
-  tag: {
-    color: colors.textFaint,
-    fontFamily: fonts.sans,
-    fontSize: 9,
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    borderColor: colors.surfaceLine,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.sm,
   },
   timer: {
     color: colors.text,
     fontFamily: fonts.mono,
-    fontSize: 31,
-    letterSpacing: 2.5,
+    fontSize: 30,
+    letterSpacing: 2,
     textAlign: "center",
     marginTop: spacing.lg,
   },
@@ -365,7 +334,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   duration: {
-    minHeight: 40,
+    minHeight: 44,
     justifyContent: "center",
     paddingHorizontal: spacing.md,
     borderRadius: radii.pill,
@@ -376,12 +345,11 @@ const styles = StyleSheet.create({
   durationSelected: { backgroundColor: colors.text, borderColor: colors.text },
   durationText: {
     color: colors.textMuted,
-    fontFamily: fonts.sans,
+    fontFamily: fonts.sansMedium,
     fontSize: 11,
-    fontWeight: "600",
   },
-  durationTextSelected: { color: colors.background, fontWeight: "800" },
-  disabled: { opacity: 0.48 },
+  durationTextSelected: { color: colors.background },
+  disabled: { opacity: 0.42 },
   errorBox: {
     marginTop: spacing.lg,
     padding: spacing.md,
@@ -390,93 +358,108 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.danger,
   },
-  errorText: { color: colors.text, fontSize: 12, lineHeight: 18 },
+  errorText: {
+    color: colors.text,
+    fontFamily: fonts.sans,
+    fontSize: 12,
+    lineHeight: 18,
+  },
   retry: { minHeight: 44, justifyContent: "center", alignSelf: "flex-start" },
-  retryText: { color: colors.moon, fontWeight: "700" },
+  retryText: { color: colors.moon, fontFamily: fonts.sansSemiBold },
   transport: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    gap: spacing.lg,
+    gap: spacing.sm,
     marginTop: spacing.lg,
   },
   primaryButton: {
-    width: 78,
-    height: 78,
-    borderRadius: 39,
+    minWidth: 150,
+    minHeight: 56,
     alignItems: "center",
     justifyContent: "center",
+    paddingHorizontal: spacing.xl,
+    borderRadius: radii.pill,
     backgroundColor: colors.text,
     shadowColor: colors.moon,
-    shadowOpacity: 0.2,
-    shadowRadius: 18,
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
   },
-  primaryGlyph: {
+  primaryButtonText: {
     color: colors.background,
-    fontSize: 23,
-    marginLeft: 2,
-    fontWeight: "700",
+    fontSize: 14,
+    fontFamily: fonts.sansSemiBold,
   },
   secondaryButton: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    minWidth: 96,
+    minHeight: 56,
     alignItems: "center",
     justifyContent: "center",
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.pill,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.surfaceLine,
   },
-  stopGlyph: { color: colors.textMuted, fontSize: 14 },
-  headphoneGlyph: { color: colors.textFaint, fontSize: 25 },
-  pressed: { opacity: 0.55, transform: [{ scale: 0.97 }] },
-  mixHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
-    marginTop: spacing.xxl,
-    marginBottom: spacing.md,
+  secondaryButtonText: {
+    color: colors.textMuted,
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 13,
   },
-  mixTitle: { color: colors.text, fontFamily: fonts.serif, fontSize: 24 },
-  mixSubtitle: {
-    color: colors.textFaint,
-    fontFamily: fonts.sans,
-    fontSize: 11,
-    marginTop: 3,
-  },
-  mixCount: {
-    color: colors.textFaint,
-    fontSize: 9,
-    letterSpacing: 1.1,
-    fontWeight: "700",
-  },
-  mixCard: {
-    paddingHorizontal: spacing.md,
+  pressed: { opacity: 0.58, transform: [{ scale: 0.98 }] },
+  disclosure: {
+    marginTop: spacing.md,
     borderRadius: radii.lg,
-    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.surfaceLine,
+    backgroundColor: "rgba(22, 32, 35, 0.82)",
     overflow: "hidden",
   },
-  note: {
-    marginTop: spacing.lg,
-    padding: spacing.md,
-    borderRadius: radii.md,
-    backgroundColor: "rgba(212, 185, 124, 0.08)",
-    borderLeftWidth: 2,
-    borderLeftColor: colors.moon,
+  disclosureButton: {
+    minHeight: 58,
+    paddingHorizontal: spacing.md,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
-  noteTitle: {
+  disclosureLabel: {
+    color: colors.text,
+    fontFamily: fonts.serif,
+    fontSize: 21,
+  },
+  disclosureGlyph: {
     color: colors.moon,
-    fontSize: 9,
-    letterSpacing: 1.4,
-    fontWeight: "700",
+    fontFamily: fonts.sans,
+    fontSize: 24,
   },
-  noteText: {
-    color: colors.textMuted,
+  disclosureBody: {
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.md,
+  },
+  disclosureIntro: {
+    color: colors.textFaint,
     fontFamily: fonts.sans,
     fontSize: 11,
     lineHeight: 17,
-    marginTop: 6,
+    marginBottom: spacing.sm,
+  },
+  mixCard: {
+    paddingHorizontal: spacing.sm,
+    borderRadius: radii.md,
+    backgroundColor: colors.surface,
+    overflow: "hidden",
+  },
+  aboutText: {
+    color: colors.textMuted,
+    fontFamily: fonts.sans,
+    fontSize: 12,
+    lineHeight: 19,
+  },
+  aboutDetail: {
+    color: colors.textFaint,
+    fontFamily: fonts.sans,
+    fontSize: 11,
+    lineHeight: 17,
+    marginTop: spacing.sm,
   },
 });

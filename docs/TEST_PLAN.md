@@ -10,7 +10,13 @@ La milestone usa cinque livelli distinti: test puri, integrazione con driver fak
 
 - Schema preset valido e versione supportata.
 - `tuningLabel`, `carrierHz` e `beatHz` separati.
-- Un solo preset registrato e quattro categorie esatte.
+- Un solo preset registrato e quattro temi/artwork editoriali esatti.
+- La Home espone esattamente Yoga, Massage, Relax, Meditation, Sleep e Focus.
+- Le sei azioni consumer sono `IN PRODUCTION` e prive di audio/player.
+- La gerarchia verificabile e funzione, CTA, durata/formato, naming evocativo.
+- Il solo `audioPresetId` appartiene a `AUDIO_TEST_RITUAL` con stato `test-only`.
+- Yoga espone soltanto formati futuri 20/30/45/60 minuti.
+- Soundscapes espone le famiglie future richieste senza asset audio.
 - `AUDIO TEST PACK 01` integrato e limitato a tre nomi canonici.
 - Copy senza promesse mediche affermative.
 
@@ -38,8 +44,19 @@ La milestone usa cinque livelli distinti: test puri, integrazione con driver fak
 
 ### UI
 
-- Home mostra Sleep, Calm, Focus e Meditate.
-- Hero unico `Deep Sleep 432` e badge Early Access.
+- Tab e copy esatti per Rituals, Yoga e Soundscapes.
+- Copy IA esatto per `Start your yoga session`, `Set the room for massage`,
+  `Relax now`, `Begin meditation`, `Prepare for sleep` e `Focus`.
+- Tutte le card consumer espongono `IN PRODUCTION`, disabled e nessun audio.
+- `Aquarian Sky`, Cosmic/Zen Ambient, Esoteric Series ed Elemental Worlds restano
+  famiglie editoriali future visibili.
+- Settings collega il percorso separato `Audio Test — Test only`.
+- Player e preset tecnico mostrano `TEST ONLY`; nessun tab consumer li apre.
+- `Volume & mute` e `Test details` sono chiusi al primo render.
+- I controlli Play/Pause/Stop, timer, volume e mute hanno target almeno 44x44.
+- La UI consumer non usa imitazioni di sfere/pianeti neri luminosi, waveform,
+  neuro-grafiche, frequency-first, mandala, chakra, Buddha o torii.
+- Reduce Motion rende l'artwork statico; target touch minimi 44x44.
 - Stato fade di ogni sorgente e esposto testualmente insieme a gain/mute.
 
 ## Gate locali
@@ -55,21 +72,27 @@ pnpm test:audio
 pnpm audio:validate-placeholders
 pnpm audio:validate-test-pack
 pnpm assets:validate-safety
+pnpm assets:validate-rituals
 pnpm security:audit
 pnpm config:validate
 pnpm expo:doctor
 pnpm exec expo config --type prebuild --json
-pnpm exec expo export --platform ios --output-dir dist/ios-bundle
-pnpm exec expo export --platform android --output-dir dist/android-bundle
+pnpm exec expo export --platform ios --output-dir dist/m3-final-export-ios
+pnpm exec expo export --platform android --output-dir dist/m3-final-export-android
 ```
 
 `security:audit` accetta soltanto i due advisory `image-size` esplicitamente documentati in D-015 e fallisce su qualsiasi altro advisory o cambio di versione. Il comando raw `pnpm audit --audit-level high` resta atteso exit 1 finche non esiste una release corretta; entrambi gli esiti vanno riportati.
 
-Ultima esecuzione verificata l'11 agosto 2026: 9 suite/37 test, subset audio 26/26, lint/typecheck/Prettier verdi; i test aggiunti provano che la notifica Android non blocchi l'avvio udibile, che un permesso risolto in ritardo non ripristini controlli `playing` dopo pausa o stop e che un aggiornamento `playing` gia in volo venga riconciliato allo stato `paused`. Expo Doctor 20/20 ed export Hermes iOS/Android rigenerati dopo il fix finale sono verdi; ogni output contiene esattamente tre asset da 51.840.044 byte con gli SHA-256 del Test Pack.
+Baseline M2 verificata il 12 agosto 2026: lint, TypeScript, 12 suite/47 test,
+subset audio 26/26, validatori, config ed Expo Doctor 20/20 verdi. M3 deve
+rigenerare tutte le prove, gli export e gli screenshot prima del visual gate.
 
 Il prebuild di verifica va eseguito soltanto in una copia temporanea e con `--no-install`; non deve generare `ios/` o `android/` nel checkout.
 
-## Gate EAS cloud
+## Gate EAS cloud storico e futuro
+
+M3 non autorizza nuove build cloud. Le sezioni seguenti registrano build
+precedenti o comandi futuri e non sono parte del gate corrente.
 
 I profili sono separati per evitare autorizzazioni implicite.
 
@@ -108,7 +131,8 @@ Non usare `--platform all`, `--auto-submit` o `eas submit`.
 ## Smoke test su telefono reale
 
 - Installazione e avvio dell'APK standalone verificato.
-- Navigazione Home -> Sleep -> player -> Settings/Legal.
+- Navigazione tra Rituals, Yoga e Soundscapes; card consumer bloccate.
+- Settings -> Audio Test -> player tecnico e Settings -> Legal.
 - Play, pausa, stop, timer e fade.
 - Mute/gain di ciascuna delle cinque sorgenti.
 - Tap rapido e navigazione senza duplicazioni.

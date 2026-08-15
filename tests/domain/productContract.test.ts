@@ -1,5 +1,7 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
+import { CONSUMER_OUTCOMES } from "@/content/productShell";
+import { OUTCOME_ARTWORK } from "@/design/outcomeArtwork";
 
 const projectRoot = join(__dirname, "..", "..");
 
@@ -11,12 +13,58 @@ function listFiles(directory: string): string[] {
 }
 
 describe("product and asset request contracts", () => {
+  it("keeps M3 functionality-first and time-to-sound ready", () => {
+    expect(CONSUMER_OUTCOMES.map((outcome) => outcome.functionLabel)).toEqual([
+      "YOGA",
+      "MASSAGE",
+      "RELAX",
+      "MEDITATION",
+      "SLEEP",
+      "FOCUS",
+    ]);
+    expect(CONSUMER_OUTCOMES[0]).toEqual(
+      expect.objectContaining({
+        cta: "Start your yoga session",
+        plannedFormat: "Future format · 20 / 30 / 45 / 60 min",
+        evocativeTitle: "Cedar Ascent",
+      }),
+    );
+    expect(
+      CONSUMER_OUTCOMES.every(
+        (outcome) =>
+          !Object.hasOwn(outcome, "audioPresetId") &&
+          !Object.hasOwn(outcome, "playerRoute"),
+      ),
+    ).toBe(true);
+  });
+
+  it("registers exactly one validated painterly artwork for every consumer outcome", () => {
+    const manifest = JSON.parse(
+      readFileSync(
+        join(projectRoot, "assets", "images", "outcomes", "manifest.json"),
+        "utf8",
+      ),
+    ) as { assets: { key: string; width: number; height: number }[] };
+
+    expect(manifest.assets.map((asset) => asset.key)).toEqual(
+      CONSUMER_OUTCOMES.map((outcome) => outcome.id),
+    );
+    expect(Object.keys(OUTCOME_ARTWORK)).toEqual(
+      CONSUMER_OUTCOMES.map((outcome) => outcome.id),
+    );
+    expect(
+      manifest.assets.every(
+        (asset) => asset.width === 720 && asset.height === 720,
+      ),
+    ).toBe(true);
+  });
+
   it("keeps AUDIO TEST PACK 01 integrated and limited to exactly three canonical files", () => {
     const request = readFileSync(
       join(projectRoot, "docs", "AUDIO_REQUESTS.md"),
       "utf8",
     );
-    expect(request).toContain("RICEVUTO E INTEGRATO LOCALMENTE");
+    expect(request).toContain("RICEVUTO E CONFINATO IN AUDIO TEST / TEST ONLY");
     expect(request).toContain("Non richiedere cover");
     const names = [...request.matchAll(/`(SLEEP_[A-Z]+_001\.wav)`/g)].map(
       (match) => match[1],
@@ -33,9 +81,12 @@ describe("product and asset request contracts", () => {
     expect(appFiles).toEqual(
       expect.arrayContaining([
         "_layout.tsx",
+        "audio-test.tsx",
         "index.tsx",
         "legal.tsx",
         "settings.tsx",
+        "soundscapes.tsx",
+        "yoga.tsx",
       ]),
     );
     expect(
@@ -58,8 +109,88 @@ describe("product and asset request contracts", () => {
       join(projectRoot, "src", "app", "session", "[sessionId].tsx"),
       "utf8",
     );
-    expect(player).toContain('testID="player-open-mixer"');
-    expect(player).toContain('testID="player-return-controls"');
+    expect(player).toContain('label="Volume & mute"');
+    expect(player).toContain('label="Test details"');
+    expect(player).toContain("TEST ONLY");
+  });
+
+  it("keeps consumer tabs audio-free and the engine route visibly test-only", () => {
+    const rituals = readFileSync(
+      join(projectRoot, "src", "content", "rituals.ts"),
+      "utf8",
+    );
+    const shell = readFileSync(
+      join(projectRoot, "src", "content", "productShell.ts"),
+      "utf8",
+    );
+    const home = readFileSync(
+      join(projectRoot, "src", "app", "index.tsx"),
+      "utf8",
+    );
+    const yoga = readFileSync(
+      join(projectRoot, "src", "app", "yoga.tsx"),
+      "utf8",
+    );
+    const soundscapes = readFileSync(
+      join(projectRoot, "src", "app", "soundscapes.tsx"),
+      "utf8",
+    );
+
+    expect(rituals).toContain('availability: "test-only"');
+    expect(rituals.match(/audioPresetId: "deep-sleep-432"/g)).toHaveLength(1);
+    expect(`${shell}\n${home}\n${yoga}\n${soundscapes}`).not.toMatch(
+      /deep-sleep-432|sleepDrone001|sleepAmbience001|sleepTexture001/,
+    );
+  });
+
+  it("avoids recognisable Anima interface motifs without banning cosmic copy", () => {
+    const consumerFiles = [
+      join(projectRoot, "src", "app", "index.tsx"),
+      join(projectRoot, "src", "app", "yoga.tsx"),
+      join(projectRoot, "src", "app", "soundscapes.tsx"),
+      join(projectRoot, "src", "components", "EditorialScreen.tsx"),
+      join(projectRoot, "src", "components", "EditorialHeader.tsx"),
+      join(projectRoot, "src", "components", "ProductTabBar.tsx"),
+      join(projectRoot, "src", "components", "ProductionCard.tsx"),
+      join(projectRoot, "src", "components", "OutcomeActionCard.tsx"),
+      join(projectRoot, "src", "components", "OutcomeGridTile.tsx"),
+      join(projectRoot, "src", "content", "productShell.ts"),
+      join(projectRoot, "src", "content", "rituals.ts"),
+      join(projectRoot, "src", "design", "editorialTheme.ts"),
+      join(projectRoot, "src", "design", "outcomeArtwork.ts"),
+      join(projectRoot, "src", "design", "shellArtwork.ts"),
+    ];
+    const consumerCopy = consumerFiles
+      .map((path) => readFileSync(path, "utf8"))
+      .join("\n");
+    expect(consumerCopy).not.toMatch(
+      /black sphere|black planet|waveform|brainwave|neuro.?graphic|frequency.?first|mandala|chakra|buddha|torii|\borb\b/i,
+    );
+    expect(
+      readFileSync(
+        join(projectRoot, "src", "content", "productShell.ts"),
+        "utf8",
+      ),
+    ).toMatch(/Cosmic \/ Zen ambient|Esoteric Series|Elemental Worlds/);
+  });
+
+  it("keeps the consumer paper shell separate from the dark technical shell", () => {
+    for (const route of ["index.tsx", "yoga.tsx", "soundscapes.tsx"]) {
+      const source = readFileSync(
+        join(projectRoot, "src", "app", route),
+        "utf8",
+      );
+      expect(source).toContain("EditorialScreen");
+      expect(source).toContain("EditorialHeader");
+      expect(source).not.toMatch(/AmbientScreen|TopBar/);
+    }
+
+    const technicalSource = readFileSync(
+      join(projectRoot, "src", "app", "audio-test.tsx"),
+      "utf8",
+    );
+    expect(technicalSource).toContain("AmbientScreen");
+    expect(technicalSource).toContain("TopBar");
   });
 
   it("does not introduce prohibited affirmative marketing phrases", () => {

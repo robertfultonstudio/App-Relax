@@ -41,7 +41,7 @@ pnpm --version          # 11.16.0 target
 git rev-parse --show-toplevel
 ```
 
-Il runtime Codex Node 24.14.0 e sufficiente per i gate eseguiti in questa sessione, ma non sostituisce il pin riproducibile per operatori esterni.
+Il runtime Codex Node 24.19.0 e sufficiente per i gate eseguiti in questa sessione, ma non sostituisce il pin riproducibile per operatori esterni.
 
 ## Gate 1 - Repository e bundle JavaScript
 
@@ -58,6 +58,7 @@ pnpm test:audio
 pnpm audio:validate-placeholders
 pnpm audio:validate-test-pack
 pnpm assets:validate-safety
+pnpm assets:validate-rituals
 pnpm security:audit
 pnpm config:validate
 CI=1 pnpm expo:doctor
@@ -193,7 +194,7 @@ Richiede almeno un telefono reale, non un nuovo computer.
 
 Disponibilita dei telefoni: `NON DETERMINATO — EVIDENZA INSUFFICIENTE`. Nessun dispositivo Android e stato rilevato via USB. Platform Tools, Emulator, image API 34 x86_64 e AVD `AppRelax_API_34_x86_64` sono stati installati su autorizzazione esplicita; Android Studio, JDK generico, SDK Platform e Build Tools restano assenti e non servono per caricare il bundle corrente via Metro.
 
-## Gate 5 - AUDIO TEST PACK 01 — integrato localmente
+## Gate 5 - AUDIO TEST PACK 01 — confinato nel test tecnico
 
 L'utente ha autorizzato esplicitamente l'integrazione locale prima della chiusura dello smoke placeholder. Il pack resta limitato a:
 
@@ -201,11 +202,17 @@ L'utente ha autorizzato esplicitamente l'integrazione locale prima della chiusur
 2. `SLEEP_AMBIENCE_001.wav`
 3. `SLEEP_TEXTURE_001.wav`
 
-Nessun altro asset o catalogo e autorizzato. Validazione automatica e cablaggio locale sono verdi; ascolto, qualita e accettazione su telefono restano aperti. Una nuova build cloud o pubblicazione non e implicita.
+Nessun altro asset o catalogo e autorizzato. In M3 il pack e `TEST ONLY`, fuori
+dai tab consumer. Validazione automatica e cablaggio locale sono verdi;
+ascolto, qualita e accettazione su telefono restano aperti. Una nuova build
+cloud o pubblicazione non e implicita.
 
 ## Confine di autorizzazione corrente
 
-Gia autorizzati ed eseguiti per questa milestone: commit locali necessari al gate, `eas login`, `eas init`, una build `development-android` e una build `preview-android`, senza auto-submit e solo entro quota Free. Qualunque ulteriore build richiede nuova approvazione.
+Gia eseguiti prima di M2: `eas login`, `eas init`, una build
+`development-android` e una build `preview-android`, senza auto-submit e solo
+entro quota Free. D-025 registrava una precedente autorizzazione condizionata
+M2; D-026 definisce ora il confine operativo M3 e non autorizza alcuna EAS.
 
 Vietati senza nuova approvazione:
 
@@ -218,7 +225,7 @@ pod install
 ulteriori installazioni sdkmanager / Android Studio
 expo run:ios / expo run:android
 eas device:create
-ulteriori eas build Android / eas build --platform ios / eas submit / --auto-submit
+eas build / eas build --platform ios / eas submit / --auto-submit
 git push / gh pr create
 ```
 

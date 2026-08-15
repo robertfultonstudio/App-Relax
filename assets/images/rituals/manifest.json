@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "generatedOn": "2026-08-12",
+  "licenseNote": "Original stylized concepts generated for this project; no reference images used.",
+  "assets": [
+    {
+      "key": "moon-current",
+      "file": "moon-current.jpg",
+      "width": 1080,
+      "height": 1440,
+      "bytes": 252749,
+      "sha256": "853d9c1d8b90dfbb6317233171c5a43aa8c60d0e0d8e92c955d35df3e7254fe1"
+    },
+    {
+      "key": "quiet-tide",
+      "file": "quiet-tide.jpg",
+      "width": 1080,
+      "height": 1440,
+      "bytes": 267597,
+      "sha256": "8fd5c437274b1a940dc3bc6630db8e1701f4077f98cc1bb444ed326be264a598"
+    },
+    {
+      "key": "cedar-light",
+      "file": "cedar-light.jpg",
+      "width": 1080,
+      "height": 1440,
+      "bytes": 356473,
+      "sha256": "830f314acc299bde3f462e449e8fb4294db9b70ab1b21d6be44749bdda924c0c"
+    },
+    {
+      "key": "aquarian-sky",
+      "file": "aquarian-sky.jpg",
+      "width": 1080,
+      "height": 1440,
+      "bytes": 396083,
+      "sha256": "070771b1bfe2fa7090ff07ce8613c9298b8f11f31bbd0abb58ad484d1c34c3f1"
+    }
+  ]
+}

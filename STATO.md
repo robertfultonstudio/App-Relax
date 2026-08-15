@@ -1,10 +1,107 @@
 # Stato progetto
 
-Aggiornato: 11 agosto 2026
+Aggiornato: 15 agosto 2026
 
 ## Milestone attiva
 
-Vertical slice `Deep Sleep 432` con `AUDIO TEST PACK 01` e APK Android standalone verificati; gate telefono e qualita aperti.
+M3 `Product Shell & Impressionist UI Foundation`: shell consumer a tre tab,
+confinamento del motore in `AUDIO TEST / TEST ONLY` e visual gate Android.
+Il commit locale M3 è autorizzato dall'utente; EAS, push e PR restano esclusi.
+
+## M3 implementato finora
+
+- [x] Tab consumer `RITUALS`, `YOGA` e `SOUNDSCAPES` con copy inglese richiesto.
+- [x] Home outcome-first con CTA esplicite per Yoga, Massage, Relax,
+      Meditation, Sleep e Focus; il caso Yoga espone subito
+      `Start your yoga session` e poi i formati 20/30/45/60.
+- [x] Home riequilibrata in una griglia 2×3 di sei box equivalenti: nessun
+      outcome domina la pagina; ogni box usa il proprio artwork finale e ordina
+      funzione, CTA, formato e titolo futuro in questa sequenza.
+- [x] Functionality and time-to-sound first; evocative naming is secondary metadata.
+- [x] La Home usa come promessa guida la frase
+      `Choose your moment. Press start. Leave the phone behind.` Un avviso
+      separato e immediatamente visibile chiarisce che le sessioni consumer sono
+      ancora in produzione e senza audio.
+- [x] Tutte le card consumer sono `IN PRODUCTION`, disabilitate e prive di
+      riferimenti a preset o asset audio.
+- [x] Yoga predisposto per formati futuri 20/30/45/60 minuti.
+- [x] Soundscapes predisposto per opere autonome, Elemental Worlds, field
+      recording, Cosmic/Zen Ambient ed Esoteric Series.
+- [x] `Moon Current`, `deep-sleep-432`, ATP01 e mixer multilayer confinati nel
+      percorso separato `AUDIO TEST / TEST ONLY`, raggiungibile da Settings.
+- [x] Play/Pause/Stop, timer, volume e mute restano chiari e accessibili nel
+      solo player tecnico; motore, controller e persistenza preservati.
+- [x] Direzione visiva: impressionismo/pastello meditativo con cosmic new age
+      raffinato e contemporary minimal Japanese impressionism materico:
+      pigmento minerale nihonga, sumi, gouache asciutta, washi, asimmetria e
+      `ma`. Differenziazione da Anima nell'interfaccia, non abbandono
+      dell'immaginario cosmico.
+- [x] Sei artwork outcome originali, uno per Yoga, Massage, Relax, Meditation,
+      Sleep e Focus: JPEG 720×720 generati con OpenAI image generation built-in.
+      Cinque restano text-only; Yoga v2 deriva da un unico edit del precedente
+      sorgente Yoga originale del progetto, senza reference esterne. Byte,
+      SHA-256 e confine di provenienza sono in
+      `docs/M3_OUTCOME_ARTWORK_PROVENANCE.md`.
+- [x] Yoga v2: susuki, luna avorio incompleta e lavatura solare pesca integrati;
+      screenshot runtime Android acquisito e verificato.
+- [x] Approvazione umana dello screenshot Yoga v2 ricevuta dall'utente con
+      `ok` il 15 agosto 2026.
+- [x] Anteprima web locale della nuova Home a griglia acquisita senza emulatore:
+      `01-home-grid-painterly-background-approved-candidate.jpg` mostra la
+      gerarchia iniziale e il fondale;
+      `01-home-grid-painterly-background-cards-detail.jpg` mostra CTA e formati
+      dei box affiancati. Sono prove visive del layout, non prove runtime Android.
+- [x] Fondale Home-only originale in stile impressionismo minimale giapponese:
+      carta washi, velature pastello minerali, luce lunare, acqua/nebbia e
+      vegetazione rada. Asset, manifest, hash e provenienza sono registrati in
+      `docs/M3_HOME_BACKGROUND_PROVENANCE.md`; le altre route non cambiano.
+- [x] Approvazione umana dell'anteprima Home con fondale pittorico ricevuta il
+      15 agosto 2026 con `bravo`, seguita dalla richiesta esplicita di commit.
+- [x] Shell consumer separata `consumer-paper`: carta washi, inchiostro AA,
+      composizioni editoriali asimmetriche, sezioni aperte e hairline; rimosso
+      il linguaggio generico di card arrotondate, pillole e blob. Audio Test
+      conserva intenzionalmente la shell tecnica scura.
+- [x] Il primo screenshot Android `consumer-paper` è stato approvato dall'utente
+      con `Design ok`. Il successivo passaggio di leggibilità porta tutte le
+      micro-scritte consumer ad almeno 11 px, riduce il tracking e conserva il
+      contrasto anche durante la pressione; screenshot aggiornato acquisito.
+- [x] Gate repository M3 consolidato prima del commit: formattazione, peer,
+      Expo install check, lint, TypeScript, 15 suite/60 test, audio 26/26,
+      validatori audio/asset/config/security policy ed Expo Doctor 20/20 verdi.
+      Gli export Metro iOS e Android contengono esattamente i tre WAV ATP01 con
+      hash canonici e 11 JPEG registrati, senza segreti mirati rilevati.
+- [ ] Screenshot finale runtime Android della Home: resta distinto
+      dall'anteprima web richiesta e approvata senza emulatore.
+
+## Baseline M2 completata e preservata
+
+- [x] Registro editoriale separato dal motore: quattro goal, quattro rituali,
+      quattro temi e un solo rituale disponibile.
+- [x] Titolo pubblico e notifica del preset `deep-sleep-432` aggiornati a
+      `Moon Current`; nessun Hz nella Home o nella vista principale del player.
+- [x] Home 2x2 senza onboarding; `Quiet Tide`, `Cedar Light` e `Aquarian Sky`
+      mostrano `IN PRODUCTION` e non possono navigare o caricare audio.
+- [x] Player immersivo con timer e trasporto; `Adjust sound` e
+      `About the sound` separati e chiusi di default.
+- [x] Quattro artwork originali ispezionati, normalizzati JPEG 1080x1440,
+      tutti sotto 1,2 MB e registrati con SHA-256.
+- [x] Font OFL Newsreader e Manrope incorporati localmente, senza download
+      runtime; motion massimo 1.03 solo in Play e statico con Reduce Motion.
+- [x] Nessun nuovo WAV: il repository contiene ancora soltanto i tre master
+      autorizzati di `AUDIO TEST PACK 01`.
+- [x] TypeScript, lint e 12 suite/47 test verdi dopo l'implementazione UI;
+      subset audio 26/26.
+- [x] Gate M2 consolidato: dipendenze/peer, Expo install check, validatori audio,
+      asset e config, Expo Doctor 20/20, config prebuild ed export Metro iOS e
+      Android verdi. Il raw audit resta rosso soltanto per i due advisory
+      `image-size` gia allowlistati; la policy audit e verde con residui accettati.
+- [x] Gli export M2 contengono esattamente i tre WAV autorizzati e i quattro
+      artwork registrati, senza placeholder audio, nuovo master, path locale,
+      file credenziale o pattern segreto mirato.
+- [x] Cinque screenshot runtime Android 1080x2400 acquisiti in
+      `dist/m2-screenshots/`: Home, card `IN PRODUCTION` non navigabile, player,
+      mixer a cinque layer e `About the sound`. Nessun overlay Fast Refresh;
+      mixer con stati editoriali `READY`, senza `STEM`/`BINAURAL`/`NOISE`.
 
 ## Completato e verificato localmente
 
@@ -39,7 +136,10 @@ Vertical slice `Deep Sleep 432` con `AUDIO TEST PACK 01` e APK Android standalon
 
 ## Gate aperti
 
-- [ ] Installazione APK e smoke test su telefono Android reale: disponibilita del dispositivo `NON DETERMINATO — EVIDENZA INSUFFICIENTE`.
+- [x] [F] Su dichiarazione diretta dell'utente, l'APK precedente è stato
+      installato e avviato su un telefono Android reale e Play ha prodotto suono.
+- [ ] [U] Modello telefono, versione Android e verifica strutturata di
+      Home/controlli nel precedente test: `NON DETERMINATO — EVIDENZA INSUFFICIENTE`.
 - [ ] EAS cloud build iOS `development-ios`: richiede approvazione, account Apple Developer attivo, credenziali e registrazione iPhone.
 - [ ] Smoke test audio su telefono reale; background, lock-screen, Bluetooth, interruzioni, latenza, batteria e qualita restano `NON DETERMINATO — EVIDENZA INSUFFICIENTE`.
 - [x] I glitch percepiti nell'emulatore sono stati localizzati dopo l'HAL Android, nel ponte QEMU -> CoreAudio: AAudio e AudioFlinger hanno mantenuto frame e segnale continui con zero underrun, mentre CoreAudio ha riaperto due volte `AppleHDAEngineOutput` con gap di circa 22 ms e 11 ms. Il trigger esatto delle riaperture resta `NON DETERMINATO — EVIDENZA INSUFFICIENTE`.
@@ -48,7 +148,7 @@ Vertical slice `Deep Sleep 432` con `AUDIO TEST PACK 01` e APK Android standalon
 
 ## Limiti locali verificati
 
-- [F] Node di sistema 18.20.8 e insufficiente; il target di progetto e Node 22.23.1. I gate di questa sessione sono stati eseguiti con il runtime isolato Codex Node 24.14.0.
+- [F] Node di sistema 18.20.8 e insufficiente; il target di progetto e Node 22.23.1. I gate di questa sessione sono stati eseguiti con il runtime isolato Codex Node 24.19.0 e pnpm 11.16.0.
 - [F] macOS 13.7.8 e Xcode 15.2 non soddisfano Expo SDK 57, che richiede Node 22.13.x e Xcode 26.4+.
 - [F] Nessun runtime/device iOS Simulator e installato; CocoaPods e assente.
 - [F] Sono installati, su autorizzazione esplicita, Android SDK Platform Tools 37.0.1, Emulator 37.1.11, system image API 34 x86_64 e AVD `AppRelax_API_34_x86_64`. Emulator, Metro e server ADB sono spenti a chiusura test.
@@ -58,7 +158,11 @@ Vertical slice `Deep Sleep 432` con `AUDIO TEST PACK 01` e APK Android standalon
 
 ## Prossimo gate
 
-I gate repository, la build Android standalone e lo smoke autonomo su emulatore sono completi. Il prossimo gate di prodotto e installare lo stesso APK su un telefono Android reale. Glitch su hardware ARM, memoria/startup, loop, background, Bluetooth e qualita vanno verificati sul telefono. Non eseguire altre build, iOS, submission, push o acquisti senza nuova approvazione.
+Yoga v2 è approvata. Consolidare i restanti screenshot e gate M3 soltanto su
+nuova indicazione.
+Nessuna EAS appartiene al gate M3 corrente.
+Bluetooth, background, lock-screen, interruzioni, batteria, ascolto lungo e
+qualità restano `NON DETERMINATO — EVIDENZA INSUFFICIENTE`.
 
 ## Lavoro parallelo escluso
 

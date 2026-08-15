@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "generatedOn": "2026-08-15",
+  "style": "Contemporary minimal Japanese impressionism: nihonga mineral pigment, sumi wash, dry gouache and generous ma on tactile washi.",
+  "licenseNote": "Original stylized concepts generated for this project with the built-in OpenAI image generator. Five assets are text-only generations; Yoga v2 is a built-in edit of the previous project-original Yoga source, with no third-party reference image.",
+  "assets": [
+    {
+      "key": "yoga",
+      "file": "yoga.jpg",
+      "subject": "Stylized susuki grasses, an incomplete pale moon and a faint peach-saffron solar wash",
+      "width": 720,
+      "height": 720,
+      "bytes": 99211,
+      "sha256": "3c252aca78b72c510337b980d4cfda21352ec69229b04e7c780610aa99ffdb2f"
+    },
+    {
+      "key": "massage",
+      "file": "massage.jpg",
+      "subject": "Folded linen, warm stone and a shallow ceramic bowl",
+      "width": 720,
+      "height": 720,
+      "bytes": 172427,
+      "sha256": "592cb03a992cd70f3369e86068859163b1d92786471f73eb01fe59d38cf2ce53"
+    },
+    {
+      "key": "relax",
+      "file": "relax.jpg",
+      "subject": "Low misty horizon over still water with a pale-gold reflection",
+      "width": 720,
+      "height": 720,
+      "bytes": 129837,
+      "sha256": "39e29b0b64d8270c815d4d88bf0a2c8f39a3669950d213c7ba78f88cadce6e71"
+    },
+    {
+      "key": "meditation",
+      "file": "meditation.jpg",
+      "subject": "Mineral-blue and lavender sky with a slender gold crescent",
+      "width": 720,
+      "height": 720,
+      "bytes": 160949,
+      "sha256": "08810383fdc5676c4be17374801f7cc0874f01809d7d9376e3f055b475b94d08"
+    },
+    {
+      "key": "sleep",
+      "file": "sleep.jpg",
+      "subject": "Moonlit night garden with grasses and one pale blossom",
+      "width": 720,
+      "height": 720,
+      "bytes": 160793,
+      "sha256": "c2a6f81030c7b453ddca05d14465a2c0dd9873c5a8205aa2f35fed0a4db8af19"
+    },
+    {
+      "key": "focus",
+      "file": "focus.jpg",
+      "subject": "Blank washi sheet, a single graphite line and cedar sprig",
+      "width": 720,
+      "height": 720,
+      "bytes": 159176,
+      "sha256": "0907915594a2a39307b3244a54bba181c9c9dfe1901cd21db9143ac5d686fcf8"
+    }
+  ]
+}

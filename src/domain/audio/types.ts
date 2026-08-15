@@ -42,6 +42,7 @@ export interface AudioPreset {
   goal: Goal;
   tuningLabel: string;
   carrierHz: number;
+  /** Audible left/right tone separation in hertz, not a brain frequency. */
   beatHz: number;
   noise: {
     type: "brown";

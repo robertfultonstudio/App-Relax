@@ -48,6 +48,7 @@ files.sort((left, right) => left.archivePath.localeCompare(right.archivePath));
 
 const forbiddenSegments = new Set([
   ".git",
+  ".pnpm-store",
   ".expo",
   ".vscode",
   "android",

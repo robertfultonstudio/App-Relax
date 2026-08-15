@@ -7,6 +7,7 @@ const projectRoot = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const excludedDirectories = new Set([
   ".expo",
   ".git",
+  ".pnpm-store",
   "dist",
   "node_modules",
   "output",

@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "licenseNote": "Original App Relax background generated with OpenAI image generation built-in from a text-only prompt; no third-party visual reference was used.",
+  "assets": [
+    {
+      "key": "rituals-home",
+      "file": "rituals-home-v1.jpg",
+      "width": 864,
+      "height": 1821,
+      "bytes": 297807,
+      "sha256": "93815a818e3284ad49966a5465cb35588aef79fe5c7f2c2608921e1d2decf560",
+      "subject": "warm ivory washi, pale lunar glow, pastel mineral washes, misted water and sparse reeds"
+    }
+  ]
+}

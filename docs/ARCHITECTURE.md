@@ -2,7 +2,14 @@
 
 ## Decisione sintetica
 
-L'app usa Expo SDK 57, React Native 0.86.2 ed Expo Router con un'architettura a porte e adattatori per l'audio. `AudioSessionController` e il solo proprietario della sessione; la UI osserva snapshot serializzabili e invia comandi. `ReactNativeAudioDriver` usa `react-native-audio-api` 0.13.2 dietro `AudioGraphDriver` e `AudioEngine`.
+L'app usa Expo SDK 57, React Native 0.86.2 ed Expo Router. La shell consumer M3
+e separata dal motore: la Home outcome-first e i tab `RITUALS`, `YOGA` e
+`SOUNDSCAPES` leggono soltanto registri editoriali senza audio. Yoga, Massage,
+Relax, Meditation, Sleep e Focus sono entita consumer prive di preset. La route
+`AUDIO TEST / TEST ONLY` e l'unica UI
+che usa `AudioSessionController`. Il controller resta il solo proprietario della
+sessione e `ReactNativeAudioDriver` resta dietro `AudioGraphDriver` e
+`AudioEngine`.
 
 RNAA dichiara peer aperti verso React Native ma la sua matrice pubblica non documenta ancora RN 0.86. Due compilazioni EAS Android e il playback della preview standalone con Metro spento dimostrano il percorso Android corrente; compatibilita iOS e comportamento su telefono reale restano `NON DETERMINATO — EVIDENZA INSUFFICIENTE`.
 
@@ -11,6 +18,7 @@ RNAA dichiara peer aperti verso React Native ma la sua matrice pubblica non docu
 ```text
 src/app/                       route Expo Router
 src/components/                componenti consumer
+src/content/                   tab e registri editoriali senza audio
 src/domain/audio/              tipi e contratti puri
 src/audio/                     controller e porta graph driver
 src/audio/reactNativeAudioApi/ adattatore nativo
@@ -24,7 +32,9 @@ assets/audio/placeholders/     fixture tecniche non referenziate
 ## Flusso di controllo
 
 ```text
-UI -> AudioSessionController -> AudioGraphDriver -> React Native Audio API -> graph nativo
+Consumer tabs -> registri editoriali (nessun AudioEngine)
+
+Audio Test UI -> AudioSessionController -> AudioGraphDriver -> React Native Audio API -> graph nativo
                  |                     |
                  v                     v
              snapshot            eventi/lifecycle
@@ -33,7 +43,10 @@ UI -> AudioSessionController -> AudioGraphDriver -> React Native Audio API -> gr
             AsyncStorage
 ```
 
-La UI non conserva handle nativi. I comandi sono serializzati; `play`, `stop` e cleanup sono idempotenti. Un fallimento durante start ferma il graph prima di pubblicare lo stato di errore.
+La UI non conserva handle nativi. Le route consumer non possiedono
+`audioPresetId` e non possono aprire il player. Nel solo Audio Test i comandi
+sono serializzati; `play`, `stop` e cleanup sono idempotenti. Un fallimento
+durante start ferma il graph prima di pubblicare lo stato di errore.
 
 ## Contratto AudioEngine
 

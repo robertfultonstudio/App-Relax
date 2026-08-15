@@ -240,3 +240,295 @@ Stato: build e smoke autonomo completati; telefono reale aperto
 [U] `NON DETERMINATO — EVIDENZA INSUFFICIENTE`: installazione sul telefono dell'amico, glitch su hardware ARM, speaker/cuffie/Bluetooth, background/lock-screen, interruzioni, latenza, batteria, memoria e qualita. Questi punti richiedono lo smoke su telefono reale.
 
 Evidenza primaria: [build EAS Android preview](https://expo.dev/accounts/robert-fulton-studio/projects/app-relax/builds/c3a39414-d156-4373-810a-0011296b51f8).
+
+## D-023 - M2 Quiet by Design e registro dei quattro rituali
+
+Data: 12 agosto 2026
+Stato: implementazione locale; visual gate aperto
+
+[F] M2 separa contenuto editoriale e temi dal motore audio. I quattro rituali
+sono `Moon Current`, `Quiet Tide`, `Cedar Light` e `Aquarian Sky`; soltanto il
+primo ha `audioPresetId` e usa l'identificativo tecnico `deep-sleep-432`.
+
+[F] Le tre card `IN PRODUCTION` sono disabilitate e non caricano il player. La
+Home non usa onboarding o catalogo; il player non espone Hz nella vista
+principale e mantiene mixer e dettagli tecnici facoltativi, separati e chiusi.
+
+[F] AudioEngine, AudioSessionController, timer, fade, persistenza, `carrierHz` e
+`beatHz` non sono stati modificati. `beatHz` è documentato come differenza tra i
+due toni stereo, non come frequenza cerebrale. Nessun nuovo audio è stato
+integrato.
+
+[F] Quattro immagini originali `stylized-concept` sono state generate senza
+reference image, ispezionate e normalizzate a JPEG 1080x1440 sotto 1,2 MB. Gli
+hash sono registrati in `assets/images/rituals/manifest.json`. Il sistema usa
+Newsreader e Manrope locali e rispetta Reduce Motion.
+
+[U] Chiarezza entro cinque secondi e preferenza estetica restano
+`NON DETERMINATO — EVIDENZA INSUFFICIENTE` fino al concept test. Retention, WTP
+ed efficacia percepita richiedono invece prove di prodotto/mercato successive e
+non sono misurate dal concept test M2.
+
+## D-024 - Evidenza del precedente test Android reale
+
+Data: 12 agosto 2026
+Stato: confine di prova registrato
+
+[F] L'utente ha dichiarato che il precedente APK è stato installato e avviato su
+un telefono Android reale e che Play ha prodotto suono. Questa evidenza chiude
+soltanto installazione, launch e Play del vecchio APK.
+
+[U] Modello telefono, versione OS, Bluetooth, background, lock-screen,
+interruzioni, latenza, batteria, sessione lunga, seam, bilanciamento e qualità
+restano `NON DETERMINATO — EVIDENZA INSUFFICIENTE`. Il nuovo APK M2 richiederà un
+nuovo smoke strutturato.
+
+## D-025 - Gate EAS M2
+
+Data: 12 agosto 2026
+Stato: autorizzazione condizionata, non ancora eseguita
+
+[F] Il piano autorizza una sola nuova EAS `preview-android`, ma soltanto dopo
+gate locali verdi, screenshot runtime approvati dall'utente, quota Free
+riverificata e assenza di costi. Nessuna build iOS, submission, pubblicazione,
+push o PR è inclusa.
+
+## D-026 - M3 Product Shell e confine Audio Test
+
+Data: 15 agosto 2026
+Stato: implementazione locale; visual gate aperto
+
+[F] L'istruzione M3 sostituisce operativamente il percorso consumer M2 senza
+trasformare il Test Pack in contenuto pubblicato. La navigazione primaria usa i
+tab `RITUALS`, `YOGA` e `SOUNDSCAPES`; tutte le card consumer sono
+`IN PRODUCTION`, disabilitate e prive di `audioPresetId` o asset audio.
+
+[F] Yoga espone soltanto strutture future da 20/30/45/60 minuti. Soundscapes
+predispone opere autonome, `Elemental Worlds`, field recording,
+`Cosmic / Zen ambient` ed `Esoteric Series`. Queste entità sono famiglie
+editoriali e formati pianificati, non sessioni o registrazioni disponibili.
+
+[F] `Moon Current`, `deep-sleep-432`, i tre WAV ATP01, binaural, brown noise e
+mixer multilayer appartengono esclusivamente a `AUDIO TEST / TEST ONLY`, fuori
+dai tab consumer e raggiungibile da Settings. Il motore, timer, fade,
+persistenza e regressioni audio restano preservati.
+
+[F] M3 non autorizza EAS, commit, push, PR, pubblicazione, backend, login,
+billing, analytics o nuovo audio. La task si arresta agli screenshot runtime e
+alla richiesta di approvazione umana.
+
+## D-027 - Identità cosmica e differenziazione da Anima
+
+Data: 15 agosto 2026
+Stato: direzione vincolante accettata
+
+[F] La differenziazione da Anima riguarda esclusivamente linguaggio e gerarchie
+di interfaccia; non richiede l'abbandono dell'immaginario cosmico o new age.
+M3 combina, in modo direzionale, circa 60% impressionismo/pastello meditativo e
+40% cosmic new age raffinato.
+
+[F] Sono parte dell'identità: cieli pittorici, campi stellari rarefatti,
+nebulose ad acquerello, luce lunare, aurora, polvere d'oro discreta, blu
+minerale, lavanda, rosa polvere e giada. `Aquarian Sky`, Cosmic/Zen Ambient,
+Esoteric Series ed Elemental Worlds restano famiglie editoriali future.
+
+[F] Restano vietate imitazioni riconoscibili di sfere o pianeti neri luminosi,
+waveform/neuro-grafiche protagoniste, gerarchie frequency-first, mandala,
+chakra, Buddha e torii. Il cosmo è ammesso come tema originale, mai come
+supporto a claim medici, scientifici o pseudoscientifici.
+
+## D-028 - Functionality e time-to-sound prima del catalogo
+
+Data: 15 agosto 2026
+Stato: direzione vincolante implementata localmente
+
+[F] Functionality and time-to-sound first; evocative naming is secondary
+metadata. La Home M3 mette in ordine Yoga, Massage, Relax, Meditation, Sleep e
+Focus e mostra prima la funzione, poi la CTA, quindi durata/formato e solo dopo
+il titolo evocativo futuro.
+
+[F] Il caso guida Yoga espone `Start your yoga session` in apertura e prepara
+formati 20/30/45/60 minuti. Le altre CTA sono `Set the room for massage`,
+`Relax now`, `Begin meditation`, `Prepare for sleep` e `Focus`.
+
+[F] In M3 tutte le sei azioni restano `IN PRODUCTION`, disabilitate e prive di
+preset, asset audio e route player. L'architettura predispone un futuro avvio in
+uno o due tap senza promettere contenuto oggi inesistente. Cosmic, Aquarian ed
+Elemental restano naming e famiglie editoriali successive alla funzione.
+
+## D-029 - Sei artwork outcome originali M3
+
+Data: 15 agosto 2026
+Stato: asset finali presenti; provenance e hash verificati
+
+[F] Yoga, Massage, Relax, Meditation, Sleep e Focus hanno ciascuno un artwork
+quadrato originale creato espressamente per App Relax con OpenAI image
+generation built-in. Cinque asset restano text-only; Yoga v2 deriva da un unico
+edit del precedente sorgente Yoga originale del progetto, senza reference
+esterne. I PNG sorgente 1254×1254 sono stati convertiti in JPEG 720×720 qualità 80. File, byte e SHA-256 sono registrati in
+`docs/M3_OUTCOME_ARTWORK_PROVENANCE.md`.
+
+[F] La direzione comune è contemporary minimal Japanese impressionism:
+pigmento minerale nihonga, sumi libero, gouache asciutta, washi tattile,
+asimmetria e `ma`, combinati con refined cosmic new age dove coerente con la
+funzione. La differenziazione da Anima resta limitata al linguaggio e alla
+gerarchia dell'interfaccia; non elimina l'immaginario cosmico.
+
+[F] Restano vietati torii, pagode, kanji, mandala, chakra, Buddha,
+sfere/pianeti neri luminosi, neon, waveform, neuro-grafiche, gerarchie
+frequency-first e claim medici, terapeutici, scientifici o pseudoscientifici.
+Functionality e time-to-sound restano primari: immagine e naming non precedono
+funzione, CTA o durata/formato e non sbloccano audio/player consumer.
+
+[U] `NON DETERMINATO — EVIDENZA INSUFFICIENTE`: esclusività legale,
+registrabilità e assenza di somiglianze sostanziali fino a una revisione IP/store
+dedicata. Il fatto verificato è il processo documentato di generazione interna,
+incluso l'edit Yoga v2 basato esclusivamente sul precedente sorgente originale
+del progetto; non è una certificazione legale automatica.
+
+## D-030 - Consumer paper shell e rifiuto del template wellness
+
+Data: 15 agosto 2026
+Stato: direzione visiva approvata; leggibilità raffinata in D-031
+
+[F] L'utente ha approvato i sei artwork ma ha respinto il linguaggio UI
+precedente perché card arrotondate, pillole, blob e barra scura rendevano la
+shell riconoscibile come grafica generica. Questi primitivi non appartengono più
+alla direzione consumer.
+
+[F] La nuova shell `consumer-paper` usa carta washi calda, inchiostro ad alto
+contrasto, composizioni asimmetriche, immagini editoriali, hairline e molto
+`ma`. Le sezioni sono aperte: nessuna card-gabbia, pillola di stato o blob
+decorativo. `IN PRODUCTION` resta una nota tipografica, non un bottone.
+
+[F] `technical-dark` resta separata per Audio Test e player: il ridisegno non
+trasforma ATP01 o il mixer in contenuto consumer. Funzione, CTA e formato
+continuano a precedere artwork e naming evocativo.
+
+[F] Il primo screenshot Android 1080×2400 del nuovo layout è stato approvato
+dall'utente con `Design ok`. Nessuna EAS, commit, push o pubblicazione è stata
+eseguita.
+
+## D-031 - Leggibilità della microtipografia consumer
+
+Data: 15 agosto 2026
+Stato: implementata e verificata su Android Emulator
+
+[F] Dopo l'approvazione della direzione visiva, l'utente ha richiesto scritte
+piccole leggermente più intelligibili. La gerarchia e la composizione restano
+invariate: micro-label, kicker, caption, note, formati e navigazione aumentano
+di circa 1 px, con tracking ridotto e interlinea più comoda.
+
+[F] Nessun testo della shell `consumer-paper` resta sotto 11 px. Gli stati
+pressed di header, tab e Settings non riducono più l'opacità del testo: usano
+un fondo carta più profondo e una traslazione di 1 px, mantenendo il contrasto.
+
+[F] Prettier, lint, TypeScript e 15 suite / 59 test sono verdi. Lo screenshot
+Android aggiornato è stato acquisito senza overlay; Audio Test, motore e asset
+audio non sono stati modificati. Emulator, Metro e ADB sono stati spenti.
+
+## D-032 - Promessa guida della Home
+
+Data: 15 agosto 2026
+Stato: implementata come copy editoriale provvisoria
+
+[F] La Home usa `Choose your moment. Press start. Leave the phone behind.` come
+promessa guida del flusso futuro: scegliere il bisogno, avviare rapidamente e
+lasciare che il telefono torni in secondo piano.
+
+[F] Non è una tagline commerciale finale né un claim legalmente validato. Per
+non promettere funzionalità inesistenti in M3, una riga distinta dichiara subito
+che le sessioni consumer sono ancora in produzione e senza audio disponibile.
+
+## D-033 - Direzione visiva Yoga sole-luna
+
+Data: 15 agosto 2026
+Stato: approvato dall'utente
+
+[F] L'artwork Yoga conserva campo avorio, palette pastello e materia washi ma
+reinterpreta il gesto botanico come susuki stilizzato. Una grande luna avorio,
+incompleta e decentrata, è bilanciata da una lavatura solare pesca/zafferano
+minima. La simbologia resta implicita, senza testo o tecnicismi.
+
+[F] L'asset deriva da una sola chiamata built-in di edit del precedente sorgente
+Yoga originale del progetto. Il JPEG finale resta `yoga.jpg`, 720×720, 99.211
+byte, SHA-256
+`3c252aca78b72c510337b980d4cfda21352ec69229b04e7c780610aa99ffdb2f`;
+gli altri cinque outcome, UI, navigazione e audio non cambiano.
+
+[F] Sono assenti luna/pianeta nero, sequenze di fasi, astrologia, zodiaco, carte
+celesti, Om, loto-logo, mandala, chakra, Buddha, torii, pagode, kanji, persone e
+pose yoga.
+
+[F] Evidenza runtime: `dist/m3-screenshots/02-yoga-consumer-paper.png`,
+1080×2400, 583.172 byte, SHA-256
+`45eebbc619a71c218476445e69dc7bca02890e69e2913b80a030e577feda6495`.
+
+[F] Il 15 agosto 2026 l'utente ha approvato Yoga v2 rispondendo `ok` alla
+richiesta esplicita di giudizio sullo screenshot. Nessun altro intervento
+visivo, build o rilascio è implicato da questa approvazione.
+
+## D-034 - Home a sei box funzionali equivalenti
+
+Data: 15 agosto 2026
+Stato: implementata e approvata dall'utente
+
+[F] L'utente ha rilevato che la Home full-width faceva apparire Yoga come il
+contenuto dominante e che lo screenshot precedente non mostrava i nuovi
+artwork. Ha confermato che la struttura a box era valida: il problema erano il
+linguaggio visivo precedente e i nomi privi di funzione esplicita.
+
+[F] La Home usa ora una griglia 2×3 con sei box dello stesso peso per Yoga,
+Massage, Relax, Meditation, Sleep e Focus. Ogni box mostra il proprio artwork
+finale e rispetta la gerarchia funzione → CTA → formato → titolo futuro. Nessun
+box usa una variante hero; `Cedar Ascent`, `Quiet Tide`, `Soft Horizon`,
+`Aquarian Sky`, `Night Garden` e `Cedar Light` restano metadati secondari.
+
+[F] Tutti i box restano disabilitati e marcati `IN PRODUCTION`; non sono stati
+aggiunti preset, audio o route player. La schermata Yoga separata, il motore e
+gli altri cinque outcome non sono stati modificati.
+
+[F] L'export web locale renderizza i sei controlli disabilitati e i sei artwork.
+Le prove visive 390×844 sono
+`dist/m3-screenshots/01-home-grid-painterly-background-approved-candidate.jpg`
+e `dist/m3-screenshots/01-home-grid-painterly-background-cards-detail.jpg`,
+ottenute senza Android Emulator. Non sostituiscono il futuro screenshot runtime
+mobile.
+
+## D-035 - Fondale pittorico Home-only
+
+Data: 15 agosto 2026
+Stato: integrato e approvato dall'utente
+
+[F] Su richiesta dell'utente la Home non usa più soltanto il gradiente carta:
+un fondale originale text-only introduce washi avorio, pigmenti pastello
+minerali, una luce lunare parziale, acqua/nebbia e vegetazione rada in uno stile
+di impressionismo minimale giapponese contemporaneo.
+
+[F] L'asset `assets/images/backgrounds/rituals-home-v1.jpg` è applicato tramite
+una prop opzionale di `EditorialScreen`, usata soltanto dalla route Home. Yoga,
+Soundscapes, Settings, Audio Test, navigazione e motore restano invariati.
+
+[F] Una velatura carta graduata mantiene leggibile la testata; i sei box hanno
+fondo carta al 90% e la nota finale al 92%. Il fondale è decorativo,
+`accessible=false`, non intercetta azioni e non altera l'ordine TalkBack.
+
+[F] Dimensioni, byte, SHA-256, prompt e confine di provenienza sono registrati
+in `docs/M3_HOME_BACKGROUND_PROVENANCE.md`; il validatore richiede esattamente
+un JPEG di sfondo registrato. Due screenshot web 390×844, uno iniziale e uno
+scrollato sui box, documentano la resa senza Android Emulator. L'approvazione
+estetica è stata ricevuta dall'utente con `bravo` il 15 agosto 2026.
+
+## D-036 - Chiusura visual gate e autorizzazione del commit locale M3
+
+Data: 15 agosto 2026
+Stato: autorizzato dall'utente
+
+[F] Dopo avere approvato la Home con il fondale pittorico, l'utente ha richiesto
+esplicitamente `commit poi screenshot home page`. Questa istruzione autorizza
+un solo commit locale della milestone M3 e un nuovo screenshot Home successivo
+al commit.
+
+[F] L'autorizzazione non comprende push, pull request, EAS, build cloud,
+pubblicazione o deploy. Queste azioni restano gate distinti e richiedono una
+nuova istruzione esplicita.

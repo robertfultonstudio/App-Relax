@@ -4,6 +4,7 @@ import { colors, fonts, radii, spacing } from "@/design/theme";
 
 interface SourceControlProps {
   source: SourceSnapshot;
+  displayLabel?: string;
   onGainChange: (gain: number) => void;
   onToggleMuted: () => void;
 }
@@ -14,27 +15,35 @@ function formatGain(gain: number): string {
 
 function sourceState(source: SourceSnapshot): string {
   if (source.error) {
-    return source.error;
+    return "needs attention";
   }
-  if (source.loadingState !== "ready") {
-    return source.loadingState;
+  if (source.loadingState === "idle") {
+    return "waiting";
+  }
+  if (source.loadingState === "loading") {
+    return "preparing";
+  }
+  if (source.loadingState === "error") {
+    return "needs attention";
   }
   if (source.fadeState !== "idle") {
     return source.fadeState === "fadingIn" ? "fading in" : "fading out";
   }
-  return source.kind;
+  return source.muted ? "muted" : "ready";
 }
 
 export function SourceControl({
   source,
+  displayLabel,
   onGainChange,
   onToggleMuted,
 }: SourceControlProps) {
   const unavailable = source.loadingState !== "ready";
+  const label = displayLabel ?? source.label;
   return (
     <View style={styles.row}>
       <Pressable
-        accessibilityLabel={`${source.label}, ${source.muted ? "muted" : "active"}`}
+        accessibilityLabel={`${label}, ${source.muted ? "muted" : "active"}`}
         accessibilityRole="button"
         accessibilityState={{ disabled: unavailable, selected: source.muted }}
         disabled={unavailable}
@@ -46,15 +55,15 @@ export function SourceControl({
           pressed && styles.pressed,
         ]}
       >
-        <Text style={styles.muteGlyph}>{source.muted ? "×" : "≈"}</Text>
+        <Text style={styles.muteText}>{source.muted ? "Muted" : "Mute"}</Text>
       </Pressable>
       <View style={styles.meta}>
-        <Text style={styles.label}>{source.label}</Text>
+        <Text style={styles.label}>{label}</Text>
         <Text style={styles.state}>{sourceState(source)}</Text>
       </View>
       <View style={styles.stepper}>
         <Pressable
-          accessibilityLabel={`Lower ${source.label}`}
+          accessibilityLabel={`Lower ${label}`}
           accessibilityRole="button"
           disabled={unavailable || source.gain <= 0}
           onPress={() => onGainChange(Math.max(0, source.gain - 0.05))}
@@ -67,14 +76,14 @@ export function SourceControl({
           <Text style={styles.stepText}>−</Text>
         </Pressable>
         <Text
-          accessibilityLabel={`${source.label} level ${formatGain(source.gain)}`}
+          accessibilityLabel={`${label} level ${formatGain(source.gain)}`}
           style={styles.value}
           testID={`source-${source.id}-level`}
         >
           {formatGain(source.gain)}
         </Text>
         <Pressable
-          accessibilityLabel={`Raise ${source.label}`}
+          accessibilityLabel={`Raise ${label}`}
           accessibilityRole="button"
           disabled={unavailable || source.gain >= 1}
           onPress={() => onGainChange(Math.min(1, source.gain + 0.05))}
@@ -101,11 +110,12 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   mute: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    minWidth: 68,
+    height: 44,
+    borderRadius: radii.pill,
     alignItems: "center",
     justifyContent: "center",
+    paddingHorizontal: spacing.sm,
     backgroundColor: colors.surfaceRaised,
     borderWidth: 1,
     borderColor: colors.surfaceLine,
@@ -114,7 +124,11 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(215, 146, 131, 0.16)",
     borderColor: colors.danger,
   },
-  muteGlyph: { color: colors.text, fontSize: 19, fontFamily: fonts.serif },
+  muteText: {
+    color: colors.text,
+    fontSize: 10,
+    fontFamily: fonts.sansSemiBold,
+  },
   meta: { flex: 1, marginHorizontal: spacing.md },
   label: {
     color: colors.text,
@@ -123,7 +137,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   state: {
-    color: colors.textFaint,
+    color: colors.textMuted,
     fontFamily: fonts.sans,
     fontSize: 10,
     marginTop: 3,
@@ -137,8 +151,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.backgroundSoft,
   },
   stepButton: {
-    width: 36,
-    height: 42,
+    width: 44,
+    height: 44,
     alignItems: "center",
     justifyContent: "center",
   },

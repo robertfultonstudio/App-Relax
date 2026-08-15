@@ -1,8 +1,7 @@
-import { Platform } from "react-native";
-
 export const colors = {
   background: "#0B1114",
   backgroundSoft: "#10191B",
+  navigation: "#0D1516",
   surface: "#162023",
   surfaceRaised: "#1C292B",
   surfaceLine: "rgba(240, 230, 211, 0.12)",
@@ -34,19 +33,10 @@ export const radii = {
 } as const;
 
 export const fonts = {
-  sans: Platform.select({
-    ios: "Avenir Next",
-    android: "sans-serif",
-    default: "System",
-  }),
-  serif: Platform.select({
-    ios: "New York",
-    android: "serif",
-    default: "Georgia",
-  }),
-  mono: Platform.select({
-    ios: "Menlo",
-    android: "monospace",
-    default: "monospace",
-  }),
+  sans: "Manrope_400Regular",
+  sansMedium: "Manrope_500Medium",
+  sansSemiBold: "Manrope_600SemiBold",
+  serif: "Newsreader_500Medium",
+  serifItalic: "Newsreader_500Medium_Italic",
+  mono: "Manrope_500Medium",
 } as const;

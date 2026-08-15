@@ -3,6 +3,7 @@
 # version control and dependencies
 /.git/
 node_modules/
+/.pnpm-store/
 
 # Expo and generated bundles
 .expo/

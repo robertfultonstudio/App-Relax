@@ -1,47 +1,72 @@
 import Constants from "expo-constants";
 import { type Href, useRouter } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { AmbientScreen } from "@/components/AmbientScreen";
-import { TopBar } from "@/components/TopBar";
-import { colors, fonts, radii, spacing } from "@/design/theme";
+import { EditorialHeader } from "@/components/EditorialHeader";
+import { EditorialScreen } from "@/components/EditorialScreen";
+import { editorial } from "@/design/editorialTheme";
+import { fonts, spacing } from "@/design/theme";
 
 export default function SettingsScreen() {
   const router = useRouter();
   const version = Constants.expoConfig?.version ?? "development";
   return (
-    <AmbientScreen>
-      <TopBar label="SETTINGS" showBack />
+    <EditorialScreen>
+      <EditorialHeader label="SETTINGS" showBack />
       <Text accessibilityRole="header" style={styles.title}>
-        Quiet by default.
+        A quiet place to begin.
       </Text>
       <Text style={styles.intro}>
-        The first build keeps decisions small and playback under your control.
+        Consumer sections contain no playable audio yet. Technical playback is
+        kept separately in Audio Test.
       </Text>
 
       <View style={styles.card}>
         <SettingRow label="Autoplay" value="Off" />
-        <SettingRow
-          label="Background mode"
-          value="Prepared · device test pending"
-        />
-        <SettingRow label="Saved locally" value="Timer and mix only" />
-        <SettingRow label="Build" value={`MVP ${version}`} last />
+        <SettingRow label="Reduce motion" value="Follows your device" />
+        <SettingRow label="Background mode" value="Device test pending" />
+        <SettingRow label="Saved locally" value="Audio test timer and mix" />
+        <SettingRow label="Build" value={`M3 ${version}`} last />
       </View>
 
-      <Pressable
-        accessibilityRole="link"
+      <SettingLink
+        body="Moon Current and the three WAV files, outside the consumer tabs"
+        hint="Opens the separate dark technical Audio Test area"
+        onPress={() => router.push("/audio-test" as Href)}
+        title="Audio Test — Test only"
+      />
+      <SettingLink
+        body="Claims, current validation and safe listening"
         onPress={() => router.push("/legal" as Href)}
-        style={({ pressed }) => [styles.link, pressed && styles.pressed]}
-      >
-        <View>
-          <Text style={styles.linkTitle}>Legal & sound labels</Text>
-          <Text style={styles.linkBody}>
-            Claims, audio status and listening note
-          </Text>
-        </View>
-        <Text style={styles.arrow}>→</Text>
-      </Pressable>
-    </AmbientScreen>
+        title="Legal & sound details"
+      />
+    </EditorialScreen>
+  );
+}
+
+function SettingLink({
+  body,
+  hint,
+  onPress,
+  title,
+}: {
+  body: string;
+  hint?: string;
+  onPress: () => void;
+  title: string;
+}) {
+  return (
+    <Pressable
+      accessibilityHint={hint}
+      accessibilityRole="link"
+      onPress={onPress}
+      style={({ pressed }) => [styles.link, pressed && styles.pressed]}
+    >
+      <View style={styles.linkCopy}>
+        <Text style={styles.linkTitle}>{title}</Text>
+        <Text style={styles.linkBody}>{body}</Text>
+      </View>
+      <Text style={styles.arrow}>→</Text>
+    </Pressable>
   );
 }
 
@@ -63,9 +88,14 @@ function SettingRow({
 }
 
 const styles = StyleSheet.create({
-  title: { color: colors.text, fontFamily: fonts.serif, fontSize: 40 },
+  title: {
+    color: editorial.ink,
+    fontFamily: fonts.serif,
+    fontSize: 40,
+    lineHeight: 44,
+  },
   intro: {
-    color: colors.textMuted,
+    color: editorial.inkMuted,
     fontFamily: fonts.sans,
     fontSize: 15,
     lineHeight: 23,
@@ -73,11 +103,8 @@ const styles = StyleSheet.create({
   },
   card: {
     marginTop: spacing.xl,
-    paddingHorizontal: spacing.md,
-    borderRadius: radii.lg,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.surfaceLine,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: editorial.lineStrong,
   },
   row: {
     minHeight: 66,
@@ -85,41 +112,45 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.surfaceLine,
+    borderBottomColor: editorial.line,
   },
   lastRow: { borderBottomWidth: 0 },
   rowLabel: {
-    color: colors.text,
-    fontFamily: fonts.sans,
+    color: editorial.ink,
     fontSize: 13,
-    fontWeight: "600",
+    fontFamily: fonts.sansSemiBold,
   },
   rowValue: {
-    color: colors.textMuted,
+    color: editorial.inkMuted,
     fontFamily: fonts.sans,
-    fontSize: 11,
+    fontSize: 12,
+    lineHeight: 18,
     textAlign: "right",
-    maxWidth: "56%",
+    flexShrink: 1,
+    maxWidth: "62%",
   },
   link: {
-    minHeight: 86,
+    minHeight: 88,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     marginTop: spacing.md,
-    padding: spacing.md,
-    borderRadius: radii.lg,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.surfaceLine,
+    paddingVertical: spacing.lg,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: editorial.lineStrong,
   },
-  linkTitle: { color: colors.text, fontFamily: fonts.serif, fontSize: 18 },
+  linkCopy: { flex: 1, paddingRight: spacing.md },
+  linkTitle: { color: editorial.ink, fontFamily: fonts.serif, fontSize: 20 },
   linkBody: {
-    color: colors.textFaint,
+    color: editorial.inkMuted,
     fontFamily: fonts.sans,
-    fontSize: 10,
+    fontSize: 11,
+    lineHeight: 16,
     marginTop: 4,
   },
-  arrow: { color: colors.moon, fontSize: 20 },
-  pressed: { opacity: 0.6 },
+  arrow: { color: editorial.gold, fontSize: 20 },
+  pressed: {
+    backgroundColor: editorial.paperDeep,
+    transform: [{ translateY: 1 }],
+  },
 });

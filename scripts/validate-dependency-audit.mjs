@@ -20,7 +20,13 @@ const acceptedResiduals = new Map([
   ],
 ]);
 
-const audit = spawnSync("pnpm", ["audit", "--json"], {
+const packageManagerEntrypoint = process.env.npm_execpath;
+const auditCommand = packageManagerEntrypoint ? process.execPath : "pnpm";
+const auditArguments = packageManagerEntrypoint
+  ? [packageManagerEntrypoint, "audit", "--json"]
+  : ["audit", "--json"];
+
+const audit = spawnSync(auditCommand, auditArguments, {
   encoding: "utf8",
   maxBuffer: 20 * 1024 * 1024,
 });
