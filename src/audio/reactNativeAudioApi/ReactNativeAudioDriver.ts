@@ -14,6 +14,10 @@ import type {
   StemSourceId,
 } from "@/domain/audio/types";
 import {
+  dbToLinear,
+  type SingleTrackProgram,
+} from "@/domain/audio/consumerTypes";
+import {
   SourceLoadError,
   type AudioGraphDriver,
   type RemoteCommandHandlers,
@@ -21,6 +25,7 @@ import {
 import { getBinauralFrequencies } from "@/audio/generators/binaural";
 import { createBrownNoiseSamples } from "@/audio/generators/brownNoise";
 import { STEM_ASSETS } from "./stemAssets";
+import { CONSUMER_ASSETS } from "./consumerAssets";
 import {
   createStreamingStemSource,
   stopStreamingStemSource,
@@ -81,11 +86,16 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
   private brownNoiseBuffer: AudioBuffer | null = null;
   private readonly stemRuntime = new Map<StemSourceId, StemRuntime>();
   private brownNoiseRuntime: BufferRuntime | null = null;
+  private singleTrackRuntime: StemRuntime | null = null;
   private binauralRuntime: BinauralRuntime | null = null;
   private sourceGains = new Map<AudioSourceId, GainNode>();
   private sourceMuted = new Map<AudioSourceId, boolean>();
   private sourceGainValues = new Map<AudioSourceId, number>();
   private loadedPresetId: string | null = null;
+  private loadedProgramId: string | null = null;
+  private programLocalUri: string | null = null;
+  private programPlaybackGain = 1;
+  private programVolume = 1;
   private graphStarted = false;
   private handlers: RemoteCommandHandlers | null = null;
   private subscriptions: RemovableSubscription[] = [];
@@ -168,6 +178,8 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
       activeSourceLabel = "brown noise";
       this.brownNoiseBuffer = this.createBrownNoiseBuffer(context);
       this.loadedPresetId = preset.id;
+      this.loadedProgramId = null;
+      this.programLocalUri = null;
       if (context.state === "running") {
         await context.suspend();
       }
@@ -187,6 +199,43 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
         activeSourceId,
         `Could not load ${activeSourceLabel}: ${detail}`,
       );
+    }
+  }
+
+  async loadSingleTrack(program: SingleTrackProgram): Promise<void> {
+    if (
+      this.loadedProgramId === program.work.id &&
+      this.context &&
+      this.programLocalUri
+    ) {
+      return;
+    }
+    await this.stop();
+    this.ensureContext();
+    const context = this.requireContext();
+    const descriptor = CONSUMER_ASSETS[program.work.assetKey];
+    if (!descriptor) {
+      throw new Error(`${program.work.title} is not embedded in this build.`);
+    }
+    try {
+      const asset = Asset.fromModule(descriptor.moduleId);
+      if (asset.hash !== descriptor.md5) {
+        throw new Error(`Asset hash mismatch for ${program.work.title}.`);
+      }
+      await asset.downloadAsync();
+      if (!asset.localUri?.startsWith("file://")) {
+        throw new Error(`No local file available for ${program.work.title}.`);
+      }
+      this.programLocalUri = asset.localUri;
+      this.programPlaybackGain = dbToLinear(program.work.playbackGainDb);
+      this.loadedProgramId = program.work.id;
+      this.loadedPresetId = null;
+      if (context.state === "running") await context.suspend();
+    } catch (error) {
+      this.programLocalUri = null;
+      this.loadedProgramId = null;
+      if (context.state === "running") await context.suspend();
+      throw error;
     }
   }
 
@@ -252,7 +301,71 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
       // Android notification setup is best-effort and can wait indefinitely on
       // platform services. The audible graph, timer and UI must not depend on it.
       const notificationGeneration = ++this.notificationGeneration;
-      void this.showPlaybackNotification(preset, notificationGeneration);
+      void this.showPlaybackNotification(
+        preset.title,
+        "Sleep rituals",
+        notificationGeneration,
+      );
+    } catch (error) {
+      await this.stop();
+      throw error;
+    }
+  }
+
+  async startSingleTrack(
+    program: SingleTrackProgram,
+    volume: number,
+  ): Promise<void> {
+    if (this.graphStarted) return;
+    if (this.loadedProgramId !== program.work.id) {
+      await this.loadSingleTrack(program);
+    }
+    if (!this.programLocalUri) {
+      throw new Error(`No local file available for ${program.work.title}.`);
+    }
+    try {
+      const context = this.requireContext();
+      AudioManager.setAudioSessionOptions({
+        iosCategory: "playback",
+        iosMode: "default",
+        iosOptions: ["allowAirPlay"],
+      });
+      AudioManager.observeAudioInterruptions(true);
+      const master = this.masterGain ?? context.createGain();
+      if (!this.masterGain) {
+        master.connect(context.destination);
+        this.masterGain = master;
+      }
+      const { source, output } = createStreamingStemSource(
+        context,
+        this.programLocalUri,
+      );
+      const gain = context.createGain();
+      this.programVolume = Math.min(1, Math.max(0, volume));
+      gain.gain.value = Math.max(
+        SILENT_GAIN,
+        this.programPlaybackGain * this.programVolume,
+      );
+      output.connect(gain);
+      gain.connect(master);
+      this.singleTrackRuntime = { source, output, gain };
+
+      if (context.state === "suspended") await context.resume();
+      await AudioManager.setAudioSessionActivity(true);
+      const startAt = context.currentTime + 0.1;
+      master.gain.cancelScheduledValues(context.currentTime);
+      master.gain.setValueAtTime(SILENT_GAIN, context.currentTime);
+      master.gain.setValueAtTime(SILENT_GAIN, startAt);
+      master.gain.linearRampToValueAtTime(1, startAt + program.fadeInSeconds);
+      source.start(startAt);
+      this.graphStarted = true;
+      this.notificationDesiredState = "playing";
+      const generation = ++this.notificationGeneration;
+      void this.showPlaybackNotification(
+        program.work.title,
+        "App Relax",
+        generation,
+      );
     } catch (error) {
       await this.stop();
       throw error;
@@ -326,6 +439,12 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
     }
     this.stemRuntime.clear();
 
+    if (this.singleTrackRuntime) {
+      stopStreamingStemSource(this.singleTrackRuntime);
+      this.singleTrackRuntime.gain.disconnect();
+      this.singleTrackRuntime = null;
+    }
+
     if (this.brownNoiseRuntime) {
       safeStop(this.brownNoiseRuntime.source);
       this.brownNoiseRuntime.gain.disconnect();
@@ -372,6 +491,8 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
     this.stemLocalUris.clear();
     this.brownNoiseBuffer = null;
     this.loadedPresetId = null;
+    this.loadedProgramId = null;
+    this.programLocalUri = null;
   }
 
   async setSourceGain(
@@ -395,6 +516,22 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
     } else {
       node.gain.setValueAtTime(target, now);
     }
+  }
+
+  async setMasterVolume(volume: number, fadeMs: number): Promise<void> {
+    this.programVolume = Math.min(1, Math.max(0, volume));
+    const node = this.singleTrackRuntime?.gain;
+    if (!node || !this.context) return;
+    const now = this.context.currentTime;
+    const target = Math.max(
+      SILENT_GAIN,
+      this.programPlaybackGain * this.programVolume,
+    );
+    node.gain.cancelScheduledValues(now);
+    node.gain.setValueAtTime(Math.max(SILENT_GAIN, node.gain.value), now);
+    if (fadeMs > 0)
+      node.gain.linearRampToValueAtTime(target, now + fadeMs / 1000);
+    else node.gain.setValueAtTime(target, now);
   }
 
   async scheduleFadeOut(remainingMs: number, fadeMs: number): Promise<void> {
@@ -530,6 +667,7 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
     this.brownNoiseRuntime?.source.stop(endAt);
     this.binauralRuntime?.left.stop(endAt);
     this.binauralRuntime?.right.stop(endAt);
+    this.singleTrackRuntime?.source.stop(endAt);
   }
 
   private isCurrentNotificationGeneration(generation: number): boolean {
@@ -565,7 +703,8 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
   }
 
   private async showPlaybackNotification(
-    preset: AudioPreset,
+    title: string,
+    album: string,
     generation: number,
   ): Promise<void> {
     try {
@@ -596,9 +735,9 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
         return;
       }
       await PlaybackNotificationManager.show({
-        title: preset.title,
+        title,
         artist: "Ritual Audio",
-        album: "Sleep rituals",
+        album,
         state: "playing",
         speed: 1,
       });

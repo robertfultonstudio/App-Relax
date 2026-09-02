@@ -114,7 +114,7 @@ describe("product and asset request contracts", () => {
     expect(player).toContain("TEST ONLY");
   });
 
-  it("keeps consumer tabs audio-free and the engine route visibly test-only", () => {
+  it("keeps the technical preset isolated while consumer works use a separate registry", () => {
     const rituals = readFileSync(
       join(projectRoot, "src", "content", "rituals.ts"),
       "utf8",
@@ -139,8 +139,15 @@ describe("product and asset request contracts", () => {
     expect(rituals).toContain('availability: "test-only"');
     expect(rituals.match(/audioPresetId: "deep-sleep-432"/g)).toHaveLength(1);
     expect(`${shell}\n${home}\n${yoga}\n${soundscapes}`).not.toMatch(
-      /deep-sleep-432|sleepDrone001|sleepAmbience001|sleepTexture001/,
+      /deep-sleep-432/,
     );
+    expect(soundscapes).toContain("CONSUMER_AUDIO_WORKS");
+    const catalog = readFileSync(
+      join(projectRoot, "src", "content", "consumerCatalog.ts"),
+      "utf8",
+    );
+    expect(catalog).toMatch(/work\(\s*"eclipse-veil"/);
+    expect(catalog).not.toContain("defaultMix");
   });
 
   it("avoids recognisable Anima interface motifs without banning cosmic copy", () => {

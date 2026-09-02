@@ -26,3 +26,14 @@ export const OUTCOME_EDITORIAL_ACCENT: Readonly<
   sleep: editorial.lavender,
   focus: editorial.gold,
 };
+
+export const OUTCOME_EDITORIAL_SURFACE: Readonly<
+  Record<ConsumerOutcomeId, string>
+> = {
+  yoga: "#E8EBDE",
+  massage: "#F2E3D7",
+  relax: "#E3E9DE",
+  meditation: "#E7E5E8",
+  sleep: "#EDE3E7",
+  focus: "#EDE8D4",
+};

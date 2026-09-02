@@ -21,9 +21,9 @@ export function EditorialScreen({
 }: EditorialScreenProps) {
   const gradient = backgroundArtwork
     ? ([
-        "rgba(248, 242, 232, 0.02)",
-        "rgba(242, 233, 218, 0.12)",
-        "rgba(231, 217, 197, 0.56)",
+        "rgba(248, 242, 232, 0.01)",
+        "rgba(242, 233, 218, 0.08)",
+        "rgba(231, 217, 197, 0.38)",
       ] as const)
     : tone === "sky"
       ? (["#EEE7E3", editorial.paper, "#E8E0D3"] as const)
@@ -67,15 +67,17 @@ const styles = StyleSheet.create({
   backgroundArtwork: {
     position: "absolute",
     bottom: 0,
+    height: "100%",
     left: 0,
     right: 0,
     top: 0,
+    width: "100%",
   },
   safeArea: { flex: 1 },
   content: {
     paddingHorizontal: 22,
     paddingTop: 8,
-    paddingBottom: 72,
+    paddingBottom: 56,
   },
   marginRule: {
     position: "absolute",

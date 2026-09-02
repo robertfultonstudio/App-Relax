@@ -11,10 +11,22 @@ import type {
 } from "@/domain/audio/types";
 import { AUDIO_SOURCE_IDS } from "@/domain/audio/types";
 import { assertValidPreset } from "@/domain/audio/presetValidation";
+import type { SingleTrackProgram } from "@/domain/audio/consumerTypes";
 import type {
   PlayerPreferences,
   PlayerPreferencesStore,
 } from "@/state/playerPersistence";
+import type {
+  ConsumerPlayerPreferences,
+  ConsumerPlayerPreferencesStore,
+} from "@/state/consumerPlayerPersistence";
+
+const nullConsumerStore: ConsumerPlayerPreferencesStore = {
+  async load() {
+    return null;
+  },
+  async save() {},
+};
 
 const SOURCE_METADATA: Record<
   AudioSourceId,
@@ -83,7 +95,9 @@ export class AudioSessionController implements AudioEngine {
   private snapshot: SessionSnapshot;
   private readonly listeners = new Set<SessionListener>();
   private currentPreset: AudioPreset | null = null;
+  private currentProgram: SingleTrackProgram | null = null;
   private restoredPreferences: PlayerPreferences | null = null;
+  private restoredConsumerPreferences: ConsumerPlayerPreferences | null = null;
   private hydrationPromise: Promise<void> | null = null;
   private commandChain: Promise<void> = Promise.resolve();
   private ticker: ReturnType<typeof setInterval> | null = null;
@@ -96,11 +110,15 @@ export class AudioSessionController implements AudioEngine {
     private readonly driver: AudioGraphDriver,
     private readonly preferencesStore: PlayerPreferencesStore,
     private readonly runtime: ControllerRuntime = defaultRuntime,
+    private readonly consumerPreferencesStore: ConsumerPlayerPreferencesStore = nullConsumerStore,
   ) {
     this.snapshot = {
+      mode: null,
       status: "idle",
       presetId: null,
+      workId: null,
       title: null,
+      volume: 0.8,
       selectedDurationMinutes: 30,
       remainingMs: 30 * 60_000,
       deadlineMs: null,
@@ -163,7 +181,12 @@ export class AudioSessionController implements AudioEngine {
 
   private async hydrateInternal(): Promise<void> {
     try {
-      this.restoredPreferences = await this.preferencesStore.load();
+      const [technical, consumer] = await Promise.all([
+        this.preferencesStore.load(),
+        this.consumerPreferencesStore.load(),
+      ]);
+      this.restoredPreferences = technical;
+      this.restoredConsumerPreferences = consumer;
       this.patch({ hydrated: true });
     } catch (error) {
       this.patch({
@@ -186,6 +209,7 @@ export class AudioSessionController implements AudioEngine {
 
       await this.stopInternal(false);
       this.currentPreset = preset;
+      this.currentProgram = null;
       const restored =
         this.restoredPreferences?.presetId === preset.id
           ? this.restoredPreferences
@@ -212,8 +236,10 @@ export class AudioSessionController implements AudioEngine {
       ) as Record<AudioSourceId, SourceSnapshot>;
 
       this.patch({
+        mode: "technical",
         status: "loading",
         presetId: preset.id,
+        workId: null,
         title: preset.title,
         selectedDurationMinutes: duration,
         remainingMs: duration * 60_000,
@@ -251,6 +277,53 @@ export class AudioSessionController implements AudioEngine {
     });
   }
 
+  loadProgram(program: SingleTrackProgram): Promise<void> {
+    return this.enqueue(async () => {
+      await this.hydrate();
+      if (program.kind !== "single-track" || !program.work.loop) {
+        throw new Error("Invalid single-track program.");
+      }
+      if (
+        this.currentProgram?.work.id === program.work.id &&
+        this.snapshot.status !== "error"
+      ) {
+        return;
+      }
+      await this.stopInternal(false);
+      this.currentPreset = null;
+      this.currentProgram = program;
+      const restored =
+        this.restoredConsumerPreferences?.workId === program.work.id
+          ? this.restoredConsumerPreferences
+          : null;
+      const duration =
+        restored &&
+        program.durationOptionsMinutes.includes(restored.durationMinutes)
+          ? restored.durationMinutes
+          : (program.durationOptionsMinutes[1] ??
+            program.durationOptionsMinutes[0]);
+      this.patch({
+        mode: "consumer",
+        status: "loading",
+        presetId: null,
+        workId: program.work.id,
+        title: program.work.title,
+        volume: restored?.volume ?? 0.8,
+        selectedDurationMinutes: duration,
+        remainingMs: duration * 60_000,
+        deadlineMs: null,
+        sources: createSourceRecord(),
+        error: null,
+      });
+      try {
+        await this.driver.loadSingleTrack(program);
+        this.patch({ status: "ready" });
+      } catch (error) {
+        this.patch({ status: "error", error: errorMessage(error) });
+      }
+    });
+  }
+
   play(): Promise<void> {
     this.activate();
     return this.enqueue(() => this.playInternal());
@@ -258,7 +331,7 @@ export class AudioSessionController implements AudioEngine {
 
   private async playInternal(): Promise<void> {
     if (
-      !this.currentPreset ||
+      (!this.currentPreset && !this.currentProgram) ||
       this.snapshot.status === "loading" ||
       this.snapshot.status === "error"
     ) {
@@ -275,14 +348,21 @@ export class AudioSessionController implements AudioEngine {
       const isResume = this.snapshot.status === "paused";
       if (isResume) {
         await this.driver.resume();
+      } else if (this.currentProgram) {
+        await this.driver.startSingleTrack(
+          this.currentProgram,
+          this.snapshot.volume,
+        );
       } else {
+        const preset = this.currentPreset;
+        if (!preset) return;
         const mix = Object.fromEntries(
           AUDIO_SOURCE_IDS.map((sourceId) => [
             sourceId,
             this.snapshot.sources[sourceId].gain,
           ]),
         ) as Record<AudioSourceId, number>;
-        await this.driver.start(this.currentPreset, mix);
+        await this.driver.start(preset, mix);
       }
 
       const remainingMs =
@@ -295,7 +375,7 @@ export class AudioSessionController implements AudioEngine {
       this.deadlineGeneration += 1;
       await this.driver.scheduleFadeOut(
         remainingMs,
-        this.currentPreset.fadeOutSeconds * 1000,
+        this.activeFadeOutSeconds() * 1000,
       );
       this.patch({ status: "playing", remainingMs, deadlineMs, error: null });
       this.startTicker();
@@ -339,9 +419,12 @@ export class AudioSessionController implements AudioEngine {
       this.clearTicker();
       await this.driver.dispose();
       this.currentPreset = null;
+      this.currentProgram = null;
       this.patch({
+        mode: null,
         status: "idle",
         presetId: null,
+        workId: null,
         title: null,
         deadlineMs: null,
         sources: createSourceRecord(),
@@ -412,9 +495,7 @@ export class AudioSessionController implements AudioEngine {
       ) {
         throw new Error("Pause or stop playback before changing the timer.");
       }
-      if (
-        !this.currentPreset?.durationOptionsMinutes.includes(durationMinutes)
-      ) {
+      if (!this.activeDurationOptions().includes(durationMinutes)) {
         throw new Error("Unsupported duration for this preset.");
       }
       const remainingMs = durationMinutes * 60_000;
@@ -423,6 +504,16 @@ export class AudioSessionController implements AudioEngine {
         remainingMs,
         deadlineMs: null,
       });
+      await this.persist();
+    });
+  }
+
+  setVolume(volume: number, fadeMs = 180): Promise<void> {
+    return this.enqueue(async () => {
+      if (!this.currentProgram) return;
+      const next = clampGain(volume);
+      await this.driver.setMasterVolume(next, fadeMs);
+      this.patch({ volume: next, error: null });
       await this.persist();
     });
   }
@@ -443,7 +534,7 @@ export class AudioSessionController implements AudioEngine {
       ? this.snapshot.selectedDurationMinutes * 60_000
       : this.snapshot.remainingMs;
     this.patch({
-      status: this.currentPreset ? "ready" : "idle",
+      status: this.currentPreset || this.currentProgram ? "ready" : "idle",
       deadlineMs: null,
       remainingMs,
       sources: Object.fromEntries(
@@ -497,13 +588,13 @@ export class AudioSessionController implements AudioEngine {
       (this.snapshot.status !== "playing" &&
         this.snapshot.status !== "fadingOut") ||
       this.snapshot.deadlineMs === null ||
-      !this.currentPreset
+      (!this.currentPreset && !this.currentProgram)
     ) {
       return;
     }
 
     const remainingMs = this.remainingFromDeadline();
-    const fadeMs = this.currentPreset.fadeOutSeconds * 1000;
+    const fadeMs = this.activeFadeOutSeconds() * 1000;
     const status = remainingMs <= fadeMs ? "fadingOut" : "playing";
     const enteringFade =
       status === "fadingOut" && this.snapshot.status !== "fadingOut";
@@ -587,6 +678,21 @@ export class AudioSessionController implements AudioEngine {
   }
 
   private async persist(): Promise<void> {
+    if (this.currentProgram) {
+      try {
+        await this.consumerPreferencesStore.save({
+          schemaVersion: 1,
+          workId: this.currentProgram.work.id,
+          durationMinutes: this.snapshot.selectedDurationMinutes,
+          volume: this.snapshot.volume,
+        });
+      } catch (error) {
+        this.patch({
+          error: `Settings could not be saved: ${errorMessage(error)}`,
+        });
+      }
+      return;
+    }
     if (!this.currentPreset) {
       return;
     }
@@ -614,5 +720,21 @@ export class AudioSessionController implements AudioEngine {
         error: `Settings could not be saved: ${errorMessage(error)}`,
       });
     }
+  }
+
+  private activeDurationOptions(): readonly number[] {
+    return (
+      this.currentProgram?.durationOptionsMinutes ??
+      this.currentPreset?.durationOptionsMinutes ??
+      []
+    );
+  }
+
+  private activeFadeOutSeconds(): number {
+    return (
+      this.currentProgram?.fadeOutSeconds ??
+      this.currentPreset?.fadeOutSeconds ??
+      0
+    );
   }
 }

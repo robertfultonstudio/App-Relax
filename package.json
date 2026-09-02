@@ -62,6 +62,8 @@
     "audio:generate-placeholders": "node scripts/generate-placeholder-audio.mjs",
     "audio:validate-placeholders": "node scripts/validate-placeholder-audio.mjs",
     "audio:validate-test-pack": "node scripts/validate-test-pack-audio.mjs",
+    "audio:validate-consumer": "node scripts/validate-consumer-audio.mjs",
+    "audio:verify-lossless": "node scripts/verify-lossless-derivatives.mjs",
     "assets:validate-safety": "node scripts/validate-asset-safety.mjs",
     "assets:validate-rituals": "node scripts/validate-ritual-assets.mjs",
     "security:audit": "node scripts/validate-asset-safety.mjs && node scripts/validate-dependency-audit.mjs",

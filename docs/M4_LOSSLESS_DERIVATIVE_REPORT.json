@@ -1,0 +1,176 @@
+{
+  "schemaVersion": 1,
+  "codec": "FLAC lossless, compression level 8",
+  "sampleFormat": "stereo PCM24 48 kHz",
+  "fileCount": 18,
+  "totals": {
+    "wavBytes": 2563271952,
+    "flacBytes": 1455254377,
+    "savedBytes": 1108017575,
+    "savedPercent": 43.2267
+  },
+  "files": [
+    {
+      "filename": "SLEEP_AMBIENCE_001.flac",
+      "wavBytes": 51840044,
+      "flacBytes": 39409745,
+      "savedBytes": 12430299,
+      "savedPercent": 23.9782,
+      "flacSha256": "834f10409162615aab358a59bb6886dac77a4953e3472b146ed458236cfe9f75",
+      "decodedPcmSha256": "c5629c9235e7bac99879902196e1af3984e8d3667295179dd4107453dd995bd1"
+    },
+    {
+      "filename": "SLEEP_DRONE_001.flac",
+      "wavBytes": 51840044,
+      "flacBytes": 38068671,
+      "savedBytes": 13771373,
+      "savedPercent": 26.5651,
+      "flacSha256": "d4319bd565863923d457fd7060f8e6799985b84c24cef5c6e20b4fbf24ef5dad",
+      "decodedPcmSha256": "dee331705e9e16335a517484f6e68551ca1d4fb286e6512b0c3f42239231a9bd"
+    },
+    {
+      "filename": "SLEEP_TEXTURE_001.flac",
+      "wavBytes": 51840044,
+      "flacBytes": 35993324,
+      "savedBytes": 15846720,
+      "savedPercent": 30.5685,
+      "flacSha256": "220e7a0d791f1d6e08135406db6f0bcf3317c9f50e0ebaad6618ad7ca907c8fe",
+      "decodedPcmSha256": "442955a26ef7c1eb75f588e8b286a83344f08c6fe1ae6df74704428a2920062e"
+    },
+    {
+      "filename": "SOUNDSCAPE_ECLYPSIS_001_EMINOR_48K24_LOOP.flac",
+      "wavBytes": 49770044,
+      "flacBytes": 28167925,
+      "savedBytes": 21602119,
+      "savedPercent": 43.4039,
+      "flacSha256": "644a9c4037fd1262c770bd195d2ae8533cb3ee3795ce2341bd595e0f0f8522a5",
+      "decodedPcmSha256": "8020c8c2c18f0bad8cdda3ebdddd1c326cfbb963359175cf00b7929859f224f6"
+    },
+    {
+      "filename": "SOUNDSCAPE_NIRVANA_WAVES_001_EMINOR_48K24_LOOP.flac",
+      "wavBytes": 48960044,
+      "flacBytes": 26858497,
+      "savedBytes": 22101547,
+      "savedPercent": 45.142,
+      "flacSha256": "2f3c121a3bc163f1747ea1e18c61dd0a32fc0be30526248639719fdd68272c46",
+      "decodedPcmSha256": "c4624544683d31183cbc642c825704f1f0044d19e9780c3e0827cc2fb980658f"
+    },
+    {
+      "filename": "SOUNDSCAPE_PIANO_MASSAGE_001_48K24_LOOP.flac",
+      "wavBytes": 339840044,
+      "flacBytes": 208526921,
+      "savedBytes": 131313123,
+      "savedPercent": 38.6397,
+      "flacSha256": "6426d6462f10e23d5ba04b6052c26ebb5f7e5302a9e8f0d9bfdc4d48e9a6319a",
+      "decodedPcmSha256": "6eb34dc5f7716789f6cbf54732613582c70b68bf9deb11d6e9fd8f424bef3562"
+    },
+    {
+      "filename": "SOUNDSCAPE_STAR_GENERATOR_001_EMINOR_48K24_LOOP.flac",
+      "wavBytes": 48960044,
+      "flacBytes": 29081063,
+      "savedBytes": 19878981,
+      "savedPercent": 40.6025,
+      "flacSha256": "61e6c85cdd63cc1654bfed940eacea12e02890f59e6c4fa5409ac6c9bbc2bc6b",
+      "decodedPcmSha256": "53fafa020bb3bfe05ebf0b9b26905c807cce5dceb5733f7de7e3c0c8c8540176"
+    },
+    {
+      "filename": "SOUNDSCAPE_STAR_GENERATOR_002_EMINOR_48K24_LOOP.flac",
+      "wavBytes": 48960044,
+      "flacBytes": 29174275,
+      "savedBytes": 19785769,
+      "savedPercent": 40.4121,
+      "flacSha256": "490e1afbbe39e5edd9293ac69ae9c1e46e010adf12317831d4a1a190ac73c0d3",
+      "decodedPcmSha256": "00a6b962d32d6023d723ffdd8ee3e79761704cb0589d980881d6215eda056427"
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_DREAM_003_PAD_48K24_LOOP.flac",
+      "wavBytes": 130091564,
+      "flacBytes": 70952753,
+      "savedBytes": 59138811,
+      "savedPercent": 45.4594,
+      "flacSha256": "c349b89fc3c06591ea41ad42584e2093a3e2bfb2e442ab3e3a55347f4db4a08a",
+      "decodedPcmSha256": "c9997f2af035aca7422c33cb3a5d05701f5fd5690d013ee1428ae5c692d2b076"
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_DREAM_003_PIANO_48K24_LOOP.flac",
+      "wavBytes": 130091564,
+      "flacBytes": 68965396,
+      "savedBytes": 61126168,
+      "savedPercent": 46.987,
+      "flacSha256": "8e36f5092793677e6ac4a36094771558233bec017784658906251cd6fe1b4306",
+      "decodedPcmSha256": "8f8cf240806e7916afb4e4347b637b2ba37cb0de50cc70f314c7b0d54b42ee0a"
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_FIELD_WAVES_001_EMINOR_48K24_LOOP.flac",
+      "wavBytes": 48962324,
+      "flacBytes": 25917656,
+      "savedBytes": 23044668,
+      "savedPercent": 47.0661,
+      "flacSha256": "0d2533a34e35f900f13488e0b98c09e36478dfd33950cd3ac0962751cf7718ee",
+      "decodedPcmSha256": "2b58e491aa7a4da199733c8dacb59f1be4188b7a48451ab21f09705238ec4d6e"
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_GENERATOR_002_EMINOR_48K24_LOOP.flac",
+      "wavBytes": 48960044,
+      "flacBytes": 25777906,
+      "savedBytes": 23182138,
+      "savedPercent": 47.3491,
+      "flacSha256": "004bcd50566571b8ab423b2dac6738dedbfa7dfe2e9c3d6bb18d1adc54572871",
+      "decodedPcmSha256": "18e492421781ef703db4fcc07a2b10f6535ed897ddf1cf946090a3ef75b66af0"
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_GENERATOR_003_PIANO_CMAJ_48K24_LOOP.flac",
+      "wavBytes": 130176044,
+      "flacBytes": 65944696,
+      "savedBytes": 64231348,
+      "savedPercent": 49.3419,
+      "flacSha256": "a36205d0447061356478be185a73f0aeea2a3d3bf33511d62f241a840b2eced8",
+      "decodedPcmSha256": "2be5ccf02208bac4ca2d179c9ad55a0708b3322325c6a5d68625036733be9538"
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_GENERATOR_003_TEXTURE_CMAJ_48K24_LOOP.flac",
+      "wavBytes": 130176044,
+      "flacBytes": 74871204,
+      "savedBytes": 55304840,
+      "savedPercent": 42.4847,
+      "flacSha256": "b9f5d1224adca7068b5ec06bfff3787f0da9c72cb09b56e4c5497356f62ed300",
+      "decodedPcmSha256": "18af106e4028fd7b5d4019af86cd77a3e410b966be38c99e2583f74d0e399593"
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_GENERATOR_004_PAD_CMAJ_48K24_LOOP.flac",
+      "wavBytes": 281089964,
+      "flacBytes": 152816732,
+      "savedBytes": 128273232,
+      "savedPercent": 45.6342,
+      "flacSha256": "62f906dc53ebcc9356f38448c1b901624f951c90a1cd646bf79e9a65a3a62852",
+      "decodedPcmSha256": "2e0f5a269d6b9f9e332812d7b8187d9adb820c6f6d95d74d50dd699932f9c830"
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_GENERATOR_004_PIANO_CMAJ_48K24_LOOP.flac",
+      "wavBytes": 281089964,
+      "flacBytes": 147885375,
+      "savedBytes": 133204589,
+      "savedPercent": 47.3886,
+      "flacSha256": "55591bbf92e9e271dc37252f9054d2bb130055be203b24afbb98b6a31ce07070",
+      "decodedPcmSha256": "a71dfb4b582cf1f8de52a06b731a0858db3cfa4adc0a60a33abf3f7818a45b6d"
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_GENERATOR_005_PAD_48K24_LOOP.flac",
+      "wavBytes": 345312044,
+      "flacBytes": 189346766,
+      "savedBytes": 155965278,
+      "savedPercent": 45.1665,
+      "flacSha256": "b6c50366273b0b1b3b68d03731d668ca1d68541abbf71e74e50c96872326a047",
+      "decodedPcmSha256": "f77ca4bdc30efbcbac3af8bdbfa8a7e04ee6f2669bff831354390915cb70d76b"
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_GENERATOR_005_PIANO_48K24_LOOP.flac",
+      "wavBytes": 345312044,
+      "flacBytes": 197495472,
+      "savedBytes": 147816572,
+      "savedPercent": 42.8067,
+      "flacSha256": "94c762dbd8a0b092229d271fb3eb82f2981db743d47d9de5fab024d6216dbb61",
+      "decodedPcmSha256": "904f19bb21260d9b262a8dec978b63ae72962b51a95052fbd57d77ad6d037316"
+    }
+  ]
+}

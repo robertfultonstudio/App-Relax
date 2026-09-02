@@ -3,6 +3,7 @@ import type {
   RemoteCommandHandlers,
 } from "@/audio/AudioGraphDriver";
 import type { AudioPreset, AudioSourceId } from "@/domain/audio/types";
+import type { SingleTrackProgram } from "@/domain/audio/consumerTypes";
 
 export class FakeAudioDriver implements AudioGraphDriver {
   readonly capabilities = {
@@ -14,7 +15,9 @@ export class FakeAudioDriver implements AudioGraphDriver {
 
   handlers: RemoteCommandHandlers | null = null;
   loadCalls = 0;
+  loadProgramCalls = 0;
   startCalls = 0;
+  startProgramCalls = 0;
   resumeCalls = 0;
   pauseCalls = 0;
   pauseFocusReleases: boolean[] = [];
@@ -27,6 +30,7 @@ export class FakeAudioDriver implements AudioGraphDriver {
     muted: boolean;
     fadeMs: number;
   }[] = [];
+  masterVolumeCalls: { volume: number; fadeMs: number }[] = [];
   startError: Error | null = null;
   failingGainSource: AudioSourceId | null = null;
 
@@ -38,6 +42,10 @@ export class FakeAudioDriver implements AudioGraphDriver {
     this.loadCalls += 1;
   }
 
+  async loadSingleTrack(_program: SingleTrackProgram): Promise<void> {
+    this.loadProgramCalls += 1;
+  }
+
   async start(
     _preset: AudioPreset,
     _mix: Readonly<Record<AudioSourceId, number>>,
@@ -46,6 +54,14 @@ export class FakeAudioDriver implements AudioGraphDriver {
     if (this.startError) {
       throw this.startError;
     }
+  }
+
+  async startSingleTrack(
+    _program: SingleTrackProgram,
+    _volume: number,
+  ): Promise<void> {
+    this.startProgramCalls += 1;
+    if (this.startError) throw this.startError;
   }
 
   async resume(): Promise<void> {
@@ -76,6 +92,10 @@ export class FakeAudioDriver implements AudioGraphDriver {
     if (this.failingGainSource === sourceId) {
       throw new Error("Injected gain failure");
     }
+  }
+
+  async setMasterVolume(volume: number, fadeMs: number): Promise<void> {
+    this.masterVolumeCalls.push({ volume, fadeMs });
   }
 
   async scheduleFadeOut(remainingMs: number, fadeMs: number): Promise<void> {

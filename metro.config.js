@@ -2,8 +2,10 @@ const { getDefaultConfig } = require("expo/metro-config");
 
 const config = getDefaultConfig(__dirname);
 
-if (!config.resolver.assetExts.includes("wav")) {
-  config.resolver.assetExts.push("wav");
+for (const extension of ["wav", "flac"]) {
+  if (!config.resolver.assetExts.includes(extension)) {
+    config.resolver.assetExts.push(extension);
+  }
 }
 
 module.exports = config;

@@ -1,12 +1,60 @@
 # Stato progetto
 
-Aggiornato: 15 agosto 2026
+Aggiornato: 2 settembre 2026
 
 ## Milestone attiva
 
-M3 `Product Shell & Impressionist UI Foundation`: shell consumer a tre tab,
-confinamento del motore in `AUDIO TEST / TEST ONLY` e visual gate Android.
-Il commit locale M3 è autorizzato dall'utente; EAS, push e PR restano esclusi.
+M4 `Lossless Autonomous Catalog Foundation`: catalogo consumer single-track,
+derivati FLAC lossless e UI outcome-first. M3 resta preservata nel worktree.
+Il commit locale M3/M4 e autorizzato il 2 settembre 2026. EAS, build
+native/cloud, push, PR, Git LFS e asset delivery restano esclusi.
+
+## M4 implementato localmente
+
+- [x] Registro editoriale unico di 18 opere autonome: 15 derivati analogici e
+      tre ATP01 riusati senza duplicare i byte.
+- [x] Tutti e sei gli outcome hanno proposte; soltanto Relax, Meditation, Sleep
+      e Focus hanno almeno un asset incorporato e quindi una route abilitata.
+- [x] `SingleTrackProgram` separato dal preset tecnico; controller, driver,
+      timer assoluto, fade, interruzioni, notification lifecycle e persistenza
+      supportano un solo file consumer in loop.
+- [x] Player consumer con Play/Pause/Stop, timer 15/30/60, volume principale e
+      mute; nessun mixer, Hz, waveform o pannello tecnico.
+- [x] Flusso outcome realmente disponibile in due tocchi: Home → lista filtrata;
+      il primo asset incorporato è ordinato in testa e il secondo tocco lo
+      carica e avvia nel player. Le opere successive aprono il player senza
+      autoplay.
+- [x] Gain di ascolto calcolato per circa -18 LUFS; tutte le opere restano sotto
+      -1 dBTP post-gain senza rinormalizzare master o applicare limiter.
+- [x] 18 FLAC level 8 generati fuori repository e verificati: PCM decodificato
+      identico ai WAV. Totale 2.563.271.952 → 1.455.254.377 byte (-43,2267%).
+- [x] Starter locale limitato a `Eclipse Veil` (28.167.925 byte); i tre ATP01
+      sono riferiti dai catalogo consumer e test tecnico allo stesso asset.
+- [x] Gate locali M4 verdi: Prettier, lint, TypeScript, 18 suite / 68 test,
+      regressione audio 28/28, validatori placeholder/ATP01/consumer/asset/config
+      e confronto PCM lossless completo.
+- [x] Export Metro Android e iOS verdi. Ciascuno contiene esattamente quattro
+      asset audio, tre WAV ATP01 e lo starter FLAC, per 183.688.057 byte; gli
+      SHA-256 coincidono con i manifest e non sono emersi path locali o segreti
+      mirati nel bundle/metadata.
+- [x] Export web statico verde con 12 route, incluse Home, outcome filtrato,
+      Soundscapes e player consumer.
+- [ ] Expo Doctor: 18/20. I due check online non hanno raggiunto Expo API e
+      React Native Directory; `NON DETERMINATO — EVIDENZA INSUFFICIENTE`, non
+      regressioni dimostrate.
+- [ ] Refresh live del dependency audit: rete non disponibile. Lockfile
+      invariato; la precedente policy M3 sui due advisory `image-size` non viene
+      promossa a prova corrente.
+- [ ] Runtime FLAC/loop Android: `NON DETERMINATO — EVIDENZA INSUFFICIENTE`.
+      ADB è bloccato dal sandbox (`Operation not permitted`) e l'emulatore non
+      si avvia in questa task; la compatibilità statica non vale come ascolto.
+- [x] Quattro render statici M4 ad alta risoluzione prodotti e ispezionati da
+      sorgenti, copy, font e artwork correnti: Home, lista Relax filtrata,
+      Soundscapes e player. Sono prove visive di layout, non screenshot runtime.
+- [ ] Screenshot runtime M4: Android, server locale e renderer browser restano
+      bloccati dalla sandbox; `NON DETERMINATO — EVIDENZA INSUFFICIENTE`.
+- [ ] Titoli, mapping e qualità sonora: `PROVISIONAL — LISTENING APPROVAL
+REQUIRED`.
 
 ## M3 implementato finora
 
@@ -55,8 +103,21 @@ Il commit locale M3 è autorizzato dall'utente; EAS, push e PR restano esclusi.
       carta washi, velature pastello minerali, luce lunare, acqua/nebbia e
       vegetazione rada. Asset, manifest, hash e provenienza sono registrati in
       `docs/M3_HOME_BACKGROUND_PROVENANCE.md`; le altre route non cambiano.
-- [x] Approvazione umana dell'anteprima Home con fondale pittorico ricevuta il
-      15 agosto 2026 con `bravo`, seguita dalla richiesta esplicita di commit.
+- [x] Il precedente `bravo` ha autorizzato il commit locale, ma la successiva
+      revisione post-commit ha riaperto il gate visivo: box e barra risultavano
+      troppo alti e il fondale appariva spoglio.
+- [x] Correzione locale dell'anteprima web: dimensionamento intrinseco bloccato,
+      sfondo 390×844, artwork 131 px, box circa 357 px e barra 52 px con target
+      tab da 48 px. Il fondale e i sei artwork sono ora visibili nel layout.
+- [x] Spettro pastello reso esplicito nei sei box: giada, pesca, acqua marina,
+      blu minerale, lavanda e zafferano usano testata, corpo, hairline e accento
+      scuro coordinati senza filtrare gli artwork o introdurre blob/gradienti.
+- [x] Revisione pastello verificata: Prettier, lint, TypeScript, 15 suite/62
+      test e regressione audio 26/26 verdi; anteprima web senza errori console.
+- [ ] Approvazione umana della Home pastello revisionata in
+      `dist/m3-screenshots/01-home-pastel-spectrum-revision.jpg` e del dettaglio
+      della seconda parte della griglia in
+      `dist/m3-screenshots/01-home-pastel-spectrum-cards.jpg`.
 - [x] Shell consumer separata `consumer-paper`: carta washi, inchiostro AA,
       composizioni editoriali asimmetriche, sezioni aperte e hairline; rimosso
       il linguaggio generico di card arrotondate, pillole e blob. Audio Test

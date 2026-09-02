@@ -73,3 +73,23 @@ Dopo la consegna del pack:
 4. test di loop, gain, fade, timer e background;
 5. checklist di ascolto su telefono reale e cuffie;
 6. approvazione umana prima di qualsiasi ulteriore richiesta di asset.
+
+## Estensione M4: opere consumer autonome
+
+L'autorizzazione M4 introduce un contratto separato dal preset tecnico fisso a
+tre stem:
+
+- ogni `ConsumerAudioWork` riferisce un solo asset e diventa un
+  `SingleTrackProgram` in loop;
+- nessun mixer, somma di coppia o mute per stem è esposto nel consumer;
+- il volume principale moltiplica un gain di compensazione interno, calcolato
+  dai valori di manifest senza modificare il master;
+- ogni true peak post-gain deve restare sotto -1 dBTP;
+- i master restano WAV PCM24/48 kHz esterni; i derivati app sono FLAC lossless
+  stereo 24-bit/48 kHz level 8;
+- il PCM decodificato FLAC deve avere hash identico al data chunk WAV sorgente;
+- file non incorporati sono metadata e non possono essere presentati come
+  riproducibili;
+- titoli e mapping restano provvisori fino all'approvazione umana d'ascolto.
+
+Il registro e le misure sono documentati in `docs/M4_CONSUMER_AUDIO_CATALOG.md`.

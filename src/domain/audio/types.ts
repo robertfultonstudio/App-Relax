@@ -1,3 +1,5 @@
+import type { SingleTrackProgram } from "./consumerTypes";
+
 export const AUDIO_SOURCE_IDS = [
   "drone",
   "ambience",
@@ -74,9 +76,12 @@ export interface AudioCapabilities {
 }
 
 export interface SessionSnapshot {
+  mode: "technical" | "consumer" | null;
   status: PlaybackStatus;
   presetId: string | null;
+  workId: string | null;
   title: string | null;
+  volume: number;
   selectedDurationMinutes: number;
   remainingMs: number;
   deadlineMs: number | null;
@@ -90,6 +95,7 @@ export type SessionListener = (snapshot: SessionSnapshot) => void;
 
 export interface AudioEngine {
   loadPreset(preset: AudioPreset): Promise<void>;
+  loadProgram(program: SingleTrackProgram): Promise<void>;
   play(): Promise<void>;
   pause(): Promise<void>;
   stop(): Promise<void>;
@@ -105,6 +111,7 @@ export interface AudioEngine {
     fadeMs?: number,
   ): Promise<void>;
   setTimer(durationMinutes: number): Promise<void>;
+  setVolume(volume: number, fadeMs?: number): Promise<void>;
   getSnapshot(): SessionSnapshot;
   subscribe(listener: SessionListener): () => void;
 }

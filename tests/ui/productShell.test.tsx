@@ -1,12 +1,15 @@
 import { fireEvent, render } from "@testing-library/react-native";
+import OutcomeCatalogScreen from "@/app/outcome/[outcomeId]";
 import SoundscapesScreen from "@/app/soundscapes";
 import YogaScreen from "@/app/yoga";
 import { CONSUMER_OUTCOMES } from "@/content/productShell";
 
 const mockPush = jest.fn();
 const mockReplace = jest.fn();
+let mockParams: Record<string, string> = {};
 
 jest.mock("expo-router", () => ({
+  useLocalSearchParams: () => mockParams,
   useRouter: () => ({ push: mockPush, replace: mockReplace }),
 }));
 
@@ -18,6 +21,7 @@ describe("M3 product tabs", () => {
   beforeEach(() => {
     mockPush.mockClear();
     mockReplace.mockClear();
+    mockParams = {};
   });
 
   it("puts the six consumer functions before evocative naming", () => {
@@ -62,23 +66,33 @@ describe("M3 product tabs", () => {
         screen.getByTestId(`production-card-${id}`).props.accessibilityState,
       ).toEqual({ disabled: true });
     }
-    fireEvent.press(screen.getByTestId("product-tab-soundscapes"));
+    await fireEvent.press(screen.getByTestId("product-tab-soundscapes"));
     expect(mockReplace).toHaveBeenCalledWith("/soundscapes");
   });
 
-  it("presents curated soundscape families with a visible cosmic branch", async () => {
+  it("starts the first embedded outcome work on the second tap", async () => {
+    mockParams = { outcomeId: "relax" };
+    const screen = await render(<OutcomeCatalogScreen />);
+    expect(screen.getByText("START FEATURED")).toBeTruthy();
+    expect(
+      screen.getByTestId("consumer-work-deep-river").props.accessibilityState,
+    ).toEqual({ disabled: false });
+    await fireEvent.press(screen.getByTestId("consumer-work-deep-river"));
+    expect(mockPush).toHaveBeenCalledWith("/listen/deep-river?start=1");
+  });
+
+  it("presents autonomous works grouped in open soundscape collections", async () => {
     const screen = await render(<SoundscapesScreen />);
     expect(screen.getByText("Where would you like to go?")).toBeTruthy();
-    expect(screen.getByText("Standalone works")).toBeTruthy();
-    expect(screen.getByText("Elemental Worlds")).toBeTruthy();
-    expect(screen.getByText("Field recordings")).toBeTruthy();
-    expect(screen.getByText("Cosmic / Zen ambient")).toBeTruthy();
-    expect(screen.getByText("Esoteric Series")).toBeTruthy();
-    expect(screen.getAllByText("IN PRODUCTION")).toHaveLength(5);
+    expect(screen.getByText("STANDALONE WORKS")).toBeTruthy();
+    expect(screen.getByText("ELEMENTAL WORLDS")).toBeTruthy();
+    expect(screen.getByText("COSMIC / ZEN AMBIENT")).toBeTruthy();
+    expect(screen.getByText("Eclipse Veil")).toBeTruthy();
+    expect(screen.getByText("Deep River")).toBeTruthy();
+    expect(screen.getAllByText("AVAILABLE LOCALLY")).toHaveLength(4);
     expect(
-      screen.getByTestId("production-card-cosmic-zen-ambient").props
-        .accessibilityState,
-    ).toEqual({ disabled: true });
+      screen.getByTestId("consumer-work-eclipse-veil").props.accessibilityState,
+    ).toEqual({ disabled: false });
     expect(
       screen.getByTestId("soundscapes-editorial-artwork", {
         includeHiddenElements: true,

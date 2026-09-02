@@ -45,18 +45,18 @@ const styles = StyleSheet.create({
     borderTopColor: editorial.lineStrong,
   },
   bar: {
-    minHeight: 68,
+    minHeight: 52,
     flexDirection: "row",
     alignItems: "stretch",
     paddingHorizontal: spacing.sm,
-    paddingTop: 3,
+    paddingTop: 2,
   },
   tab: {
     flex: 1,
-    minHeight: 58,
+    minHeight: 48,
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
+    gap: 4,
     paddingHorizontal: 4,
   },
   stroke: {

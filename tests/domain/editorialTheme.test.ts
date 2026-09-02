@@ -1,4 +1,9 @@
-import { editorial, OUTCOME_EDITORIAL_ACCENT } from "@/design/editorialTheme";
+import { CONSUMER_OUTCOMES } from "@/content/productShell";
+import {
+  editorial,
+  OUTCOME_EDITORIAL_ACCENT,
+  OUTCOME_EDITORIAL_SURFACE,
+} from "@/design/editorialTheme";
 
 function luminance(hex: string) {
   const channels = hex
@@ -49,5 +54,26 @@ describe("consumer editorial theme", () => {
       "sleep",
       "focus",
     ]);
+    expect(Object.keys(OUTCOME_EDITORIAL_SURFACE)).toEqual(
+      Object.keys(OUTCOME_EDITORIAL_ACCENT),
+    );
+  });
+
+  it("keeps the pastel spectrum legible across every outcome panel", () => {
+    for (const outcome of CONSUMER_OUTCOMES) {
+      const surface = OUTCOME_EDITORIAL_SURFACE[outcome.id];
+      const accent = OUTCOME_EDITORIAL_ACCENT[outcome.id];
+
+      expect(contrast(editorial.ink, outcome.accent)).toBeGreaterThanOrEqual(
+        4.5,
+      );
+      expect(
+        contrast(editorial.inkMuted, outcome.accent),
+      ).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(editorial.ink, surface)).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(editorial.inkMuted, surface)).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(editorial.inkFaint, surface)).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(accent, surface)).toBeGreaterThanOrEqual(4.5);
+    }
   });
 });

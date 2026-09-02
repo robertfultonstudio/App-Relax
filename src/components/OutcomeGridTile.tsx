@@ -3,11 +3,18 @@ import type {
   ConsumerOutcome,
   ConsumerOutcomeId,
 } from "@/content/productShell";
-import { editorial, OUTCOME_EDITORIAL_ACCENT } from "@/design/editorialTheme";
+import {
+  editorial,
+  OUTCOME_EDITORIAL_ACCENT,
+  OUTCOME_EDITORIAL_SURFACE,
+} from "@/design/editorialTheme";
 import { OUTCOME_ARTWORK } from "@/design/outcomeArtwork";
 import { fonts, spacing } from "@/design/theme";
 
 interface OutcomeGridTileProps {
+  available: boolean;
+  featuredTitle: string;
+  onPress: () => void;
   outcome: ConsumerOutcome;
 }
 
@@ -20,45 +27,66 @@ const OUTCOME_NUMBER: Readonly<Record<ConsumerOutcomeId, string>> = {
   focus: "06",
 };
 
-export function OutcomeGridTile({ outcome }: OutcomeGridTileProps) {
+export function OutcomeGridTile({
+  available,
+  featuredTitle,
+  onPress,
+  outcome,
+}: OutcomeGridTileProps) {
   const accent = OUTCOME_EDITORIAL_ACCENT[outcome.id];
+  const surface = OUTCOME_EDITORIAL_SURFACE[outcome.id];
 
   return (
     <Pressable
-      accessibilityHint="This consumer experience is in production and has no audio yet"
-      accessibilityLabel={`${outcome.functionLabel}. ${outcome.cta}. ${outcome.homeFormat}. Future title: ${outcome.evocativeTitle}. In production.`}
+      accessibilityHint={
+        available
+          ? "Opens a filtered list with locally available audio"
+          : "The audio for this outcome requires delivery"
+      }
+      accessibilityLabel={`${outcome.functionLabel}. ${outcome.cta}. ${outcome.homeFormat}. ${available ? "Audio available locally" : "Audio delivery required"}.`}
       accessibilityRole="button"
-      accessibilityState={{ disabled: true }}
-      disabled
-      style={styles.tile}
+      accessibilityState={{ disabled: !available }}
+      disabled={!available}
+      onPress={onPress}
+      style={[styles.tile, { borderColor: outcome.wash }]}
       testID={`outcome-${outcome.id}`}
     >
-      <View style={styles.metaRow}>
-        <Text style={[styles.functionLabel, { color: accent }]}>
-          {outcome.functionLabel}
-        </Text>
+      <View
+        style={[
+          styles.metaRow,
+          {
+            backgroundColor: outcome.accent,
+            borderBottomColor: outcome.wash,
+          },
+        ]}
+      >
+        <Text style={styles.functionLabel}>{outcome.functionLabel}</Text>
         <Text style={styles.number}>{OUTCOME_NUMBER[outcome.id]}</Text>
       </View>
 
-      <Image
-        accessibilityIgnoresInvertColors
-        accessible={false}
-        resizeMode="cover"
-        source={OUTCOME_ARTWORK[outcome.id]}
-        style={styles.artwork}
-        testID={`outcome-artwork-${outcome.id}`}
-      />
+      <View style={[styles.artworkFrame, { borderBottomColor: outcome.wash }]}>
+        <Image
+          accessibilityIgnoresInvertColors
+          accessible={false}
+          resizeMode="cover"
+          source={OUTCOME_ARTWORK[outcome.id]}
+          style={styles.artwork}
+          testID={`outcome-artwork-${outcome.id}`}
+        />
+      </View>
 
-      <View style={styles.copy}>
+      <View style={[styles.copy, { backgroundColor: surface }]}>
         <Text style={styles.cta}>{outcome.cta}</Text>
         <Text style={styles.format}>{outcome.homeFormat}</Text>
         <View style={styles.futureRow}>
-          <Text style={styles.futureLabel}>FUTURE TITLE</Text>
+          <Text style={styles.futureLabel}>FEATURED</Text>
           <Text style={[styles.evocativeTitle, { color: accent }]}>
-            {outcome.evocativeTitle}
+            {featuredTitle}
           </Text>
         </View>
-        <Text style={styles.state}>IN PRODUCTION</Text>
+        <Text style={[styles.state, { borderTopColor: outcome.wash }]}>
+          {available ? "START HERE" : "DELIVERY REQUIRED"}
+        </Text>
       </View>
     </Pressable>
   );
@@ -67,47 +95,54 @@ export function OutcomeGridTile({ outcome }: OutcomeGridTileProps) {
 const styles = StyleSheet.create({
   tile: {
     width: "48%",
-    minHeight: 356,
-    backgroundColor: "rgba(248, 242, 232, 0.9)",
-    borderColor: editorial.line,
+    minHeight: 348,
+    backgroundColor: editorial.paperLight,
     borderWidth: StyleSheet.hairlineWidth,
   },
   metaRow: {
-    minHeight: 44,
+    minHeight: 40,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     gap: spacing.xs,
     paddingHorizontal: spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   functionLabel: {
     flexShrink: 1,
+    color: editorial.ink,
     fontFamily: fonts.sansSemiBold,
     fontSize: 11,
     letterSpacing: 0.9,
   },
   number: {
-    color: editorial.inkFaint,
+    color: editorial.inkMuted,
     fontFamily: fonts.sansSemiBold,
     fontSize: 11,
     letterSpacing: 0.7,
   },
+  artworkFrame: {
+    width: "100%",
+    aspectRatio: 1.25,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    overflow: "hidden",
+  },
   artwork: {
     width: "100%",
-    aspectRatio: 1.12,
+    height: "100%",
   },
   copy: {
     flex: 1,
     paddingHorizontal: spacing.sm,
     paddingBottom: spacing.sm,
-    paddingTop: spacing.md,
+    paddingTop: 10,
   },
   cta: {
-    minHeight: 76,
+    minHeight: 66,
     color: editorial.ink,
     fontFamily: fonts.serif,
-    fontSize: 24,
-    lineHeight: 25,
+    fontSize: 20,
+    lineHeight: 21,
     letterSpacing: -0.25,
   },
   format: {
@@ -116,11 +151,14 @@ const styles = StyleSheet.create({
     fontFamily: fonts.sansMedium,
     fontSize: 11,
     lineHeight: 16,
-    marginTop: spacing.sm,
+    marginTop: 6,
   },
   futureRow: {
-    marginTop: spacing.md,
-    minHeight: 46,
+    alignItems: "baseline",
+    flexDirection: "row",
+    gap: 5,
+    marginTop: spacing.sm,
+    minHeight: 20,
   },
   futureLabel: {
     color: editorial.inkFaint,
@@ -129,19 +167,18 @@ const styles = StyleSheet.create({
     letterSpacing: 0.65,
   },
   evocativeTitle: {
+    flexShrink: 1,
     fontFamily: fonts.serifItalic,
-    fontSize: 15,
-    lineHeight: 19,
-    marginTop: 2,
+    fontSize: 14,
+    lineHeight: 18,
   },
   state: {
     color: editorial.inkFaint,
     fontFamily: fonts.sansSemiBold,
     fontSize: 11,
     letterSpacing: 0.65,
-    borderTopColor: editorial.line,
     borderTopWidth: StyleSheet.hairlineWidth,
-    marginTop: spacing.sm,
-    paddingTop: spacing.sm,
+    marginTop: 6,
+    paddingTop: 6,
   },
 });

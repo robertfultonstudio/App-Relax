@@ -1,5 +1,63 @@
 # Decision log
 
+## D-040 - Commit locale M3/M4 autorizzato
+
+Data: 2 settembre 2026
+Stato: autorizzato dall'utente
+
+[F] L'utente ha richiesto esplicitamente `Commit`. L'autorizzazione comprende
+un commit locale delle modifiche M3/M4 presenti e verificate nel worktree.
+
+[F] L'autorizzazione non comprende push, pull request, EAS, build cloud,
+pubblicazione, Git LFS o asset delivery. `output/strategia-app-audio/`,
+`tmp/strategia-app-audio/` e gli screenshot ignorati in `dist/` restano esclusi.
+
+## D-039 - M4: catalogo consumer autonomo e lossless
+
+Data: 1 settembre 2026
+Stato: implementato localmente; runtime e listening gate aperti
+
+[F] L'autorizzazione M4 supera il limite M3 sui nuovi asset soltanto per il pack
+`APP_READY_AUDIO_01`. Le 18 registrazioni sono entità autonome; le vecchie
+coppie pad/piano sono varianti editoriali separate e non possono essere
+sommate. `Moon Current`, `deep-sleep-432` e il mixer restano confinati nel test
+tecnico.
+
+[F] Il modello `ConsumerAudioWork` e il programma `SingleTrackProgram` sono
+separati dal contratto fisso a tre stem. Il player consumer usa un solo file,
+timer, trasporto e volume principale; il gain interno porta ciascuna proposta
+verso -18 LUFS mantenendo il true peak post-gain sotto -1 dBTP.
+
+[F] I master restano WAV esterni. I derivati app sono FLAC lossless stereo
+PCM24/48 kHz level 8. Il PCM decodificato dei 18 file è hash-identico al WAV;
+il totale scende da 2.563.271.952 a 1.455.254.377 byte (-43,2267%).
+
+[F] Un solo FLAC da 28.167.925 byte entra nello starter; gli altri derivati
+restano esterni. Quattro lavori sono quindi referenziabili localmente: Eclipse
+Veil e i tre ATP01 riusati. Yoga e Massage restano disabilitati perché nessun
+asset delle rispettive proposte è incorporato.
+
+[F] Il flusso outcome rispetta il massimo di due tocchi: il primo apre la lista
+filtrata, che ordina il primo asset incorporato in testa; il secondo avvia quel
+featured nel player dopo il completamento del load. La navigazione diretta da
+Soundscapes e le opere non featured non attivano autoplay.
+
+[F] Gli export Metro Android e iOS contengono ciascuno esattamente tre WAV ATP01
+e lo starter FLAC, 183.688.057 byte audio totali, con hash attesi. Prettier,
+lint, TypeScript, test, regressione audio, validatori asset/config e verifica
+PCM sono verdi.
+
+[F] Per il gate visivo sono disponibili quattro render statici ad alta
+risoluzione in `dist/m4-screenshots/`: Home, outcome Relax filtrato,
+Soundscapes e player. Usano copy, font, palette e artwork correnti e sono stati
+ispezionati visivamente; non dimostrano esecuzione runtime né playback.
+
+[U] `NON DETERMINATO — EVIDENZA INSUFFICIENTE`: decoder/loop FLAC a runtime,
+qualità, titoli e mapping fino a test Android e approvazione d'ascolto; screenshot
+M4 finché la sandbox non consente un renderer; due controlli Expo Doctor e il
+refresh dell'audit dipendenze finché manca rete. Git LFS o asset delivery
+richiedono autorizzazione separata; non è stato configurato alcun workaround.
+
 ## D-001 - Milestone singola
 
 Data: 10 agosto 2026
@@ -471,7 +529,7 @@ visivo, build o rilascio è implicato da questa approvazione.
 ## D-034 - Home a sei box funzionali equivalenti
 
 Data: 15 agosto 2026
-Stato: implementata e approvata dall'utente
+Stato: struttura preservata; visual revision riaperta in D-037
 
 [F] L'utente ha rilevato che la Home full-width faceva apparire Yoga come il
 contenuto dominante e che lo screenshot precedente non mostrava i nuovi
@@ -498,7 +556,7 @@ mobile.
 ## D-035 - Fondale pittorico Home-only
 
 Data: 15 agosto 2026
-Stato: integrato e approvato dall'utente
+Stato: asset preservato; resa corretta in D-037
 
 [F] Su richiesta dell'utente la Home non usa più soltanto il gradiente carta:
 un fondale originale text-only introduce washi avorio, pigmenti pastello
@@ -532,3 +590,57 @@ al commit.
 [F] L'autorizzazione non comprende push, pull request, EAS, build cloud,
 pubblicazione o deploy. Queste azioni restano gate distinti e richiedono una
 nuova istruzione esplicita.
+
+## D-037 - Correzione dimensionale e Home pittorica compatta
+
+Data: 15 agosto 2026
+Stato: implementata localmente; approvazione umana aperta
+
+[F] Lo screenshot successivo al commit ha mostrato un difetto di layout reale,
+non l'assenza degli asset: React Native Web manteneva le dimensioni intrinseche
+dei JPEG. Nel viewport 390×844 il fondale risultava 864×1821 e ogni artwork alto
+720 px; la prima tile raggiungeva circa 1.010 px. Restavano visibili soltanto la
+zona pallida dello sfondo e frammenti delle immagini.
+
+[F] `EditorialScreen` forza ora il fondale al 100% del viewport e riduce la
+velatura inferiore. `OutcomeGridTile` usa un frame con rapporto esplicito e
+immagine 100%×100%; la tile Yoga misurata via browser scende a circa 357 px e il
+suo artwork a circa 131 px. La barra primaria scende da 68 a 52 px, mentre ogni
+tab resta alta 48 px e supera il target minimo di 44 px.
+
+[F] La Home conserva sei outcome equivalenti, CTA, formato, titolo futuro e
+stato `IN PRODUCTION`; rimuove soltanto il kicker `RITUALS` duplicato. Audio,
+navigazione, asset e route consumer non cambiano. La nuova prova web è
+`dist/m3-screenshots/01-home-compact-painterly-revision.jpg`, 390×844, SHA-256
+`c2bee77684f2bcd60dadfe5c9f74c87591d7ac4ca1a36344cc6d64dcb05b7da6`.
+
+## D-038 - Spettro pastello funzionale nei sei outcome
+
+Data: 15 agosto 2026
+Stato: implementata localmente; approvazione umana aperta
+
+[F] L'utente ha richiesto di rendere realmente percepibili i pastelli in tutte
+le loro sfumature. I dati dei sei outcome contenevano già coppie `accent` e
+`wash`, ma la Home le copriva con pannelli carta quasi bianchi.
+
+[F] Ogni box usa ora una composizione rettangolare a quattro toni: testata
+pastello pieno, corpo pastello chiaro opaco, hairline nella relativa tinta
+`wash` e accento editoriale scuro per il titolo futuro. La sequenza è giada per
+Yoga, pesca/rosa polvere per Massage, acqua marina per Relax, blu minerale per
+Meditation, lavanda per Sleep e zafferano per Focus. Gli artwork restano
+inalterati e non filtrati; non sono stati introdotti blob, pillole o gradienti
+digitali.
+
+[F] I test di tema verificano per tutti e sei i box contrasto almeno 4,5:1 di
+testo e accenti sui relativi fondi. L'anteprima web 390×844 conserva griglia,
+CTA, formati, stato bloccato e barra da 52 px. Le prove sono:
+
+- `dist/m3-screenshots/01-home-pastel-spectrum-revision.jpg`, 52.684 byte,
+  SHA-256 `b29875cc323a09ff2a88bb39b9238e87f556b96902a3956ab93d9f1d3d73ec6a`;
+- `dist/m3-screenshots/01-home-pastel-spectrum-cards.jpg`, 51.070 byte,
+  SHA-256 `109a82f28ae2556c21708492c48c21fa8150f421e37cd4100ba4eb9821ce7332`.
+
+[F] Nessun audio, route player, asset, dipendenza o configurazione nativa è
+stato modificato. Prettier, lint, TypeScript, 15 suite/62 test e regressione
+audio 26/26 sono verdi; l'anteprima web non registra errori console.
+L'approvazione estetica della nuova palette resta umana.

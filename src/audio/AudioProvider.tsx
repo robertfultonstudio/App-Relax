@@ -9,6 +9,7 @@ import {
 import { AudioSessionController } from "./AudioSessionController";
 import { ReactNativeAudioDriver } from "./reactNativeAudioApi/ReactNativeAudioDriver";
 import { createPlayerPreferencesStore } from "@/state/playerPersistence";
+import { createConsumerPlayerPreferencesStore } from "@/state/consumerPlayerPersistence";
 
 const AudioControllerContext = createContext<AudioSessionController | null>(
   null,
@@ -20,6 +21,8 @@ export function AudioProvider({ children }: PropsWithChildren) {
       new AudioSessionController(
         new ReactNativeAudioDriver(),
         createPlayerPreferencesStore(),
+        undefined,
+        createConsumerPlayerPreferencesStore(),
       ),
   );
 

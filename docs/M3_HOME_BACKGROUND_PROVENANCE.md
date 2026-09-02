@@ -61,3 +61,36 @@ La prima prova mostra la gerarchia iniziale e la presenza del fondale; la second
 mostra che Yoga e Massage restano due box equivalenti con funzione, CTA,
 durata/formato e naming secondario. Non sostituiscono il futuro screenshot
 runtime mobile.
+
+## Revisione compatta post-commit
+
+[F] Il primo screenshot post-commit ha rivelato che il renderer web manteneva le
+dimensioni intrinseche del JPEG invece di adattarlo al viewport. La correzione
+forza sfondo e artwork nei rispettivi frame, riduce la velatura carta e rende
+visibile la parte pittorica senza modificare l'asset originale.
+
+[F] La prova aggiornata è
+`dist/m3-screenshots/01-home-compact-painterly-revision.jpg`, 390×844, 52.640
+byte, SHA-256
+`c2bee77684f2bcd60dadfe5c9f74c87591d7ac4ca1a36344cc6d64dcb05b7da6`.
+L'approvazione estetica della revisione resta umana.
+
+## Revisione dello spettro pastello
+
+[F] Il fondale e gli undici JPEG registrati non cambiano. La Home usa le coppie
+pastello `accent`/`wash` già associate ai sei outcome e aggiunge un corpo
+pastello chiaro opaco per mantenere la resa prevedibile sopra il fondale
+pittorico. Ogni box mostra così testata, corpo, hairline e accento scuro
+coordinati senza filtri sull'immagine.
+
+[F] Le prove web 390×844 sono:
+
+- `dist/m3-screenshots/01-home-pastel-spectrum-revision.jpg`, 52.684 byte,
+  SHA-256 `b29875cc323a09ff2a88bb39b9238e87f556b96902a3956ab93d9f1d3d73ec6a`;
+- `dist/m3-screenshots/01-home-pastel-spectrum-cards.jpg`, 51.070 byte,
+  SHA-256 `109a82f28ae2556c21708492c48c21fa8150f421e37cd4100ba4eb9821ce7332`.
+
+La prima mostra la gerarchia iniziale e le prime quattro gamme; la seconda
+mostra le gamme Relax, Meditation, Sleep e Focus; gli stati inferiori degli
+ultimi due box restano fuori quadro. Nessun Android Emulator è stato avviato.
+L'approvazione estetica resta umana.

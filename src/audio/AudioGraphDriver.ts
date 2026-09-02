@@ -3,6 +3,7 @@ import type {
   AudioPreset,
   AudioSourceId,
 } from "@/domain/audio/types";
+import type { SingleTrackProgram } from "@/domain/audio/consumerTypes";
 
 export interface RemoteCommandHandlers {
   play: () => void;
@@ -15,10 +16,12 @@ export interface AudioGraphDriver {
   readonly capabilities: AudioCapabilities;
   setRemoteCommandHandlers(handlers: RemoteCommandHandlers): void;
   loadPreset(preset: AudioPreset): Promise<void>;
+  loadSingleTrack(program: SingleTrackProgram): Promise<void>;
   start(
     preset: AudioPreset,
     mix: Readonly<Record<AudioSourceId, number>>,
   ): Promise<void>;
+  startSingleTrack(program: SingleTrackProgram, volume: number): Promise<void>;
   resume(): Promise<void>;
   pause(releaseAudioFocus: boolean): Promise<void>;
   stop(): Promise<void>;
@@ -29,6 +32,7 @@ export interface AudioGraphDriver {
     muted: boolean,
     fadeMs: number,
   ): Promise<void>;
+  setMasterVolume(volume: number, fadeMs: number): Promise<void>;
   scheduleFadeOut(remainingMs: number, fadeMs: number): Promise<void>;
   cancelScheduledFade(): Promise<void>;
 }

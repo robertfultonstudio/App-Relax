@@ -8,6 +8,6 @@ module.exports = {
     "!src/audio/reactNativeAudioApi/**",
   ],
   moduleNameMapper: {
-    "\\.(wav|jpg|jpeg|png)$": "<rootDir>/tests/__mocks__/fileMock.ts",
+    "\\.(wav|flac|jpg|jpeg|png)$": "<rootDir>/tests/__mocks__/fileMock.ts",
   },
 };
