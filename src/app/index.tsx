@@ -6,7 +6,7 @@ import { OutcomeGridTile } from "@/components/OutcomeGridTile";
 import { ProductTabBar } from "@/components/ProductTabBar";
 import { CONSUMER_OUTCOMES } from "@/content/productShell";
 import {
-  getEmbeddedWorksForOutcome,
+  getPlayableWorksForOutcome,
   getWorksForOutcome,
 } from "@/content/consumerCatalog";
 import { editorial } from "@/design/editorialTheme";
@@ -35,8 +35,9 @@ export default function HomeScreen() {
         Choose your moment. Press start. Leave the phone behind.
       </Text>
       <Text style={styles.availability}>
-        Four lossless works are available locally. All titles remain provisional
-        until listening approval.
+        Lossless works and real-time noise colours are available locally.
+        Available works remain provisional; rejected material stays
+        technical-only.
       </Text>
 
       <View
@@ -45,12 +46,12 @@ export default function HomeScreen() {
         testID="outcome-grid"
       >
         {CONSUMER_OUTCOMES.map((outcome) => {
-          const embeddedWorks = getEmbeddedWorksForOutcome(outcome.id);
+          const playableWorks = getPlayableWorksForOutcome(outcome.id);
           return (
             <OutcomeGridTile
-              available={embeddedWorks.length > 0}
+              available={playableWorks.length > 0}
               featuredTitle={
-                embeddedWorks[0]?.title ??
+                playableWorks[0]?.title ??
                 getWorksForOutcome(outcome.id)[0]?.title ??
                 outcome.evocativeTitle
               }

@@ -18,7 +18,7 @@ export interface PlannedCollection {
 }
 
 export type ConsumerOutcomeId =
-  "yoga" | "massage" | "relax" | "meditation" | "sleep" | "focus";
+  "meditation" | "yoga" | "massage" | "relax" | "sleep" | "focus";
 
 export interface ConsumerOutcome {
   id: ConsumerOutcomeId;
@@ -40,6 +40,19 @@ export const PRODUCT_TABS: readonly ProductTab[] = [
 ] as const;
 
 export const CONSUMER_OUTCOMES: readonly ConsumerOutcome[] = [
+  {
+    id: "meditation",
+    functionLabel: "MEDITATION",
+    cta: "Begin meditation",
+    homeFormat: "Practice · duration planned",
+    plannedFormat: "Future practice format · duration options in production",
+    evocativeTitle: "Aquarian Sky",
+    description:
+      "A future clear entry into stillness, with no technical layer.",
+    accent: "#C5CBE8",
+    wash: "#8397C8",
+    cosmic: true,
+  },
   {
     id: "yoga",
     functionLabel: "YOGA",
@@ -72,19 +85,6 @@ export const CONSUMER_OUTCOMES: readonly ConsumerOutcome[] = [
     description: "A future immediate pause without setup or exploration.",
     accent: "#B9D8CC",
     wash: "#7FB29F",
-  },
-  {
-    id: "meditation",
-    functionLabel: "MEDITATION",
-    cta: "Begin meditation",
-    homeFormat: "Practice · duration planned",
-    plannedFormat: "Future practice format · duration options in production",
-    evocativeTitle: "Aquarian Sky",
-    description:
-      "A future clear entry into stillness, with no technical layer.",
-    accent: "#C5CBE8",
-    wash: "#8397C8",
-    cosmic: true,
   },
   {
     id: "sleep",

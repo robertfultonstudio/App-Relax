@@ -16,5 +16,4 @@ export const CONSUMER_ASSETS: Readonly<
   },
   sleepDrone001: STEM_ASSETS.sleepDrone001,
   sleepAmbience001: STEM_ASSETS.sleepAmbience001,
-  sleepTexture001: STEM_ASSETS.sleepTexture001,
 };

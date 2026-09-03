@@ -7,7 +7,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import { AudioSessionController } from "./AudioSessionController";
-import { ReactNativeAudioDriver } from "./reactNativeAudioApi/ReactNativeAudioDriver";
+import { createAudioGraphDriver } from "./createAudioDriver";
 import { createPlayerPreferencesStore } from "@/state/playerPersistence";
 import { createConsumerPlayerPreferencesStore } from "@/state/consumerPlayerPersistence";
 
@@ -19,7 +19,7 @@ export function AudioProvider({ children }: PropsWithChildren) {
   const [controller] = useState(
     () =>
       new AudioSessionController(
-        new ReactNativeAudioDriver(),
+        createAudioGraphDriver(),
         createPlayerPreferencesStore(),
         undefined,
         createConsumerPlayerPreferencesStore(),

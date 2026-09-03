@@ -88,6 +88,7 @@ const requiredFiles = [
   "tsconfig.json",
 ];
 const expectedAudioFiles = [
+  "assets/audio/consumer-starter/SOUNDSCAPE_ECLYPSIS_001_EMINOR_48K24_LOOP.flac",
   "assets/audio/test-pack-01/SLEEP_AMBIENCE_001.wav",
   "assets/audio/test-pack-01/SLEEP_DRONE_001.wav",
   "assets/audio/test-pack-01/SLEEP_TEXTURE_001.wav",
@@ -122,6 +123,10 @@ for (const { absolutePath, archivePath } of files) {
     `forbidden file: ${archivePath}`,
   );
   assert(
+    !archivePath.startsWith("public/audio-catalog/"),
+    `local listening catalog entered the EAS archive: ${archivePath}`,
+  );
+  assert(
     !archivePath.startsWith(".env") &&
       !segments.some((segment) => /^credentials(?:\.|$)/i.test(segment)),
     `environment or credential file: ${archivePath}`,
@@ -154,5 +159,5 @@ assert(
 );
 
 console.log(
-  `EAS archive: PASS (${files.length} files, ${totalBytes} bytes, no Git metadata/secrets/local paths, 3 AUDIO TEST PACK 01 WAV files).`,
+  `EAS archive: PASS (${files.length} files, ${totalBytes} bytes, no Git metadata/secrets/local paths, 3 AUDIO TEST PACK 01 WAV files and 1 consumer starter FLAC).`,
 );

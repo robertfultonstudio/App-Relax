@@ -1,13 +1,15 @@
 # M4 Consumer Audio Catalog
 
-Stato: `TECHNICAL_PASS_LISTENING_PENDING`
+Stato: `LOCALHOST_CATALOG_READY — LISTENING PASSED`
 
 ## Confine di prodotto
 
-[F] Il catalogo contiene 18 opere autonome: 15 derivati analogici e i tre file
-canonici ATP01 riusati per riferimento, senza duplicare i byte. Ogni programma
-consumer contiene un solo file in loop. Pad e piano della stessa famiglia sono
-varianti editoriali separate; non possono essere sommate. Il mixer multilayer,
+[F] Il catalogo contiene 50 entità autonome: 42 opere file-backed (15 derivati
+analogici, 24 opere Water/Air e i tre file canonici ATP01) e otto generatori
+noise runtime. Ogni programma consumer contiene una sola sorgente:
+un file in loop oppure un buffer noise generato sul device. Pad e piano della
+stessa famiglia sono varianti editoriali separate; non possono essere sommate.
+Il mixer multilayer,
 `Moon Current` e `deep-sleep-432` restano esclusivamente in `AUDIO TEST / TEST
 ONLY`.
 
@@ -15,34 +17,90 @@ ONLY`.
 Il volume 0–100% moltiplica il `playbackGainDb` interno; nessun master è stato
 rinormalizzato e non viene applicato alcun limiter.
 
-## Catalogo provvisorio
+## Noise colours generati
 
-Tutti i titoli sono `PROVISIONAL — LISTENING APPROVAL REQUIRED`.
+[F] La collezione `Noise Colours` genera in memoria, soltanto quando richiesta,
+otto profili: White, Pink, Brown/Red, Blue/Azure, Violet/Purple, Grey/Gray,
+Green e Black. Red e Purple sono alias, non generatori duplicati. Ogni buffer è
+Float32 stereo 48 kHz, lungo 8 secondi, centrato, limitato a 0,5 sample peak e
+raccordato al confine di loop. Il gain interno di -6 dB porta il ceiling sample teorico a
+circa -12,02 dBFS prima del volume utente. Nessun file audio o byte persistente
+viene aggiunto al pacchetto.
 
-| Titolo            | Outcome primario | Famiglia                | Gain dB | TP post-gain dBTP | Stato byte               |
-| ----------------- | ---------------- | ----------------------- | ------: | ----------------: | ------------------------ |
-| Eclipse Veil      | Meditation       | Cosmic / Zen ambient    |  -0.001 |            -5.931 | FLAC starter incorporato |
-| Stillwater Halo   | Relax            | Cosmic / Zen ambient    |  +0.002 |            -5.068 | FLAC esterno pronto      |
-| Mineral Drift     | Massage          | Standalone works        |  +0.019 |            -2.641 | FLAC esterno pronto      |
-| Astral Thread     | Focus            | Cosmic / Zen ambient    |  -0.001 |            -6.481 | FLAC esterno pronto      |
-| Celestial Current | Meditation       | Cosmic / Zen ambient    |   0.000 |            -6.400 | FLAC esterno pronto      |
-| Quiet Field       | Yoga             | Cosmic / Zen ambient    |  -0.003 |            -5.533 | FLAC esterno pronto      |
-| Cedar Current     | Yoga             | Cosmic / Zen ambient    |   0.000 |            -6.830 | FLAC esterno pronto      |
-| Moonlit Veil      | Sleep            | Cosmic / Zen ambient    |  +3.574 |            -5.286 | FLAC esterno pronto      |
-| Moonlit Keys      | Massage          | Standalone works        |  +2.687 |            -4.903 | FLAC esterno pronto      |
-| Luminous Grain    | Focus            | Cosmic / Zen ambient    |  +1.485 |            -6.605 | FLAC esterno pronto      |
-| Luminous Steps    | Massage          | Standalone works        |  +5.178 |            -4.592 | FLAC esterno pronto      |
-| Distant Garden    | Meditation       | Cosmic / Zen ambient    |  +2.048 |            -5.762 | FLAC esterno pronto      |
-| Distant Bloom     | Relax            | Standalone works        |  +3.763 |            -4.337 | FLAC esterno pronto      |
-| Aquarian Drift    | Meditation       | Cosmic / Zen ambient    |  +3.064 |            -3.886 | FLAC esterno pronto      |
-| Aquarian Echo     | Massage          | Standalone works        |  +2.329 |            -3.001 | FLAC esterno pronto      |
-| Moon Drone        | Sleep            | Cosmic / Zen ambient    |  -4.000 |            -6.020 | WAV ATP01 riusato        |
-| Deep River        | Relax / Sleep    | Elemental Worlds: Water |  +2.028 |            -5.982 | WAV ATP01 riusato        |
-| Soft Air          | Focus / Relax    | Elemental Worlds: Air   |  -4.001 |            -6.021 | WAV ATP01 riusato        |
+[F] White, Pink, Brown, Blue e Violet seguono i consueti profili spettrali da
+chiaro a scuro. Grey, Green e Black non hanno una definizione universale:
+nell'app sono esplicitamente descritti come profili non standard,
+rispettivamente bilanciato, mid-band e profondo con intervalli quieti lenti. Il
+silenzio resta Stop/Mute.
+
+[U] Qualità percepita, assenza di fatica, resa del raccordo e comportamento in
+background su telefono reale sono `NON DETERMINATO — EVIDENZA INSUFFICIENTE`.
+
+## Catalogo analogico e ATP01
+
+L'utente ha confermato il 3 settembre 2026 l'esito positivo dell'ascolto dei 15
+lavori analogici. Lo stato sonoro è `APPROVED — LISTENING PASSED`; i working
+title restano metadata editoriali modificabili. Soft Air non appartiene a
+questo gruppo approvato: resta respinto e soltanto tecnico.
+
+[F] Nella vista Soundscapes, `Stillwater Halo` è mostrato per ultimo nella
+raccolta `Cosmic / Zen Ambient`. Si tratta soltanto di ordine editoriale: file,
+mapping e comportamento di playback non cambiano.
+
+| Titolo            | Outcome primario | Famiglia                | Gain dB | TP post-gain dBTP | Stato byte                 |
+| ----------------- | ---------------- | ----------------------- | ------: | ----------------: | -------------------------- |
+| Eclipse Veil      | Meditation       | Cosmic / Zen ambient    |  -0.001 |            -5.931 | FLAC starter incorporato   |
+| Stillwater Halo   | Relax            | Cosmic / Zen ambient    |  +0.002 |            -5.068 | WAV localhost verificato   |
+| Mineral Drift     | Massage          | Standalone works        |  +0.019 |            -2.641 | WAV localhost verificato   |
+| Astral Thread     | Focus            | Cosmic / Zen ambient    |  -0.001 |            -6.481 | WAV localhost verificato   |
+| Celestial Current | Meditation       | Cosmic / Zen ambient    |   0.000 |            -6.400 | WAV localhost verificato   |
+| Quiet Field       | Yoga             | Cosmic / Zen ambient    |  -0.003 |            -5.533 | WAV localhost verificato   |
+| Cedar Current     | Yoga             | Cosmic / Zen ambient    |   0.000 |            -6.830 | WAV localhost verificato   |
+| Moonlit Veil      | Sleep            | Cosmic / Zen ambient    |  +3.574 |            -5.286 | WAV localhost verificato   |
+| Moonlit Keys      | Massage          | Standalone works        |  +2.687 |            -4.903 | WAV localhost verificato   |
+| Luminous Grain    | Focus            | Cosmic / Zen ambient    |  +1.485 |            -6.605 | WAV localhost verificato   |
+| Luminous Steps    | Massage          | Standalone works        |  +5.178 |            -4.592 | WAV localhost verificato   |
+| Distant Garden    | Meditation       | Cosmic / Zen ambient    |  +2.048 |            -5.762 | WAV localhost verificato   |
+| Distant Bloom     | Relax            | Standalone works        |  +3.763 |            -4.337 | WAV localhost verificato   |
+| Aquarian Drift    | Meditation       | Cosmic / Zen ambient    |  +3.064 |            -3.886 | WAV localhost verificato   |
+| Aquarian Echo     | Massage          | Standalone works        |  +2.329 |            -3.001 | WAV localhost verificato   |
+| Moon Drone        | Sleep            | Cosmic / Zen ambient    |  -4.000 |            -6.020 | WAV ATP01 riusato          |
+| Deep River        | Relax / Sleep    | Elemental Worlds: Water |  +2.028 |            -5.982 | WAV ATP01 riusato          |
+| Soft Air          | Focus / Relax    | Elemental Worlds: Air   |  -4.001 |            -6.021 | RESPINTO · solo AUDIO TEST |
 
 `Deep River` non è descritto come field recording: la provenienza disponibile
-non basta a sostenere quel claim. Nessuna opera è assegnata automaticamente a
-Esoteric Series.
+non basta a sostenere quel claim. Soltanto `Second Element: Air`, dotato di
+provenienza esplicita, entra in Esoteric Series.
+
+## Elemental Water / Esoteric Air approvati
+
+I 24 derivati di `APP_READY_AUDIO_02_ELEMENTAL_WATER_AIR` sono stati approvati
+all'ascolto dall'utente e usano gain di playback 0 dB: i livelli più quieti
+restano intenzionali e non vengono spinti contro il ceiling.
+
+| Gruppo                | Titoli                                              | Funzione primaria |
+| --------------------- | --------------------------------------------------- | ----------------- |
+| Rain                  | Silver Canopy; Fine Rain; Rain Veil; Distant Shower | Focus             |
+| Rain                  | Soft Weather; Misted Garden; Quiet Weather          | Relax             |
+| Rain                  | Deep Rain; Sheltered Rain; Low Rain; Rain Receding  | Sleep             |
+| Stream                | Stone Current; Moss Current                         | Relax             |
+| Stream                | Hidden Water                                        | Meditation        |
+| Stream                | Clear Stream; Cedar Stream                          | Focus             |
+| Sea                   | Tidal Breath; Open Tide; Pearl Tide; Blue Interval  | Meditation        |
+| Sea                   | Moon Shore; Night Shore; Distant Surf               | Sleep             |
+| Esoteric Series / Air | Second Element: Air                                 | Meditation        |
+
+[F] L'ordine editoriale di Meditation privilegia i suoni marini approvati:
+`Open Tide` è il lavoro featured, seguito da `Tidal Breath`, `Pearl Tide`,
+`Blue Interval`, `Moon Shore` e `Night Shore`. `Eclipse Veil` resta nel
+catalogo Meditation, ma viene mostrato dopo questo gruppo e non è più il primo
+avvio nella preview localhost.
+
+[F] Soft Air è stato respinto all'ascolto il 2 settembre 2026: l'utente lo
+descrive come una ventola potente, simile all'interno di un aereo. La route
+consumer è disabilitata e richiede un asset sostitutivo; il WAV canonico non è
+stato cancellato né modificato perché resta uno dei tre stem ATP01 del percorso
+tecnico separato.
 
 ## Lossless e dimensioni
 
@@ -53,10 +111,25 @@ SHA-256 del data chunk WAV: sample rate, canali, frame count, durata, LUFS e sea
 restano quindi invariati. Il report per-file è
 `docs/M4_LOSSLESS_DERIVATIVE_REPORT.json`.
 
+[F] La preview localhost contiene 38 file per **2.706.406.941 byte**: 14 WAV
+analogici invariati per **2.357.981.776 byte** e 24 FLAC Water/Air invariati per
+**348.425.165 byte**. Con Eclipse Veil già incorporato, tutte le 39 opere
+approvate sono riproducibili. I byte sono richiesti uno alla volta e sono
+ignorati da Git; manifest e hash sono in
+`docs/M4_LOCAL_LISTENING_MANIFEST.json`.
+
+[F] Expo copia la cartella `public/` nell'output di un export locale quando i
+file sono presenti sul Mac. Questo comportamento non trasforma il catalogo
+localhost in asset nativi: `.easignore` esclude ora l'intera
+`public/audio-catalog/` dall'archivio EAS e il validatore fallisce se anche un
+solo file della cartella entra nel pacchetto sorgente.
+
 [F] Starter incorporato: un FLAC da **28.167.925 byte** più i tre WAV ATP01 già
 presenti. Audio referenziato previsto nell'archivio base: **183.688.057 byte**.
 Il contributo incrementale certo di M4 è 28.167.925 byte; il peso finale APK/AAB
 è `NON DETERMINATO — EVIDENZA INSUFFICIENTE` senza una build autorizzata.
+I generatori noise aggiungono solo codice e memoria temporanea: **0 byte audio**
+all'archivio.
 
 [F] Il catalogo FLAC completo richiederebbe circa 1,455 GB di soli file audio.
 Diversi file superano 100 MB, incluso `Mineral Drift` a 208.526.921 byte. GitHub
@@ -74,8 +147,11 @@ approvato sono rimasti in sola lettura.
 aggiuntivo. Il validatore riproducibile è
 `scripts/verify-lossless-derivatives.mjs`.
 
-[U] Il percorso FLAC `expo-asset → file:// → createFileSource(loop=true)` è
-implementato e supportato staticamente da RNAA 0.13.2, ma la prova runtime è
-`NON DETERMINATO — EVIDENZA INSUFFICIENTE`: il sandbox corrente impedisce ad
-ADB di aprire la porta locale e l'emulatore non parte. Nessuna approvazione
-sonora è implicita.
+[F] Nel localhost tutte le 39 opere approvate hanno completato il percorso
+Play → Pause senza alert o errori console. Il server espone byte range per WAV e
+FLAC e il driver Web Audio applica loop e volume principale.
+
+[U] Il percorso nativo FLAC `expo-asset → file:// → createFileSource(loop=true)`
+resta `NON DETERMINATO — EVIDENZA INSUFFICIENTE` per il catalogo completo. La
+prova web e l'approvazione d'ascolto non certificano packaging, background,
+Bluetooth o prestazioni su telefono.

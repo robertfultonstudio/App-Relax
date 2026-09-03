@@ -12,11 +12,12 @@ La milestone usa cinque livelli distinti: test puri, integrazione con driver fak
 - `tuningLabel`, `carrierHz` e `beatHz` separati.
 - Un solo preset registrato e quattro temi/artwork editoriali esatti.
 - La Home espone esattamente Yoga, Massage, Relax, Meditation, Sleep e Focus.
-- Le sei azioni consumer sono `IN PRODUCTION` e prive di audio/player.
+- Le sei azioni consumer hanno almeno una sorgente riproducibile; il localhost
+  distingue gli asset di preview dai byte realmente incorporati nel mobile.
 - La gerarchia verificabile e funzione, CTA, durata/formato, naming evocativo.
 - Il solo `audioPresetId` appartiene a `AUDIO_TEST_RITUAL` con stato `test-only`.
 - Yoga espone soltanto formati futuri 20/30/45/60 minuti.
-- Soundscapes espone le famiglie future richieste senza asset audio.
+- Soundscapes espone le famiglie richieste e la collezione `Noise Colours`.
 - `AUDIO TEST PACK 01` integrato e limitato a tre nomi canonici.
 - Copy senza promesse mediche affermative.
 
@@ -24,6 +25,9 @@ La milestone usa cinque livelli distinti: test puri, integrazione con driver fak
 
 - Binaural: frequenze sinistra/destra con differenza uguale a `beatHz`.
 - Brown noise: output deterministico con RNG seeded, centrato e normalizzato.
+- Noise consumer: otto profili, alias Red/Purple/Gray, output deterministico,
+  centrato, bounded e raccordato al loop; ordine di brillantezza verificato per
+  Brown, Pink, White, Blue e Violet.
 - Placeholder: esattamente tre WAV PCM 16-bit, 48 kHz, stereo, 8 secondi, manifest e SHA-256 coerenti.
 - Test Pack: esattamente tre WAV PCM 24-bit, 48 kHz, stereo, 180 secondi, metriche, loop, manifest e SHA-256 coerenti.
 - I placeholder restano fixture tecniche e non sono referenziati dal preset.
@@ -47,7 +51,8 @@ La milestone usa cinque livelli distinti: test puri, integrazione con driver fak
 - Tab e copy esatti per Rituals, Yoga e Soundscapes.
 - Copy IA esatto per `Start your yoga session`, `Set the room for massage`,
   `Relax now`, `Begin meditation`, `Prepare for sleep` e `Focus`.
-- Tutte le card consumer espongono `IN PRODUCTION`, disabled e nessun audio.
+- Le card distinguono file incorporato, localhost-only, generatore locale,
+  delivery richiesta, approvazione d'ascolto e rifiuto.
 - `Aquarian Sky`, Cosmic/Zen Ambient, Esoteric Series ed Elemental Worlds restano
   famiglie editoriali future visibili.
 - Settings collega il percorso separato `Audio Test — Test only`.
@@ -71,6 +76,7 @@ pnpm test
 pnpm test:audio
 pnpm audio:validate-placeholders
 pnpm audio:validate-test-pack
+pnpm audio:validate-consumer
 pnpm assets:validate-safety
 pnpm assets:validate-rituals
 pnpm security:audit
@@ -80,6 +86,11 @@ pnpm exec expo config --type prebuild --json
 pnpm exec expo export --platform ios --output-dir dist/m3-final-export-ios
 pnpm exec expo export --platform android --output-dir dist/m3-final-export-android
 ```
+
+Il validatore consumer legge `docs/M4_LOCAL_LISTENING_MANIFEST.json`, richiede
+esattamente 38 asset locali, verifica per ciascuno byte size e SHA-256 e fallisce
+se entra `SLEEP_TEXTURE_001.wav`. Il collaudo browser apre separatamente tutte le
+39 route approvate, preme Play e richiede la transizione a Pause senza alert.
 
 `security:audit` accetta soltanto i due advisory `image-size` esplicitamente documentati in D-015 e fallisce su qualsiasi altro advisory o cambio di versione. Il comando raw `pnpm audit --audit-level high` resta atteso exit 1 finche non esiste una release corretta; entrambi gli esiti vanno riportati.
 
@@ -134,6 +145,8 @@ Non usare `--platform all`, `--auto-submit` o `eas submit`.
 - Navigazione tra Rituals, Yoga e Soundscapes; card consumer bloccate.
 - Settings -> Audio Test -> player tecnico e Settings -> Legal.
 - Play, pausa, stop, timer e fade.
+- Tutti e otto i noise colours, uno alla volta; nessun click evidente al loop,
+  clipping, affaticamento o cambio anomalo di volume.
 - Mute/gain di ciascuna delle cinque sorgenti.
 - Tap rapido e navigazione senza duplicazioni.
 - Stato salvato dopo riavvio senza autoplay.

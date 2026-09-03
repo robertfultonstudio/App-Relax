@@ -20,12 +20,12 @@ function assert(condition, message) {
 }
 
 assert(
-  packageJson.dependencies.expo === "~57.0.13",
+  packageJson.dependencies.expo === "~57.0.19",
   "Expo SDK 57 must remain pinned",
 );
 assert(
-  packageJson.dependencies["react-native"] === "0.86.2",
-  "React Native 0.86.2 must remain pinned",
+  packageJson.dependencies["react-native"] === "0.86.3",
+  "React Native 0.86.3 must remain pinned",
 );
 assert(
   packageJson.engines.node === ">=22.13.0",
@@ -49,6 +49,7 @@ for (const requiredIgnore of [
   "/README.md",
   "/STATO.md",
   "/scripts/",
+  "/public/audio-catalog/",
   "/eslint.config.js",
   "/jest.config.js",
 ]) {

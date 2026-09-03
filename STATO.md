@@ -1,23 +1,44 @@
 # Stato progetto
 
-Aggiornato: 2 settembre 2026
+Aggiornato: 3 settembre 2026
 
 ## Milestone attiva
 
-M4 `Lossless Autonomous Catalog Foundation`: catalogo consumer single-track,
-derivati FLAC lossless e UI outcome-first. M3 resta preservata nel worktree.
+M4 `Lossless Autonomous Catalog Foundation`: catalogo consumer single-source,
+derivati FLAC lossless, noise colours runtime e UI outcome-first. M3 resta
+preservata nel worktree.
 Il commit locale M3/M4 e autorizzato il 2 settembre 2026. EAS, build
 native/cloud, push, PR, Git LFS e asset delivery restano esclusi.
 
 ## M4 implementato localmente
 
-- [x] Registro editoriale unico di 18 opere autonome: 15 derivati analogici e
-      tre ATP01 riusati senza duplicare i byte.
-- [x] Tutti e sei gli outcome hanno proposte; soltanto Relax, Meditation, Sleep
-      e Focus hanno almeno un asset incorporato e quindi una route abilitata.
+- [x] Registro editoriale unico di 50 entità autonome: 42 opere file-backed (15
+      derivati analogici, 24 opere Water/Air e tre ATP01) più otto generatori
+      noise runtime. Ogni entità resta single-source.
+- [x] Tutti e sei gli outcome hanno opere riproducibili nel localhost. Calm è
+      ricondotto a Relax; Water vive in Elemental Worlds e Second Element: Air
+      in Esoteric Series, senza cambiare i master o sommare sorgenti.
+- [x] L'utente ha dichiarato positivo l'ascolto dei 15 lavori analogici e dei 24
+      Water/Air il 3 settembre 2026: 39 opere hanno stato
+      `APPROVED — LISTENING PASSED`. Titoli e mapping restano modificabili come
+      metadata editoriali.
+- [x] Meditation occupa ora la prima posizione della Home. Nel localhost la sua
+      selezione apre con `Open Tide` in evidenza e prosegue con gli altri cinque
+      suoni marini già associati a Meditation; `Eclipse Veil` resta disponibile
+      ma non è più il brano principale.
+- [x] In Soundscapes, `Stillwater Halo` chiude ora la raccolta
+      `Cosmic / Zen Ambient`; catalogazione, disponibilità e audio restano
+      invariati.
 - [x] `SingleTrackProgram` separato dal preset tecnico; controller, driver,
       timer assoluto, fade, interruzioni, notification lifecycle e persistenza
-      supportano un solo file consumer in loop.
+      supportano una sola sorgente consumer in loop: file oppure noise buffer.
+- [x] Collezione `Noise Colours`: White, Pink, Brown/Red, Blue/Azure,
+      Violet/Purple, Grey/Gray, Green e Black. Gli alias non duplicano
+      generatori; Grey, Green e Black sono dichiarati profili non standard.
+- [x] I noise vengono generati una sola volta al load in un buffer stereo
+      Float32 48 kHz da 8 secondi, con boundary raccordato, sample peak 0,5 e
+      gain interno -6 dB. Nessun nuovo asset audio e nessun peso audio nel
+      pacchetto; circa 3,1 MB temporanei per il buffer attivo.
 - [x] Player consumer con Play/Pause/Stop, timer 15/30/60, volume principale e
       mute; nessun mixer, Hz, waveform o pannello tecnico.
 - [x] Flusso outcome realmente disponibile in due tocchi: Home → lista filtrata;
@@ -28,33 +49,56 @@ native/cloud, push, PR, Git LFS e asset delivery restano esclusi.
       -1 dBTP post-gain senza rinormalizzare master o applicare limiter.
 - [x] 18 FLAC level 8 generati fuori repository e verificati: PCM decodificato
       identico ai WAV. Totale 2.563.271.952 → 1.455.254.377 byte (-43,2267%).
-- [x] Starter locale limitato a `Eclipse Veil` (28.167.925 byte); i tre ATP01
-      sono riferiti dai catalogo consumer e test tecnico allo stesso asset.
-- [x] Gate locali M4 verdi: Prettier, lint, TypeScript, 18 suite / 68 test,
-      regressione audio 28/28, validatori placeholder/ATP01/consumer/asset/config
+- [x] Starter locale limitato a `Eclipse Veil` (28.167.925 byte). Moon Drone e
+      Deep River riusano due ATP01 nel consumer; `SLEEP_TEXTURE_001` resta nei
+      byte soltanto per AUDIO TEST dopo il rifiuto consumer di Soft Air.
+- [x] Catalogo localhost completo: 38 file on-demand in
+      `public/audio-catalog/`, ignorati da Git, per 2.706.406.941 byte; Eclipse
+      Veil resta nello starter incorporato. I 14 lavori analogici mancanti sono
+      serviti come WAV invariati, i 24 Water/Air come FLAC delivery invariati.
+      Manifest locale, dimensioni e SHA-256 di ogni file sono validati.
+- [x] Prova browser individuale completata su tutte le 39 opere approvate:
+      ciascuna ha raggiunto lo stato Pause dopo Play, senza alert o errori
+      console. Play/Pause/Stop restano verificati sul percorso Web Audio.
+- [x] Gate locali M4 verdi dopo l'estensione: Prettier, lint, TypeScript, 18
+      suite / 81 test, regressione audio 40/40, peer dependency, Expo install
+      check, Expo Doctor 20/20, validatori placeholder/ATP01/consumer/asset/config
       e confronto PCM lossless completo.
-- [x] Export Metro Android e iOS verdi. Ciascuno contiene esattamente quattro
-      asset audio, tre WAV ATP01 e lo starter FLAC, per 183.688.057 byte; gli
-      SHA-256 coincidono con i manifest e non sono emersi path locali o segreti
-      mirati nel bundle/metadata.
+- [x] Bundle Metro Android e iOS verdi. La tabella degli asset referenziati
+      contiene esattamente quattro audio, tre WAV ATP01 e lo starter FLAC, per
+      183.688.057 byte; gli SHA-256 coincidono con i manifest e non sono emersi
+      path locali o segreti mirati nel bundle/metadata. Un export locale eseguito
+      mentre `public/audio-catalog/` è popolata ne copia anche i 38 file di
+      ascolto: non sono asset Metro nativi e l'intera cartella è ora esclusa
+      esplicitamente dall'archivio EAS tramite `.easignore`.
 - [x] Export web statico verde con 12 route, incluse Home, outcome filtrato,
       Soundscapes e player consumer.
-- [ ] Expo Doctor: 18/20. I due check online non hanno raggiunto Expo API e
-      React Native Directory; `NON DETERMINATO — EVIDENZA INSUFFICIENTE`, non
-      regressioni dimostrate.
-- [ ] Refresh live del dependency audit: rete non disponibile. Lockfile
-      invariato; la precedente policy M3 sui due advisory `image-size` non viene
-      promossa a prova corrente.
+- [x] Anteprima web sonora su `http://localhost:8092/`: un adattatore Web Audio
+      separato usa lo stesso `AudioSessionController` senza importare il graph
+      nativo nel browser. Verificati nel browser Play/Pause/Stop, timer,
+      volume/mute, Pink Noise generato, Deep River WAV, Eclipse Veil FLAC e il
+      percorso tecnico Moon Current; nessun errore console nel run.
+- [x] Dipendenze allineate alle patch SDK 57 richieste da Expo il 2 settembre:
+      Expo 57.0.19, Router 57.0.18 e React Native 0.86.3. L'override transitivo
+      `decode-uri-component` 0.5.0 corregge GHSA-vcc3-ghjq-m6fr; audit policy
+      verde con i soli due residui `image-size` già documentati.
+- [x] Il nuovo GHSA-6gmq-8vp8-gcm6 emerso il 3 settembre è chiuso con override
+      transitivi `@xmldom/xmldom` 0.8.15 e 0.9.12, le due release corrette
+      indicate dall'advisory. Audit policy nuovamente verde.
 - [ ] Runtime FLAC/loop Android: `NON DETERMINATO — EVIDENZA INSUFFICIENTE`.
       ADB è bloccato dal sandbox (`Operation not permitted`) e l'emulatore non
       si avvia in questa task; la compatibilità statica non vale come ascolto.
 - [x] Quattro render statici M4 ad alta risoluzione prodotti e ispezionati da
       sorgenti, copy, font e artwork correnti: Home, lista Relax filtrata,
       Soundscapes e player. Sono prove visive di layout, non screenshot runtime.
-- [ ] Screenshot runtime M4: Android, server locale e renderer browser restano
-      bloccati dalla sandbox; `NON DETERMINATO — EVIDENZA INSUFFICIENTE`.
-- [ ] Titoli, mapping e qualità sonora: `PROVISIONAL — LISTENING APPROVAL
-REQUIRED`.
+- [x] Renderer browser e server locale M4 disponibili; lo screenshot web resta
+      prova visiva e il playback web prova il solo percorso Web Audio.
+- [ ] Runtime M4 su telefono reale: `NON DETERMINATO — EVIDENZA INSUFFICIENTE`.
+      Il browser non certifica background, Bluetooth, latenza, batteria o
+      qualità del percorso nativo Android/iOS.
+- [x] Qualità d'ascolto dei 39 file raccolti dalla Strategia approvata
+      direttamente dall'utente. [U] Naming definitivo e test del percorso
+      nativo restano separati; Soft Air resta `REJECTED — REPLACEMENT REQUIRED`.
 
 ## M3 implementato finora
 
@@ -219,11 +263,12 @@ REQUIRED`.
 
 ## Prossimo gate
 
-Yoga v2 è approvata. Consolidare i restanti screenshot e gate M3 soltanto su
-nuova indicazione.
-Nessuna EAS appartiene al gate M3 corrente.
-Bluetooth, background, lock-screen, interruzioni, batteria, ascolto lungo e
-qualità restano `NON DETERMINATO — EVIDENZA INSUFFICIENTE`.
+Il catalogo sonoro completo è pronto per il confronto in localhost. Il prossimo
+gate richiesto dall'utente è la revisione estetica e della gerarchia editoriale.
+La consegna mobile dei 39 file richiede una decisione separata su asset delivery
+o Git LFS; nessuna EAS è autorizzata. Bluetooth, background, lock-screen,
+interruzioni, batteria e percorso nativo restano `NON DETERMINATO — EVIDENZA
+INSUFFICIENTE`.
 
 ## Lavoro parallelo escluso
 

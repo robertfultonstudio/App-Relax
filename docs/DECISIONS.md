@@ -1,5 +1,50 @@
 # Decision log
 
+## D-042 - Patch SDK 57 e correzione decode-uri-component
+
+Data: 2 settembre 2026
+Stato: verificato localmente
+
+[F] `expo install --check` ha richiesto le patch correnti della stessa baseline
+SDK 57: Expo 57.0.19, Expo Router 57.0.18 e React Native 0.86.3, con i relativi
+moduli Expo e preset di test. L'aggiornamento non cambia SDK o architettura.
+Peer check, Expo install check, Expo Doctor 20/20, lint, TypeScript, test ed
+export Metro Android/iOS sono verdi.
+
+[F] Il refresh audit ha rilevato GHSA-vcc3-ghjq-m6fr nella dipendenza transitiva
+`decode-uri-component` 0.2.2 via `query-string`/Expo Router. La versione corretta
+è 0.5.0; un override pnpm riproducibile la applica senza cambiare API dell'app.
+Fonti primarie: [GitHub Advisory](https://github.com/advisories/GHSA-vcc3-ghjq-m6fr),
+[release 0.5.0](https://github.com/SamVerschueren/decode-uri-component/releases/tag/v0.5.0).
+
+[F] L'audit policy passa con i soli due advisory `image-size` già accettati e
+vincolati dal validator degli asset. Nessun nuovo residuo è stato allowlistato.
+
+## D-041 - Noise Colours come sorgenti consumer autonome
+
+Data: 2 settembre 2026
+Stato: implementato localmente; ascolto reale aperto
+
+[F] Su richiesta esplicita dell'utente, il catalogo aggiunge otto generatori
+runtime: White, Pink, Brown/Red, Blue/Azure, Violet/Purple, Grey/Gray, Green e
+Black. Gli alias non duplicano sorgenti. Ogni programma riproduce un solo buffer in
+loop attraverso lo stesso controller consumer: nessun layering, mixer o nuovo
+file audio.
+
+[F] White/Pink/Brown/Blue/Violet sono profili spettrali tecnici; Grey, Green e
+Black sono etichettati come profili non standard. Black è definito
+editorialmente come profilo profondo con intervalli quieti lenti, non come uno
+standard universale. Stop e Mute restano i controlli del silenzio.
+
+[F] Ogni buffer stereo Float32 48 kHz viene creato una sola volta al load, non
+nel callback audio: 384.000 frame / 8 secondi, sample peak 0,5, crossfade di
+confine e gain interno -6 dB. Il costo audio nel pacchetto è zero; il buffer
+temporaneo vale circa 3,1 MB includendo i due canali.
+
+[U] True peak inter-sample, raccordo percepito, qualità, fatica d'ascolto,
+background e stabilità restano `NON DETERMINATO — EVIDENZA INSUFFICIENTE` fino
+al test su telefono Android reale. L'emulatore non è un gate d'ascolto valido.
+
 ## D-040 - Commit locale M3/M4 autorizzato
 
 Data: 2 settembre 2026
@@ -644,3 +689,138 @@ CTA, formati, stato bloccato e barra da 52 px. Le prove sono:
 stato modificato. Prettier, lint, TypeScript, 15 suite/62 test e regressione
 audio 26/26 sono verdi; l'anteprima web non registra errori console.
 L'approvazione estetica della nuova palette resta umana.
+
+## D-039 - Anteprima locale sonora con driver Web Audio separato
+
+Data: 2 settembre 2026
+Stato: implementata e verificata localmente; commit aperto
+
+[F] L'anteprima Expo Web usa `WebAudioDriver`, selezionato soltanto per la
+piattaforma web e conforme allo stesso `AudioGraphDriver` del driver nativo.
+Android e iOS continuano a usare `ReactNativeAudioDriver`; controller, UI,
+catalogo, persistenza e contratti consumer non sono stati duplicati.
+
+[F] Nel browser locale sono entrati in stato Play con timer in decremento:
+Pink Noise generato a runtime, Deep River WAV, Eclipse Veil FLAC lossless e il
+percorso tecnico Moon Current con i tre stem ATP01 più generatori. Per il
+consumer sono stati verificati anche Pause/Resume, Stop e Mute/Unmute; il log
+console non ha registrato errori durante il run.
+
+[F] Il web è una superficie di anteprima locale, non sostituisce il prodotto
+mobile. Le capability dichiarano correttamente assenti background playback,
+notification controls e shared clock preciso. [U] Bluetooth, lock-screen,
+interruzioni, latenza, batteria e qualità nativa restano `NON DETERMINATO —
+EVIDENZA INSUFFICIENTE` fino al test su telefono reale.
+
+## D-040 - Soft Air respinto nel consumer
+
+Data: 2 settembre 2026
+Stato: decisione umana applicata localmente; sostituzione aperta
+
+[F] L'utente ha respinto Soft Air perché il materiale è percepito come una
+ventola potente e ricorda l'interno di un aereo. La qualità consumer non è più
+provvisoria: lo stato è `REJECTED — REPLACEMENT REQUIRED`.
+
+[F] Soft Air è disabilitato in Home, outcome e Soundscapes e non può aprire il
+player. La UI mostra `REPLACEMENT REQUIRED` e `REJECTED AFTER LISTENING`.
+`SLEEP_TEXTURE_001.wav` non viene cancellato, rinominato o modificato: resta
+necessario soltanto al preset tecnico ATP01 in `AUDIO TEST / TEST ONLY`.
+
+[U] Nome, provenienza, spettro e master del sostituto sono `NON DETERMINATO —
+EVIDENZA INSUFFICIENTE`; nessun nuovo asset è stato integrato.
+
+## D-041 - Catalogo completo approvato nella preview localhost
+
+Data: 3 settembre 2026
+Stato: implementata e verificata localmente; mobile delivery aperta
+
+[F] L'utente ha dichiarato positivo l'ascolto di tutti i file raccolti dalla
+Strategia e ha richiesto che siano inseriti, ricatalogati e funzionanti nella
+preview localhost. L'approvazione sonora copre i 15 lavori analogici di
+`APP_READY_AUDIO_01` e i 24 lavori di
+`APP_READY_AUDIO_02_ELEMENTAL_WATER_AIR`: 39 opere. Non riabilita Soft Air,
+respinto separatamente in D-040, e non rende definitivi i working title.
+
+[F] Il registro contiene ora 42 opere file-backed: 39 approvate, Moon Drone e
+Deep River ancora tecniche/provvisorie, Soft Air respinto. Con otto generatori
+noise il totale è 50 entità; ogni programma consumer resta rigorosamente
+single-source. Calm viene esposto sotto Relax, le 23 opere Water sotto
+Elemental Worlds e `Second Element: Air` sotto Esoteric Series.
+
+[F] Per evitare un pacchetto nativo monolitico, 38 file sono copiati nella
+cartella locale ignorata `public/audio-catalog/` e caricati soltanto on demand:
+14 WAV invariati dal pack 01 e 24 FLAC invariati dal pack 02, per
+2.706.406.941 byte. Eclipse Veil usa il FLAC starter già incorporato. Il
+manifest tracciato fissa filename, byte size e SHA-256; il validatore ha
+verificato tutti i file e vieta l'ingresso di `SLEEP_TEXTURE_001.wav`.
+
+[F] Il collaudo browser ha aperto individualmente tutte le 39 route approvate:
+ciascuna ha completato Play e mostrato Pause, senza alert o errori console. Un
+primo ciclo rapido su Silver Canopy non ha osservato la transizione entro la
+finestra breve; due prove isolate, inclusa quella finale con attesa maggiore,
+sono passate. Non resta un fallimento riproducibile.
+
+[I] Il localhost è la superficie corretta per questa fase di ascolto e
+ricatalogazione, ma non è una strategia di distribuzione mobile. Incorporare
+tutti i FLAC approvati richiederebbe circa 1.690.207.802 byte di solo audio;
+Git LFS o asset delivery e una nuova build restano gate separati non
+autorizzati. [U] Prestazioni, loop, background e qualità del percorso nativo
+restano `NON DETERMINATO — EVIDENZA INSUFFICIENTE` fino al test su telefono.
+
+## D-042 - Patch transitiva xmldom
+
+Data: 3 settembre 2026
+Stato: risolta e verificata localmente
+
+[F] Il gate finale ha rilevato GHSA-6gmq-8vp8-gcm6 nelle versioni transitive
+`@xmldom/xmldom` 0.8.13 e 0.9.10, introdotte dagli strumenti plist/config di
+Expo. L'advisory GitHub reviewed indica come release corrette 0.8.15 e 0.9.12.
+
+[F] `pnpm-workspace.yaml` forza separatamente ciascun ramo alla propria patch
+compatibile. Il lockfile e l'installazione locale sono stati aggiornati senza
+installazioni globali; `security:audit`, Expo install check, TypeScript e i test
+mirati catalogo/UI sono tornati verdi. Restano soltanto i due advisory
+`image-size` già accettati e confinati dal validatore asset.
+
+## D-043 - Meditation prima e priorità editoriale ai suoni marini
+
+Data: 3 settembre 2026
+Stato: decisione umana applicata localmente
+
+[F] L'utente ha chiesto di portare Meditation in prima posizione e di dare più
+risalto ai suoni di onde marine già approvati. Meditation è quindi il primo
+outcome della Home e `Open Tide` è il suo lavoro featured nella preview
+localhost.
+
+[F] Seguono `Tidal Breath`, `Pearl Tide`, `Blue Interval`, `Moon Shore` e
+`Night Shore`. `Eclipse Veil` rimane disponibile e invariato nel catalogo, ma
+viene mostrato dopo il gruppo marino. Nessun file audio, gain, stato di ascolto
+o mapping di collezione è stato modificato.
+
+## D-044 - Stillwater Halo chiude Cosmic / Zen Ambient
+
+Data: 3 settembre 2026
+Stato: decisione umana applicata localmente
+
+[F] L'utente ha chiesto di spostare `Stillwater Halo` in ultima posizione nella
+sezione Soundscapes. L'opera chiude ora la propria raccolta
+`Cosmic / Zen Ambient`; resta una traccia Relax approvata e non cambia file,
+gain, disponibilità, route o catalogazione.
+
+## D-045 - Il catalogo localhost è escluso dall'archivio EAS
+
+Data: 3 settembre 2026
+Stato: hardening locale verificato prima del commit
+
+[F] Il controllo pre-commit ha dimostrato che `expo export` copia anche
+`public/audio-catalog/` nell'output locale quando i 38 file sono presenti sul
+Mac. La tabella Metro continua a referenziare soltanto i tre WAV ATP01 e lo
+starter FLAC, ma l'output completo non può essere descritto come limitato a
+questi quattro file.
+
+[F] `.easignore` esclude ora l'intera cartella `public/audio-catalog/`. I byte
+locali restano disponibili per l'ascolto localhost ma non devono entrare
+nell'archivio sorgente EAS; `validate-project-config.mjs` richiede la regola e
+`validate-eas-archive.mjs` fallisce se trova la cartella. Il validatore riconosce
+inoltre correttamente i quattro asset audio incorporati: tre WAV ATP01 e un
+consumer starter FLAC.

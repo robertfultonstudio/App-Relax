@@ -1,11 +1,18 @@
 import type { ConsumerOutcomeId } from "./productShell";
+import { Platform } from "react-native";
 import type {
   ConsumerAudioWork,
   ConsumerCollectionId,
+  NoiseColorId,
 } from "@/domain/audio/consumerTypes";
+import { NOISE_COLOR_DEFINITIONS } from "@/audio/generators/coloredNoise";
+import { APPROVED_ELEMENTAL_WORKS } from "@/content/approvedElementalCatalog";
 
 const COMMON = {
   schemaVersion: 1 as const,
+  sourceKind: "file" as const,
+  noiseColor: null,
+  spectralDefinition: null,
   loop: true as const,
   sampleRateHz: 48000 as const,
   channels: 2 as const,
@@ -14,6 +21,31 @@ const COMMON = {
   provenance: {
     packId: "APP_READY_AUDIO_01" as const,
     manifestReference: "qa/APP_READY_AUDIO_01_MANIFEST.json" as const,
+  },
+};
+
+const NOISE_COMMON = {
+  schemaVersion: 1 as const,
+  familyId: "runtime-noise-generators",
+  sourceKind: "generated-noise" as const,
+  sourceFilename: null,
+  localPreviewFilename: null,
+  durationSeconds: 8,
+  frameCount: 384000,
+  loop: true as const,
+  sampleRateHz: 48000 as const,
+  channels: 2 as const,
+  bitDepth: 32 as const,
+  measuredLufs: null,
+  truePeakDbtp: null,
+  playbackGainDb: -6,
+  postGainTruePeakDbtp: null,
+  generatedPeakCeilingDbfs: -6.021,
+  availability: "generated-runtime" as const,
+  listeningStatus: "PROVISIONAL — LISTENING APPROVAL REQUIRED" as const,
+  provenance: {
+    packId: "RUNTIME_NOISE_GENERATORS" as const,
+    manifestReference: "src/audio/generators/coloredNoise.ts" as const,
   },
 };
 
@@ -244,6 +276,7 @@ export const CONSUMER_AUDIO_WORKS: readonly ConsumerAudioWork[] = [
     -5.33,
     2.329,
   ),
+  ...APPROVED_ELEMENTAL_WORKS,
   work(
     "moon-drone",
     "Moon Drone",
@@ -259,6 +292,7 @@ export const CONSUMER_AUDIO_WORKS: readonly ConsumerAudioWork[] = [
     -2.02,
     -4,
     "embedded-wav",
+    "PROVISIONAL — LISTENING APPROVAL REQUIRED",
   ),
   work(
     "deep-river",
@@ -275,6 +309,7 @@ export const CONSUMER_AUDIO_WORKS: readonly ConsumerAudioWork[] = [
     -8.01,
     2.028,
     "embedded-wav",
+    "PROVISIONAL — LISTENING APPROVAL REQUIRED",
   ),
   work(
     "soft-air",
@@ -290,9 +325,38 @@ export const CONSUMER_AUDIO_WORKS: readonly ConsumerAudioWork[] = [
     -13.999,
     -2.02,
     -4.001,
-    "embedded-wav",
+    "rejected-listening",
+    "REJECTED — REPLACEMENT REQUIRED",
   ),
+  noiseWork("white-noise", "white", "focus", ["massage"]),
+  noiseWork("pink-noise", "pink", "sleep", ["relax", "massage"]),
+  noiseWork("brown-red-noise", "brown", "sleep", ["relax"]),
+  noiseWork("blue-noise", "blue", "focus", []),
+  noiseWork("violet-purple-noise", "violet", "focus", ["meditation"]),
+  noiseWork("grey-noise", "grey", "focus", ["massage"]),
+  noiseWork("green-noise", "green", "meditation", ["relax", "yoga"]),
+  noiseWork("black-noise", "black", "sleep", ["relax", "meditation"]),
 ] as const;
+
+function noiseWork(
+  id: string,
+  noiseColor: NoiseColorId,
+  primaryOutcome: ConsumerOutcomeId,
+  secondaryOutcomes: readonly ConsumerOutcomeId[],
+): ConsumerAudioWork {
+  const definition = NOISE_COLOR_DEFINITIONS[noiseColor];
+  return {
+    ...NOISE_COMMON,
+    id,
+    title: definition.title,
+    assetKey: `generatedNoise.${noiseColor}`,
+    noiseColor,
+    spectralDefinition: definition.spectralDefinition,
+    primaryOutcome,
+    secondaryOutcomes,
+    collectionIds: ["noise-colours"],
+  };
+}
 
 function work(
   id: string,
@@ -308,7 +372,8 @@ function work(
   measuredLufs: number,
   truePeakDbtp: number,
   playbackGainDb: number,
-  availability: ConsumerAudioWork["availability"] = "external-flac-ready",
+  availability: ConsumerAudioWork["availability"] = "local-preview-file",
+  listeningStatus: ConsumerAudioWork["listeningStatus"] = "APPROVED — LISTENING PASSED",
 ): ConsumerAudioWork {
   return {
     ...COMMON,
@@ -317,6 +382,8 @@ function work(
     familyId,
     assetKey,
     sourceFilename,
+    localPreviewFilename:
+      availability === "local-preview-file" ? sourceFilename : null,
     primaryOutcome,
     secondaryOutcomes,
     collectionIds,
@@ -326,7 +393,9 @@ function work(
     truePeakDbtp,
     playbackGainDb,
     postGainTruePeakDbtp: Number((truePeakDbtp + playbackGainDb).toFixed(3)),
+    generatedPeakCeilingDbfs: null,
     availability,
+    listeningStatus,
   };
 }
 
@@ -343,13 +412,50 @@ export function isEmbeddedWork(work: ConsumerAudioWork): boolean {
   );
 }
 
+export function isPlayableWork(work: ConsumerAudioWork): boolean {
+  return (
+    isEmbeddedWork(work) ||
+    work.availability === "generated-runtime" ||
+    (Platform.OS === "web" && work.availability === "local-preview-file")
+  );
+}
+
+export function isPlayableWorkOnWeb(work: ConsumerAudioWork): boolean {
+  return (
+    isEmbeddedWork(work) ||
+    work.availability === "generated-runtime" ||
+    work.availability === "local-preview-file"
+  );
+}
+
+const MEDITATION_EDITORIAL_PRIORITY = [
+  "field-sea-003-open-tide",
+  "field-sea-001-tidal-breath",
+  "field-sea-005-pearl-tide",
+  "field-sea-007-blue-interval",
+  "field-sea-002-moon-shore",
+  "field-sea-004-night-shore",
+] as const;
+
+const MEDITATION_EDITORIAL_RANK = new Map<string, number>(
+  MEDITATION_EDITORIAL_PRIORITY.map((id, index) => [id, index]),
+);
+
 export function getWorksForOutcome(
   outcome: ConsumerOutcomeId,
 ): readonly ConsumerAudioWork[] {
-  return CONSUMER_AUDIO_WORKS.filter(
+  const works = CONSUMER_AUDIO_WORKS.filter(
     (work) =>
       work.primaryOutcome === outcome ||
       work.secondaryOutcomes.includes(outcome),
+  );
+
+  if (outcome !== "meditation") return works;
+
+  return works.sort(
+    (left, right) =>
+      (MEDITATION_EDITORIAL_RANK.get(left.id) ?? Number.MAX_SAFE_INTEGER) -
+      (MEDITATION_EDITORIAL_RANK.get(right.id) ?? Number.MAX_SAFE_INTEGER),
   );
 }
 
@@ -357,6 +463,12 @@ export function getEmbeddedWorksForOutcome(
   outcome: ConsumerOutcomeId,
 ): readonly ConsumerAudioWork[] {
   return getWorksForOutcome(outcome).filter(isEmbeddedWork);
+}
+
+export function getPlayableWorksForOutcome(
+  outcome: ConsumerOutcomeId,
+): readonly ConsumerAudioWork[] {
+  return getWorksForOutcome(outcome).filter(isPlayableWork);
 }
 
 export function getWorksForCollection(

@@ -4,7 +4,7 @@ import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { useAudioSession } from "@/audio/AudioProvider";
 import { EditorialHeader } from "@/components/EditorialHeader";
 import { EditorialScreen } from "@/components/EditorialScreen";
-import { getConsumerWork, isEmbeddedWork } from "@/content/consumerCatalog";
+import { getConsumerWork, isPlayableWork } from "@/content/consumerCatalog";
 import { createSingleTrackProgram } from "@/domain/audio/consumerTypes";
 import { OUTCOME_ARTWORK } from "@/design/outcomeArtwork";
 import { editorial } from "@/design/editorialTheme";
@@ -29,7 +29,7 @@ export default function ConsumerPlayerScreen() {
   );
 
   useEffect(() => {
-    if (program && isEmbeddedWork(program.work)) {
+    if (program && isPlayableWork(program.work)) {
       void (async () => {
         await controller.loadProgram(program);
         if (start === "1" && autoStartedWorkId.current !== program.work.id) {
@@ -40,7 +40,7 @@ export default function ConsumerPlayerScreen() {
     }
   }, [controller, program, start]);
 
-  if (!work || !program || !isEmbeddedWork(work)) return null;
+  if (!work || !program || !isPlayableWork(work)) return null;
   const isPlaying = snapshot.status === "playing";
   const isFading = snapshot.status === "fadingOut";
   const canPlay = snapshot.status === "ready" || snapshot.status === "paused";
@@ -62,7 +62,11 @@ export default function ConsumerPlayerScreen() {
       <Text accessibilityRole="header" style={styles.title}>
         {work.title}
       </Text>
-      <Text style={styles.gate}>PROVISIONAL · LISTENING APPROVAL REQUIRED</Text>
+      <Text style={styles.gate}>
+        {work.listeningStatus === "APPROVED — LISTENING PASSED"
+          ? "APPROVED AFTER LISTENING"
+          : "PROVISIONAL · LISTENING APPROVAL REQUIRED"}
+      </Text>
 
       <Text
         accessibilityLabel={`${formatRemaining(snapshot.remainingMs)} remaining`}
@@ -160,7 +164,9 @@ export default function ConsumerPlayerScreen() {
         </View>
       </View>
       <Text style={styles.note}>
-        One file plays alone in a lossless loop. No mixer or hidden layers.
+        {work.sourceKind === "generated-noise"
+          ? "Generated on this device as one continuous source. No audio file, mixer or hidden layers."
+          : "One file plays alone in a lossless loop. No mixer or hidden layers."}
       </Text>
     </EditorialScreen>
   );

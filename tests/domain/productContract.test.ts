@@ -15,14 +15,20 @@ function listFiles(directory: string): string[] {
 describe("product and asset request contracts", () => {
   it("keeps M3 functionality-first and time-to-sound ready", () => {
     expect(CONSUMER_OUTCOMES.map((outcome) => outcome.functionLabel)).toEqual([
+      "MEDITATION",
       "YOGA",
       "MASSAGE",
       "RELAX",
-      "MEDITATION",
       "SLEEP",
       "FOCUS",
     ]);
     expect(CONSUMER_OUTCOMES[0]).toEqual(
+      expect.objectContaining({
+        id: "meditation",
+        cta: "Begin meditation",
+      }),
+    );
+    expect(CONSUMER_OUTCOMES.find((outcome) => outcome.id === "yoga")).toEqual(
       expect.objectContaining({
         cta: "Start your yoga session",
         plannedFormat: "Future format · 20 / 30 / 45 / 60 min",
@@ -46,12 +52,11 @@ describe("product and asset request contracts", () => {
       ),
     ) as { assets: { key: string; width: number; height: number }[] };
 
-    expect(manifest.assets.map((asset) => asset.key)).toEqual(
-      CONSUMER_OUTCOMES.map((outcome) => outcome.id),
+    const outcomeIds = CONSUMER_OUTCOMES.map((outcome) => outcome.id).sort();
+    expect(manifest.assets.map((asset) => asset.key).sort()).toEqual(
+      outcomeIds,
     );
-    expect(Object.keys(OUTCOME_ARTWORK)).toEqual(
-      CONSUMER_OUTCOMES.map((outcome) => outcome.id),
-    );
+    expect(Object.keys(OUTCOME_ARTWORK).sort()).toEqual(outcomeIds);
     expect(
       manifest.assets.every(
         (asset) => asset.width === 720 && asset.height === 720,

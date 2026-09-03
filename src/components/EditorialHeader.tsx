@@ -25,7 +25,9 @@ export function EditorialHeader({
           accessibilityLabel="Go back"
           accessibilityRole="button"
           hitSlop={10}
-          onPress={() => router.back()}
+          onPress={() =>
+            router.canGoBack() ? router.back() : router.replace("/")
+          }
           style={({ pressed }) => [
             styles.sideAction,
             pressed && styles.pressed,

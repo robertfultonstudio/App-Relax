@@ -88,8 +88,44 @@ tre stem:
 - i master restano WAV PCM24/48 kHz esterni; i derivati app sono FLAC lossless
   stereo 24-bit/48 kHz level 8;
 - il PCM decodificato FLAC deve avere hash identico al data chunk WAV sorgente;
-- file non incorporati sono metadata e non possono essere presentati come
-  riproducibili;
-- titoli e mapping restano provvisori fino all'approvazione umana d'ascolto.
+- file non incorporati nel pacchetto mobile possono essere riproducibili
+  esclusivamente nel localhost quando esiste un file verificato nel catalogo
+  locale; non possono essere presentati come disponibili nella build nativa;
+- l'approvazione d'ascolto e l'approvazione di titolo/mapping sono gate separati.
 
 Il registro e le misure sono documentati in `docs/M4_CONSUMER_AUDIO_CATALOG.md`.
+
+### Catalogo locale approvato
+
+[F] Il 3 settembre 2026 l'utente ha confermato l'esito positivo dell'ascolto dei
+15 lavori analogici e dei 24 lavori Water/Air raccolti dalla Strategia. I 39
+lavori sono perciò `APPROVED — LISTENING PASSED`; i working title restano
+metadata modificabili.
+
+[F] Il localhost serve 38 file da `public/audio-catalog/`: 14 WAV PCM24/48 kHz
+invariati da `APP_READY_AUDIO_01` e 24 FLAC lossless invariati da
+`APP_READY_AUDIO_02_ELEMENTAL_WATER_AIR`. Eclipse Veil usa invece il FLAC
+starter già incorporato. I byte locali sono esclusi da Git e dal pacchetto
+nativo; `docs/M4_LOCAL_LISTENING_MANIFEST.json` ne fissa nome, dimensione e
+SHA-256.
+
+## Generator noise runtime
+
+I noise consumer non sono asset e non modificano il contratto dei master:
+
+- ogni programma genera e riproduce un solo buffer Float32 stereo 48 kHz;
+- nessun WAV/FLAC, download, layer o mixer viene aggiunto;
+- il generatore deve essere deterministico nei test, centrato, bounded e con
+  confine di loop raccordato;
+- sample peak e gain sono verificati separatamente dal true peak dBTP, che non
+  viene dichiarato senza misura sul percorso nativo;
+- Grey, Green e Black devono essere presentati come profili non standard;
+- qualità, loop e livello percepito richiedono ascolto su telefono reale.
+
+## Esito di ascolto Soft Air
+
+[F] Il 2 settembre 2026 `Soft Air` / `SLEEP_TEXTURE_001.wav` è stato respinto
+come opera consumer perché percepito come una ventola potente o l'interno di un
+aereo. Deve essere sostituito prima di tornare disponibile nel catalogo. Il
+file canonico resta invariato e autorizzato soltanto come stem di regressione
+in `AUDIO TEST / TEST ONLY`.

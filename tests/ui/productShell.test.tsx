@@ -1,4 +1,4 @@
-import { fireEvent, render } from "@testing-library/react-native";
+import { fireEvent, render, within } from "@testing-library/react-native";
 import OutcomeCatalogScreen from "@/app/outcome/[outcomeId]";
 import SoundscapesScreen from "@/app/soundscapes";
 import YogaScreen from "@/app/yoga";
@@ -26,18 +26,18 @@ describe("M3 product tabs", () => {
 
   it("puts the six consumer functions before evocative naming", () => {
     expect(CONSUMER_OUTCOMES.map((outcome) => outcome.id)).toEqual([
+      "meditation",
       "yoga",
       "massage",
       "relax",
-      "meditation",
       "sleep",
       "focus",
     ]);
     expect(CONSUMER_OUTCOMES.map((outcome) => outcome.cta)).toEqual([
+      "Begin meditation",
       "Start your yoga session",
       "Set the room for massage",
       "Relax now",
-      "Begin meditation",
       "Prepare for sleep",
       "Focus",
     ]);
@@ -85,14 +85,36 @@ describe("M3 product tabs", () => {
     const screen = await render(<SoundscapesScreen />);
     expect(screen.getByText("Where would you like to go?")).toBeTruthy();
     expect(screen.getByText("STANDALONE WORKS")).toBeTruthy();
-    expect(screen.getByText("ELEMENTAL WORLDS")).toBeTruthy();
+    expect(screen.getByText("ELEMENTAL WORLDS · RAIN")).toBeTruthy();
+    expect(screen.getByText("ELEMENTAL WORLDS · STREAM")).toBeTruthy();
+    expect(screen.getByText("ELEMENTAL WORLDS · SEA")).toBeTruthy();
+    expect(screen.getByText("ELEMENTAL WORLDS · AIR")).toBeTruthy();
+    expect(screen.getByText("NOISE COLOURS")).toBeTruthy();
     expect(screen.getByText("COSMIC / ZEN AMBIENT")).toBeTruthy();
+    expect(screen.getByText("ESOTERIC SERIES · AIR")).toBeTruthy();
     expect(screen.getByText("Eclipse Veil")).toBeTruthy();
     expect(screen.getByText("Deep River")).toBeTruthy();
-    expect(screen.getAllByText("AVAILABLE LOCALLY")).toHaveLength(4);
+    expect(screen.getByText("Silver Canopy")).toBeTruthy();
+    expect(screen.getByText("Second Element: Air")).toBeTruthy();
+    expect(screen.getAllByText("AVAILABLE LOCALLY")).toHaveLength(3);
+    expect(screen.getAllByText("GENERATED LOCALLY")).toHaveLength(8);
+    expect(screen.getAllByText("WEB PREVIEW ONLY")).toHaveLength(38);
+    expect(screen.getAllByText("APPROVED AFTER LISTENING")).toHaveLength(39);
+    expect(screen.getByText("REPLACEMENT REQUIRED")).toBeTruthy();
+    expect(screen.getByText("REJECTED AFTER LISTENING")).toBeTruthy();
+    expect(
+      screen.getByTestId("consumer-work-soft-air").props.accessibilityState,
+    ).toEqual({ disabled: true });
     expect(
       screen.getByTestId("consumer-work-eclipse-veil").props.accessibilityState,
     ).toEqual({ disabled: false });
+    const cosmicCollection = screen.getByTestId(
+      "soundscape-collection-cosmic-zen-ambient",
+    );
+    const cosmicWorks = within(cosmicCollection).getAllByRole("button");
+    expect(cosmicWorks[cosmicWorks.length - 1]?.props.testID).toBe(
+      "consumer-work-stillwater-halo",
+    );
     expect(
       screen.getByTestId("soundscapes-editorial-artwork", {
         includeHiddenElements: true,

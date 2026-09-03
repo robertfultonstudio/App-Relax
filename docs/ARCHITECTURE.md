@@ -2,14 +2,15 @@
 
 ## Decisione sintetica
 
-L'app usa Expo SDK 57, React Native 0.86.2 ed Expo Router. La shell consumer M3
-e separata dal motore: la Home outcome-first e i tab `RITUALS`, `YOGA` e
-`SOUNDSCAPES` leggono soltanto registri editoriali senza audio. Yoga, Massage,
-Relax, Meditation, Sleep e Focus sono entita consumer prive di preset. La route
-`AUDIO TEST / TEST ONLY` e l'unica UI
-che usa `AudioSessionController`. Il controller resta il solo proprietario della
-sessione e `ReactNativeAudioDriver` resta dietro `AudioGraphDriver` e
-`AudioEngine`.
+L'app usa Expo SDK 57, React Native 0.86.3 ed Expo Router. La Home outcome-first
+e i tab `RITUALS`, `YOGA` e `SOUNDSCAPES` leggono il catalogo consumer M4; le
+opere disponibili aprono un player single-source. Yoga, Massage, Relax,
+Meditation, Sleep e Focus restano entita consumer prive di preset. Sia il
+player consumer sia la route separata `AUDIO TEST / TEST ONLY` usano
+`AudioSessionController`, con modalità e contratti distinti. Il controller
+resta il solo proprietario della sessione. `ReactNativeAudioDriver` su
+Android/iOS e `WebAudioDriver` nell'anteprima browser restano entrambi dietro
+`AudioGraphDriver` e `AudioEngine`.
 
 RNAA dichiara peer aperti verso React Native ma la sua matrice pubblica non documenta ancora RN 0.86. Due compilazioni EAS Android e il playback della preview standalone con Metro spento dimostrano il percorso Android corrente; compatibilita iOS e comportamento su telefono reale restano `NON DETERMINATO — EVIDENZA INSUFFICIENTE`.
 
@@ -18,23 +19,28 @@ RNAA dichiara peer aperti verso React Native ma la sua matrice pubblica non docu
 ```text
 src/app/                       route Expo Router
 src/components/                componenti consumer
-src/content/                   tab e registri editoriali senza audio
+src/content/                   tab e registro editoriale consumer
 src/domain/audio/              tipi e contratti puri
 src/audio/                     controller e porta graph driver
 src/audio/reactNativeAudioApi/ adattatore nativo
+src/audio/web/                 adattatore Web Audio per anteprima locale
 src/audio/generators/          funzioni DSP pure/testabili
 src/state/                     persistenza serializzabile
 src/presets/                   registry dei preset
 assets/audio/test-pack-01/     tre stem reali e manifest
 assets/audio/placeholders/     fixture tecniche non referenziate
+public/audio-catalog/           byte audio localhost, ignorati da Git
 ```
 
 ## Flusso di controllo
 
 ```text
-Consumer tabs -> registri editoriali (nessun AudioEngine)
+Consumer tabs -> catalogo -> SingleTrackProgram -> AudioSessionController
+                                                   |
+                                                   v
+                                     file source OPPURE noise buffer
 
-Audio Test UI -> AudioSessionController -> AudioGraphDriver -> React Native Audio API -> graph nativo
+Audio Test UI -> AudioSessionController -> AudioGraphDriver -> driver di piattaforma -> graph audio
                  |                     |
                  v                     v
              snapshot            eventi/lifecycle
@@ -44,8 +50,9 @@ Audio Test UI -> AudioSessionController -> AudioGraphDriver -> React Native Audi
 ```
 
 La UI non conserva handle nativi. Le route consumer non possiedono
-`audioPresetId` e non possono aprire il player. Nel solo Audio Test i comandi
-sono serializzati; `play`, `stop` e cleanup sono idempotenti. Un fallimento
+`audioPresetId`: caricano soltanto un `SingleTrackProgram`, mai un preset o un
+mixer. Tutti i comandi sono serializzati; `play`, `stop` e cleanup sono
+idempotenti. Un fallimento
 durante start ferma il graph prima di pubblicare lo stato di errore.
 
 ## Contratto AudioEngine
@@ -53,10 +60,12 @@ durante start ferma il graph prima di pubblicare lo stato di errore.
 Il contratto copre:
 
 - `loadPreset(preset)`;
+- `loadProgram(singleTrackProgram)`;
 - `play()`, `pause()`, `stop()`, `dispose()`;
 - `setSourceGain(sourceId, gain, fadeMs)`;
 - `setSourceMuted(sourceId, muted, fadeMs)`;
 - `setTimer(durationMinutes)`;
+- `setVolume(volume)` per la singola sorgente consumer;
 - `subscribe(listener)` e `getSnapshot()`;
 - capability esplicite per background, notification controls, shared clock e synthesis.
 
@@ -70,6 +79,10 @@ ambience file source - media element ---- gain ---\
 texture file source -- media element ---- gain ----+--> master gain --> destination
 left/right oscillators -----/
 brown-noise loop buffer ----/
+
+consumer file source --------> consumer gain --> master gain --> destination
+        OPPURE
+consumer colour-noise buffer -> consumer gain --> master gain --> destination
 ```
 
 - I tre stem sono file source incrementali distinti, avviati sullo stesso clock e loopabili; non vengono decodificati integralmente in `AudioBuffer`.
@@ -77,7 +90,18 @@ brown-noise loop buffer ----/
 - `expo-asset` scarica ogni WAV su un `file://` locale; hash MD5 atteso e URI distinta sono condizioni di load.
 - Il binaural usa due oscillatori sinusoidali, uno per canale tramite stereo panner.
 - Il brown noise e generato in un buffer PCM a runtime e riprodotto in loop.
+- Il catalogo consumer offre otto colour-noise generati su richiesta. Un solo
+  buffer stereo Float32 da 8 secondi esiste alla volta; nessun file viene
+  scaricato o incorporato e nessun consumer mixer viene creato.
 - Ogni sorgente ha un gain node; il master applica fade-in e fade-out.
+- La risoluzione di piattaforma usa `createAudioDriver.web.ts` nel browser e
+  `createAudioDriver.ts` nelle build native. Il driver web riproduce gli asset
+  Metro tramite `HTMLAudioElement` instradato nel Web Audio graph e genera i
+  noise in `AudioBuffer`; non dichiara background o notification controls.
+- Le opere approvate ma non incorporate risolvono nel solo browser un filename
+  locale sotto `/audio-catalog/`. Il server supporta byte range e carica un
+  solo file on demand; Android/iOS non considerano questa disponibilità come
+  asset mobile.
 - `react-native-worklets` e presente per soddisfare il peer nativo di RNAA; questa slice non implementa un worklet custom.
 - Il mix iniziale conserva headroom. Loudness e qualita definitivi restano `NON DETERMINATO — EVIDENZA INSUFFICIENTE` fino all'ascolto su telefono.
 

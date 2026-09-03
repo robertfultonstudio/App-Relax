@@ -48,5 +48,6 @@ yarn-error.*
 /eslint.config.js
 /jest.config.js
 /assets/audio/placeholders/
+/public/audio-catalog/
 /output/
 /tmp/

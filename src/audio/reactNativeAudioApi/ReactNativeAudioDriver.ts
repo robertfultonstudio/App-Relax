@@ -24,6 +24,10 @@ import {
 } from "@/audio/AudioGraphDriver";
 import { getBinauralFrequencies } from "@/audio/generators/binaural";
 import { createBrownNoiseSamples } from "@/audio/generators/brownNoise";
+import {
+  createColoredNoiseSamples,
+  createSeededRandom,
+} from "@/audio/generators/coloredNoise";
 import { STEM_ASSETS } from "./stemAssets";
 import { CONSUMER_ASSETS } from "./consumerAssets";
 import {
@@ -58,6 +62,7 @@ type NotificationPlaybackState = "hidden" | "paused" | "playing";
 
 const SILENT_GAIN = 0.0001;
 const BROWN_NOISE_SECONDS = 8;
+const CONSUMER_NOISE_SECONDS = 8;
 
 function safeStop(node: AudioBufferSourceNode | OscillatorNode): void {
   try {
@@ -87,6 +92,7 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
   private readonly stemRuntime = new Map<StemSourceId, StemRuntime>();
   private brownNoiseRuntime: BufferRuntime | null = null;
   private singleTrackRuntime: StemRuntime | null = null;
+  private singleTrackNoiseRuntime: BufferRuntime | null = null;
   private binauralRuntime: BinauralRuntime | null = null;
   private sourceGains = new Map<AudioSourceId, GainNode>();
   private sourceMuted = new Map<AudioSourceId, boolean>();
@@ -94,6 +100,7 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
   private loadedPresetId: string | null = null;
   private loadedProgramId: string | null = null;
   private programLocalUri: string | null = null;
+  private programNoiseBuffer: AudioBuffer | null = null;
   private programPlaybackGain = 1;
   private programVolume = 1;
   private graphStarted = false;
@@ -180,6 +187,7 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
       this.loadedPresetId = preset.id;
       this.loadedProgramId = null;
       this.programLocalUri = null;
+      this.programNoiseBuffer = null;
       if (context.state === "running") {
         await context.suspend();
       }
@@ -206,13 +214,31 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
     if (
       this.loadedProgramId === program.work.id &&
       this.context &&
-      this.programLocalUri
+      (program.work.sourceKind === "generated-noise"
+        ? this.programNoiseBuffer
+        : this.programLocalUri)
     ) {
       return;
     }
     await this.stop();
     this.ensureContext();
     const context = this.requireContext();
+    this.programLocalUri = null;
+    this.programNoiseBuffer = null;
+    if (program.work.sourceKind === "generated-noise") {
+      if (!program.work.noiseColor) {
+        throw new Error(`${program.work.title} has no noise colour defined.`);
+      }
+      this.programNoiseBuffer = this.createConsumerNoiseBuffer(
+        context,
+        program.work.noiseColor,
+      );
+      this.programPlaybackGain = dbToLinear(program.work.playbackGainDb);
+      this.loadedProgramId = program.work.id;
+      this.loadedPresetId = null;
+      if (context.state === "running") await context.suspend();
+      return;
+    }
     const descriptor = CONSUMER_ASSETS[program.work.assetKey];
     if (!descriptor) {
       throw new Error(`${program.work.title} is not embedded in this build.`);
@@ -233,6 +259,7 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
       if (context.state === "running") await context.suspend();
     } catch (error) {
       this.programLocalUri = null;
+      this.programNoiseBuffer = null;
       this.loadedProgramId = null;
       if (context.state === "running") await context.suspend();
       throw error;
@@ -320,8 +347,16 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
     if (this.loadedProgramId !== program.work.id) {
       await this.loadSingleTrack(program);
     }
-    if (!this.programLocalUri) {
+    if (program.work.sourceKind === "file" && !this.programLocalUri) {
       throw new Error(`No local file available for ${program.work.title}.`);
+    }
+    if (
+      program.work.sourceKind === "generated-noise" &&
+      !this.programNoiseBuffer
+    ) {
+      throw new Error(
+        `No generated buffer available for ${program.work.title}.`,
+      );
     }
     try {
       const context = this.requireContext();
@@ -336,19 +371,28 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
         master.connect(context.destination);
         this.masterGain = master;
       }
-      const { source, output } = createStreamingStemSource(
-        context,
-        this.programLocalUri,
-      );
       const gain = context.createGain();
       this.programVolume = Math.min(1, Math.max(0, volume));
       gain.gain.value = Math.max(
         SILENT_GAIN,
         this.programPlaybackGain * this.programVolume,
       );
-      output.connect(gain);
-      gain.connect(master);
-      this.singleTrackRuntime = { source, output, gain };
+      if (program.work.sourceKind === "generated-noise") {
+        const source = context.createBufferSource();
+        source.buffer = this.programNoiseBuffer;
+        source.loop = true;
+        source.connect(gain);
+        gain.connect(master);
+        this.singleTrackNoiseRuntime = { source, gain };
+      } else {
+        const { source, output } = createStreamingStemSource(
+          context,
+          this.programLocalUri!,
+        );
+        output.connect(gain);
+        gain.connect(master);
+        this.singleTrackRuntime = { source, output, gain };
+      }
 
       if (context.state === "suspended") await context.resume();
       await AudioManager.setAudioSessionActivity(true);
@@ -357,7 +401,11 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
       master.gain.setValueAtTime(SILENT_GAIN, context.currentTime);
       master.gain.setValueAtTime(SILENT_GAIN, startAt);
       master.gain.linearRampToValueAtTime(1, startAt + program.fadeInSeconds);
-      source.start(startAt);
+      if (this.singleTrackNoiseRuntime) {
+        this.singleTrackNoiseRuntime.source.start(startAt);
+      } else {
+        this.singleTrackRuntime?.source.start(startAt);
+      }
       this.graphStarted = true;
       this.notificationDesiredState = "playing";
       const generation = ++this.notificationGeneration;
@@ -445,6 +493,12 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
       this.singleTrackRuntime = null;
     }
 
+    if (this.singleTrackNoiseRuntime) {
+      safeStop(this.singleTrackNoiseRuntime.source);
+      this.singleTrackNoiseRuntime.gain.disconnect();
+      this.singleTrackNoiseRuntime = null;
+    }
+
     if (this.brownNoiseRuntime) {
       safeStop(this.brownNoiseRuntime.source);
       this.brownNoiseRuntime.gain.disconnect();
@@ -493,6 +547,7 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
     this.loadedPresetId = null;
     this.loadedProgramId = null;
     this.programLocalUri = null;
+    this.programNoiseBuffer = null;
   }
 
   async setSourceGain(
@@ -520,7 +575,8 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
 
   async setMasterVolume(volume: number, fadeMs: number): Promise<void> {
     this.programVolume = Math.min(1, Math.max(0, volume));
-    const node = this.singleTrackRuntime?.gain;
+    const node =
+      this.singleTrackRuntime?.gain ?? this.singleTrackNoiseRuntime?.gain;
     if (!node || !this.context) return;
     const now = this.context.currentTime;
     const target = Math.max(
@@ -653,6 +709,27 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
     return buffer;
   }
 
+  private createConsumerNoiseBuffer(
+    context: AudioContext,
+    color: NonNullable<SingleTrackProgram["work"]["noiseColor"]>,
+  ): AudioBuffer {
+    const length = Math.floor(context.sampleRate * CONSUMER_NOISE_SECONDS);
+    const buffer = context.createBuffer(2, length, context.sampleRate);
+    const seed = [...color].reduce(
+      (value, character) => (value * 31 + character.charCodeAt(0)) >>> 0,
+      0x51a7c0de,
+    );
+    const samples = createColoredNoiseSamples({
+      color,
+      length,
+      sampleRate: context.sampleRate,
+      random: createSeededRandom(seed),
+    });
+    buffer.copyToChannel(samples, 0);
+    buffer.copyToChannel(samples, 1);
+    return buffer;
+  }
+
   private effectiveGain(sourceId: AudioSourceId, fallback: number): number {
     const value = this.sourceGainValues.get(sourceId) ?? fallback;
     return this.sourceMuted.get(sourceId)
@@ -668,6 +745,7 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
     this.binauralRuntime?.left.stop(endAt);
     this.binauralRuntime?.right.stop(endAt);
     this.singleTrackRuntime?.source.stop(endAt);
+    this.singleTrackNoiseRuntime?.source.stop(endAt);
   }
 
   private isCurrentNotificationGeneration(generation: number): boolean {

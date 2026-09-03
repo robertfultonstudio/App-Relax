@@ -11,13 +11,22 @@ import { fonts, spacing } from "@/design/theme";
 
 export default function SoundscapesScreen() {
   const router = useRouter();
+  const cosmicWorks = CONSUMER_AUDIO_WORKS.filter((work) =>
+    work.collectionIds.includes("cosmic-zen-ambient"),
+  );
+  const stillwaterHalo = cosmicWorks.find(
+    (work) => work.id === "stillwater-halo",
+  );
+  const orderedCosmicWorks = cosmicWorks.filter(
+    (work) => work.id !== "stillwater-halo",
+  );
+  if (stillwaterHalo) orderedCosmicWorks.push(stillwaterHalo);
+
   const collections = [
     {
       id: "cosmic-zen-ambient",
       label: "COSMIC / ZEN AMBIENT",
-      works: CONSUMER_AUDIO_WORKS.filter((work) =>
-        work.collectionIds.includes("cosmic-zen-ambient"),
-      ),
+      works: orderedCosmicWorks,
     },
     {
       id: "standalone-works",
@@ -27,10 +36,46 @@ export default function SoundscapesScreen() {
       ),
     },
     {
-      id: "elemental-worlds",
-      label: "ELEMENTAL WORLDS",
+      id: "noise-colours",
+      label: "NOISE COLOURS",
       works: CONSUMER_AUDIO_WORKS.filter((work) =>
-        work.collectionIds.some((id) => id.startsWith("elemental-")),
+        work.collectionIds.includes("noise-colours"),
+      ),
+    },
+    {
+      id: "elemental-rain",
+      label: "ELEMENTAL WORLDS · RAIN",
+      works: CONSUMER_AUDIO_WORKS.filter((work) =>
+        work.familyId.startsWith("field-rain-"),
+      ),
+    },
+    {
+      id: "elemental-stream",
+      label: "ELEMENTAL WORLDS · STREAM",
+      works: CONSUMER_AUDIO_WORKS.filter(
+        (work) =>
+          work.familyId.startsWith("field-stream-") || work.id === "deep-river",
+      ),
+    },
+    {
+      id: "elemental-sea",
+      label: "ELEMENTAL WORLDS · SEA",
+      works: CONSUMER_AUDIO_WORKS.filter((work) =>
+        work.familyId.startsWith("field-sea-"),
+      ),
+    },
+    {
+      id: "elemental-air",
+      label: "ELEMENTAL WORLDS · AIR",
+      works: CONSUMER_AUDIO_WORKS.filter((work) =>
+        work.collectionIds.includes("elemental-air"),
+      ),
+    },
+    {
+      id: "esoteric-series",
+      label: "ESOTERIC SERIES · AIR",
+      works: CONSUMER_AUDIO_WORKS.filter((work) =>
+        work.collectionIds.includes("esoteric-series"),
       ),
     },
   ] as const;
@@ -72,7 +117,11 @@ export default function SoundscapesScreen() {
 
       <View accessibilityLabel="Soundscape collections" style={styles.list}>
         {collections.map((collection) => (
-          <View key={collection.id} style={styles.collection}>
+          <View
+            key={collection.id}
+            style={styles.collection}
+            testID={`soundscape-collection-${collection.id}`}
+          >
             <Text style={styles.collectionLabel}>{collection.label}</Text>
             {collection.works.map((work) => (
               <ConsumerWorkCard
@@ -85,8 +134,9 @@ export default function SoundscapesScreen() {
         ))}
       </View>
       <Text style={styles.note}>
-        Working titles are provisional. Files marked delivery required are
-        lossless-ready outside this build and are not playable here.
+        Approved works are available in this localhost listening preview. Noise
+        colours are generated on demand; the mobile delivery package remains a
+        separate release gate.
       </Text>
     </EditorialScreen>
   );

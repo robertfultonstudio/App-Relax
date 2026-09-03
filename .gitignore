@@ -49,3 +49,8 @@ example
 
 # Test output
 /coverage/
+
+# Large local-only listening catalog served by the localhost preview.
+# Metadata and preparation instructions remain tracked; audio bytes do not.
+/public/audio-catalog/*.wav
+/public/audio-catalog/*.flac

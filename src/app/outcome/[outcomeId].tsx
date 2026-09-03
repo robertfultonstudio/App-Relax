@@ -7,7 +7,7 @@ import {
   CONSUMER_OUTCOMES,
   type ConsumerOutcomeId,
 } from "@/content/productShell";
-import { getWorksForOutcome, isEmbeddedWork } from "@/content/consumerCatalog";
+import { getWorksForOutcome, isPlayableWork } from "@/content/consumerCatalog";
 import { OUTCOME_ARTWORK } from "@/design/outcomeArtwork";
 import { editorial } from "@/design/editorialTheme";
 import { fonts, spacing } from "@/design/theme";
@@ -19,7 +19,7 @@ export default function OutcomeCatalogScreen() {
   if (!outcome) return null;
   const works = [...getWorksForOutcome(outcome.id as ConsumerOutcomeId)].sort(
     (left, right) =>
-      Number(isEmbeddedWork(right)) - Number(isEmbeddedWork(left)),
+      Number(isPlayableWork(right)) - Number(isPlayableWork(left)),
   );
 
   return (
@@ -41,14 +41,14 @@ export default function OutcomeCatalogScreen() {
       <View style={styles.list}>
         {works.map((work, index) => (
           <ConsumerWorkCard
-            featured={index === 0 && isEmbeddedWork(work)}
+            featured={index === 0 && isPlayableWork(work)}
             key={work.id}
             onPress={() =>
               router.push(
                 `/listen/${work.id}${index === 0 ? "?start=1" : ""}` as Href,
               )
             }
-            startsPlayback={index === 0 && isEmbeddedWork(work)}
+            startsPlayback={index === 0 && isPlayableWork(work)}
             work={work}
           />
         ))}

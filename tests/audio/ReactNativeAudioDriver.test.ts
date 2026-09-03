@@ -4,6 +4,8 @@ import {
 } from "react-native-audio-api";
 import { ReactNativeAudioDriver } from "@/audio/reactNativeAudioApi/ReactNativeAudioDriver";
 import { DEEP_SLEEP_432 } from "@/presets/deepSleep432";
+import { getConsumerWork } from "@/content/consumerCatalog";
+import { createSingleTrackProgram } from "@/domain/audio/consumerTypes";
 
 jest.mock("react-native-audio-api", () => ({
   AudioContext: jest.fn(),
@@ -134,6 +136,41 @@ describe("ReactNativeAudioDriver lifecycle", () => {
     await driver.stop();
 
     expect(PlaybackNotificationManager.hide).toHaveBeenCalledTimes(1);
+  });
+
+  it("creates and starts one looping buffer for a consumer noise colour", async () => {
+    const source = {
+      connect: jest.fn(),
+      disconnect: jest.fn(),
+      loop: false,
+      start: jest.fn(),
+      stop: jest.fn(),
+    };
+    const copyToChannel = jest.fn();
+    const context = {
+      createBuffer: jest.fn(() => ({ copyToChannel })),
+      createBufferSource: jest.fn(() => source),
+      createGain: jest.fn(createGainNode),
+      currentTime: 1,
+      destination: {},
+      resume: jest.fn().mockResolvedValue(undefined),
+      sampleRate: 48000,
+      state: "suspended",
+      suspend: jest.fn().mockResolvedValue(undefined),
+    };
+    const driver = new ReactNativeAudioDriver();
+    Object.assign(driver, { context, masterGain: createGainNode() });
+    const work = getConsumerWork("pink-noise")!;
+    const program = createSingleTrackProgram(work);
+
+    await driver.loadSingleTrack(program);
+    await driver.startSingleTrack(program, 0.8);
+
+    expect(context.createBuffer).toHaveBeenCalledWith(2, 384000, 48000);
+    expect(copyToChannel).toHaveBeenCalledTimes(2);
+    expect(context.createBufferSource).toHaveBeenCalledTimes(1);
+    expect(source.loop).toBe(true);
+    expect(source.start).toHaveBeenCalledWith(1.1);
   });
 
   it("does not block audible start while Android notification setup is pending", async () => {

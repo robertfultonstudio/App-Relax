@@ -1,8 +1,14 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { ConsumerAudioWork } from "@/domain/audio/consumerTypes";
-import { isEmbeddedWork } from "@/content/consumerCatalog";
+import { isPlayableWork } from "@/content/consumerCatalog";
 import { editorial } from "@/design/editorialTheme";
 import { fonts, spacing } from "@/design/theme";
+
+function formatSourceDuration(seconds: number): string {
+  return seconds < 60
+    ? `${Math.round(seconds)} sec`
+    : `${Math.round(seconds / 60)} min`;
+}
 
 export function ConsumerWorkCard({
   featured = false,
@@ -15,17 +21,25 @@ export function ConsumerWorkCard({
   startsPlayback?: boolean;
   work: ConsumerAudioWork;
 }) {
-  const available = isEmbeddedWork(work);
+  const available = isPlayableWork(work);
+  const generated = work.sourceKind === "generated-noise";
+  const rejected = work.availability === "rejected-listening";
+  const localPreview = work.availability === "local-preview-file";
+  const approved = work.listeningStatus === "APPROVED — LISTENING PASSED";
   return (
     <Pressable
       accessibilityHint={
-        available
-          ? startsPlayback
-            ? "Starts this work in the single-track player"
-            : "Opens the single-track player"
-          : "The lossless file is ready outside this build"
+        rejected
+          ? "Rejected after listening; a consumer replacement is required"
+          : available
+            ? startsPlayback
+              ? "Starts this work in the single-track player"
+              : "Opens the single-track player"
+            : localPreview
+              ? "Available in the localhost listening preview"
+              : "The lossless file is ready outside this build"
       }
-      accessibilityLabel={`${work.title}. ${work.primaryOutcome}. ${available ? "Available in this build" : "Audio delivery required"}. Listening approval required.`}
+      accessibilityLabel={`${work.title}. ${work.primaryOutcome}. ${rejected ? "Rejected after listening. Replacement required" : approved ? "Approved after listening" : available ? "Available locally. Listening approval required" : "Audio delivery required. Listening approval required"}.`}
       accessibilityRole="button"
       accessibilityState={{ disabled: !available }}
       disabled={!available}
@@ -41,18 +55,36 @@ export function ConsumerWorkCard({
       <View style={styles.topRow}>
         <Text style={styles.outcome}>{work.primaryOutcome.toUpperCase()}</Text>
         <Text style={styles.state}>
-          {available
-            ? startsPlayback
-              ? "START FEATURED"
-              : "AVAILABLE LOCALLY"
-            : "DELIVERY REQUIRED"}
+          {rejected
+            ? "REPLACEMENT REQUIRED"
+            : available
+              ? startsPlayback
+                ? "START FEATURED"
+                : generated
+                  ? "GENERATED LOCALLY"
+                  : localPreview
+                    ? "LOCALHOST READY"
+                    : "AVAILABLE LOCALLY"
+              : localPreview
+                ? "WEB PREVIEW ONLY"
+                : "DELIVERY REQUIRED"}
         </Text>
       </View>
       <Text style={styles.title}>{work.title}</Text>
       <Text style={styles.meta}>
-        Single work · loops · {Math.round(work.durationSeconds / 60)} min source
+        {rejected
+          ? "Consumer replacement required · technical test asset only"
+          : generated
+            ? `${work.spectralDefinition} · generated continuously`
+            : `Single work · loops · ${formatSourceDuration(work.durationSeconds)} source`}
       </Text>
-      <Text style={styles.gate}>LISTENING APPROVAL REQUIRED</Text>
+      <Text style={styles.gate}>
+        {rejected
+          ? "REJECTED AFTER LISTENING"
+          : approved
+            ? "APPROVED AFTER LISTENING"
+            : "LISTENING APPROVAL REQUIRED"}
+      </Text>
     </Pressable>
   );
 }

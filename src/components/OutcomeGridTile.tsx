@@ -19,10 +19,10 @@ interface OutcomeGridTileProps {
 }
 
 const OUTCOME_NUMBER: Readonly<Record<ConsumerOutcomeId, string>> = {
-  yoga: "01",
-  massage: "02",
-  relax: "03",
-  meditation: "04",
+  meditation: "01",
+  yoga: "02",
+  massage: "03",
+  relax: "04",
   sleep: "05",
   focus: "06",
 };

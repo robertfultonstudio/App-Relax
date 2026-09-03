@@ -11,7 +11,10 @@ import { fonts, spacing } from "@/design/theme";
 
 export default function YogaScreen() {
   const router = useRouter();
-  const yogaOutcome = CONSUMER_OUTCOMES[0];
+  const yogaOutcome = CONSUMER_OUTCOMES.find(
+    (outcome) => outcome.id === "yoga",
+  );
+  if (!yogaOutcome) return null;
   return (
     <EditorialScreen footer={<ProductTabBar activeTab="yoga" />}>
       <EditorialHeader
