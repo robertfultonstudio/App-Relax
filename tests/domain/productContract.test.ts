@@ -13,7 +13,7 @@ function listFiles(directory: string): string[] {
 }
 
 describe("product and asset request contracts", () => {
-  it("keeps M3 functionality-first and time-to-sound ready", () => {
+  it("keeps functionality and time-to-sound first in adaptive sessions", () => {
     expect(CONSUMER_OUTCOMES.map((outcome) => outcome.functionLabel)).toEqual([
       "MEDITATION",
       "YOGA",
@@ -31,7 +31,7 @@ describe("product and asset request contracts", () => {
     expect(CONSUMER_OUTCOMES.find((outcome) => outcome.id === "yoga")).toEqual(
       expect.objectContaining({
         cta: "Start your yoga session",
-        plannedFormat: "Future format · 20 / 30 / 45 / 60 min",
+        plannedFormat: "20 / 30 / 45 / 60 / 90 min",
         evocativeTitle: "Cedar Ascent",
       }),
     );

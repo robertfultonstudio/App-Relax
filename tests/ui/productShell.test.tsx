@@ -17,7 +17,7 @@ jest.mock("expo-linear-gradient", () => ({
   LinearGradient: "LinearGradient",
 }));
 
-describe("M3 product tabs", () => {
+describe("consumer product tabs", () => {
   beforeEach(() => {
     mockPush.mockClear();
     mockReplace.mockClear();
@@ -36,49 +36,46 @@ describe("M3 product tabs", () => {
     expect(CONSUMER_OUTCOMES.map((outcome) => outcome.cta)).toEqual([
       "Begin meditation",
       "Start your yoga session",
-      "Set the room for massage",
+      "Start your massage session",
       "Relax now",
       "Prepare for sleep",
       "Focus",
     ]);
     for (const outcome of CONSUMER_OUTCOMES) {
       expect(outcome.homeFormat).toBeTruthy();
-      expect(outcome.plannedFormat).toMatch(/Future|future/);
+      expect(outcome.plannedFormat).toMatch(/\d/);
       expect(outcome.evocativeTitle).toBeTruthy();
       expect(outcome).not.toHaveProperty("audioPresetId");
     }
   });
 
-  it("presents four planned Yoga durations without audio", async () => {
+  it("presents the Yoga duration-first session setup", async () => {
     const screen = await render(<YogaScreen />);
     expect(screen.getByText("Begin your practice.")).toBeTruthy();
     expect(
       screen.getByText("Choose a journey shaped to move with you."),
     ).toBeTruthy();
     expect(screen.getByText("Start your yoga session")).toBeTruthy();
-    expect(screen.getByText("CHOOSE A FUTURE DURATION")).toBeTruthy();
-    expect(screen.getAllByText("IN PRODUCTION")).toHaveLength(5);
+    expect(screen.getByText("01 / CHOOSE A DURATION")).toBeTruthy();
+    for (const duration of [20, 30, 45, 60, 90]) {
+      expect(screen.getByTestId(`duration-${duration}`)).toBeTruthy();
+    }
+    expect(
+      screen.getByText("PHONE SESSION PLAYBACK · IN PRODUCTION"),
+    ).toBeTruthy();
     expect(
       screen.getByTestId("product-tab-yoga").props.accessibilityState,
     ).toEqual({ selected: true });
-    for (const id of ["arrive-20", "move-30", "deepen-45", "unfold-60"]) {
-      expect(
-        screen.getByTestId(`production-card-${id}`).props.accessibilityState,
-      ).toEqual({ disabled: true });
-    }
     await fireEvent.press(screen.getByTestId("product-tab-soundscapes"));
     expect(mockReplace).toHaveBeenCalledWith("/soundscapes");
   });
 
-  it("starts the first embedded outcome work on the second tap", async () => {
+  it("opens duration choice instead of a single featured work", async () => {
     mockParams = { outcomeId: "relax" };
     const screen = await render(<OutcomeCatalogScreen />);
-    expect(screen.getByText("START FEATURED")).toBeTruthy();
-    expect(
-      screen.getByTestId("consumer-work-deep-river").props.accessibilityState,
-    ).toEqual({ disabled: false });
-    await fireEvent.press(screen.getByTestId("consumer-work-deep-river"));
-    expect(mockPush).toHaveBeenCalledWith("/listen/deep-river?start=1");
+    expect(screen.getByText("01 / CHOOSE A DURATION")).toBeTruthy();
+    expect(screen.getByTestId("duration-20")).toBeTruthy();
+    expect(screen.queryByTestId("consumer-work-deep-river")).toBeNull();
   });
 
   it("presents autonomous works grouped in open soundscape collections", async () => {
@@ -96,11 +93,10 @@ describe("M3 product tabs", () => {
     expect(screen.getByText("Deep River")).toBeTruthy();
     expect(screen.getByText("Silver Canopy")).toBeTruthy();
     expect(screen.getByText("Second Element: Air")).toBeTruthy();
-    expect(screen.getAllByText("AVAILABLE LOCALLY")).toHaveLength(3);
-    expect(screen.getAllByText("GENERATED LOCALLY")).toHaveLength(8);
-    expect(screen.getAllByText("WEB PREVIEW ONLY")).toHaveLength(38);
-    expect(screen.getAllByText("APPROVED AFTER LISTENING")).toHaveLength(39);
-    expect(screen.getByText("REPLACEMENT REQUIRED")).toBeTruthy();
+    expect(screen.getAllByText("AVAILABLE")).toHaveLength(11);
+    expect(screen.getAllByText("IN PRODUCTION")).toHaveLength(39);
+    expect(screen.getAllByText("READY TO LISTEN")).toHaveLength(39);
+    expect(screen.getByText("A new version is being prepared")).toBeTruthy();
     expect(screen.getByText("REJECTED AFTER LISTENING")).toBeTruthy();
     expect(
       screen.getByTestId("consumer-work-soft-air").props.accessibilityState,

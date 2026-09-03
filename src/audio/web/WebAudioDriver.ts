@@ -1,5 +1,6 @@
 import { Asset } from "expo-asset";
 import type {
+  AdaptiveSessionEventHandlers,
   AudioGraphDriver,
   RemoteCommandHandlers,
 } from "@/audio/AudioGraphDriver";
@@ -19,6 +20,9 @@ import type {
 } from "@/domain/audio/types";
 import { CONSUMER_ASSETS } from "@/audio/reactNativeAudioApi/consumerAssets";
 import { STEM_ASSETS } from "@/audio/reactNativeAudioApi/stemAssets";
+import type { AdaptiveSessionProgram } from "@/domain/sessions/types";
+import type { TransitionAudition } from "@/domain/sessions/workbench";
+import { AdaptiveWebPlayback } from "./AdaptiveWebPlayback";
 
 const SILENT_GAIN = 0.0001;
 const NOISE_SECONDS = 8;
@@ -89,8 +93,10 @@ export class WebAudioDriver implements AudioGraphDriver {
   private context: AudioContext | null = null;
   private masterGain: GainNode | null = null;
   private handlers: RemoteCommandHandlers | null = null;
+  private adaptiveHandlers: AdaptiveSessionEventHandlers | null = null;
   private loadedPresetId: string | null = null;
   private loadedProgramId: string | null = null;
+  private loadedAdaptiveProgramId: string | null = null;
   private stemUrls = new Map<StemSourceId, string>();
   private programUrl: string | null = null;
   private programNoiseBuffer: AudioBuffer | null = null;
@@ -107,9 +113,16 @@ export class WebAudioDriver implements AudioGraphDriver {
   private programVolume = 1;
   private graphStarted = false;
   private scheduledStop: ReturnType<typeof setTimeout> | null = null;
+  private adaptivePlayback: AdaptiveWebPlayback | null = null;
 
   setRemoteCommandHandlers(handlers: RemoteCommandHandlers): void {
     this.handlers = handlers;
+  }
+
+  setAdaptiveSessionEventHandlers(
+    handlers: AdaptiveSessionEventHandlers,
+  ): void {
+    this.adaptiveHandlers = handlers;
   }
 
   async loadPreset(preset: AudioPreset): Promise<void> {
@@ -128,6 +141,8 @@ export class WebAudioDriver implements AudioGraphDriver {
     this.brownNoiseBuffer = this.createBrownNoiseBuffer(context);
     this.loadedPresetId = preset.id;
     this.loadedProgramId = null;
+    this.loadedAdaptiveProgramId = null;
+    this.adaptivePlayback = null;
     this.programUrl = null;
     this.programNoiseBuffer = null;
   }
@@ -176,6 +191,23 @@ export class WebAudioDriver implements AudioGraphDriver {
 
     this.loadedProgramId = program.work.id;
     this.loadedPresetId = null;
+    this.loadedAdaptiveProgramId = null;
+    this.adaptivePlayback = null;
+  }
+
+  async loadAdaptiveSession(program: AdaptiveSessionProgram): Promise<void> {
+    if (this.loadedAdaptiveProgramId === program.plan.id) return;
+    await this.stop();
+    const context = this.ensureContext();
+    const master = this.requireMaster();
+    this.adaptivePlayback = new AdaptiveWebPlayback(context, master, {
+      ended: () => this.adaptiveHandlers?.ended(program.plan.id),
+      error: (error) => this.adaptiveHandlers?.error(program.plan.id, error),
+    });
+    await this.adaptivePlayback.load(program);
+    this.loadedAdaptiveProgramId = program.plan.id;
+    this.loadedPresetId = null;
+    this.loadedProgramId = null;
   }
 
   async start(
@@ -283,9 +315,50 @@ export class WebAudioDriver implements AudioGraphDriver {
     }
   }
 
+  async startAdaptiveSession(
+    program: AdaptiveSessionProgram,
+    volume: number,
+    positionSeconds = 0,
+  ): Promise<void> {
+    if (this.graphStarted) return;
+    if (this.loadedAdaptiveProgramId !== program.plan.id) {
+      await this.loadAdaptiveSession(program);
+    }
+    const context = this.ensureContext();
+    try {
+      await context.resume();
+      this.prepareMasterFade(program.fadeInSeconds);
+      await this.adaptivePlayback?.start(program, volume, positionSeconds);
+      this.graphStarted = true;
+    } catch (error) {
+      await this.stop();
+      throw error;
+    }
+  }
+
+  async seekAdaptiveSession(positionSeconds: number): Promise<void> {
+    if (!this.adaptivePlayback) {
+      throw new Error("No adaptive session is loaded.");
+    }
+    await this.adaptivePlayback.seek(positionSeconds);
+  }
+
+  async configureAdaptiveAudition(
+    audition: TransitionAudition | null,
+  ): Promise<void> {
+    if (!this.adaptivePlayback) {
+      throw new Error("No adaptive session is loaded.");
+    }
+    await this.adaptivePlayback.configureAudition(audition);
+  }
+
   async resume(): Promise<void> {
     if (!this.context || !this.graphStarted) return;
     await this.context.resume();
+    if (this.loadedAdaptiveProgramId && this.adaptivePlayback) {
+      await this.adaptivePlayback.resume();
+      return;
+    }
     await Promise.all(
       [...this.mediaRuntime.values()].map((runtime) => runtime.element.play()),
     );
@@ -293,6 +366,9 @@ export class WebAudioDriver implements AudioGraphDriver {
 
   async pause(_releaseAudioFocus: boolean): Promise<void> {
     if (!this.context || !this.graphStarted) return;
+    if (this.loadedAdaptiveProgramId && this.adaptivePlayback) {
+      await this.adaptivePlayback.pause();
+    }
     for (const runtime of this.mediaRuntime.values()) runtime.element.pause();
     await this.context.suspend();
   }
@@ -323,6 +399,7 @@ export class WebAudioDriver implements AudioGraphDriver {
     this.brownNoiseRuntime = null;
     this.binauralRuntime = null;
     this.programGain = null;
+    await this.adaptivePlayback?.stop();
     this.sourceGains.clear();
     this.graphStarted = false;
     if (this.context?.state === "running") await this.context.suspend();
@@ -337,11 +414,14 @@ export class WebAudioDriver implements AudioGraphDriver {
     this.masterGain = null;
     this.loadedPresetId = null;
     this.loadedProgramId = null;
+    this.loadedAdaptiveProgramId = null;
     this.stemUrls.clear();
     this.programUrl = null;
     this.programNoiseBuffer = null;
     this.brownNoiseBuffer = null;
     this.handlers = null;
+    this.adaptiveHandlers = null;
+    this.adaptivePlayback = null;
   }
 
   async setSourceGain(
@@ -364,6 +444,9 @@ export class WebAudioDriver implements AudioGraphDriver {
         this.programPlaybackGain * this.programVolume,
         fadeMs,
       );
+    }
+    if (this.loadedAdaptiveProgramId) {
+      this.adaptivePlayback?.setVolume(this.programVolume, fadeMs);
     }
   }
 

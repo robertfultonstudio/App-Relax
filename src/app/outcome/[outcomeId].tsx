@@ -1,31 +1,26 @@
-import { type Href, useLocalSearchParams, useRouter } from "expo-router";
-import { Image, StyleSheet, Text, View } from "react-native";
-import { ConsumerWorkCard } from "@/components/ConsumerWorkCard";
+import { useLocalSearchParams } from "expo-router";
+import { Image, StyleSheet, Text } from "react-native";
+import { AdaptiveSessionSetup } from "@/components/AdaptiveSessionSetup";
 import { EditorialHeader } from "@/components/EditorialHeader";
 import { EditorialScreen } from "@/components/EditorialScreen";
 import {
   CONSUMER_OUTCOMES,
   type ConsumerOutcomeId,
 } from "@/content/productShell";
-import { getWorksForOutcome, isPlayableWork } from "@/content/consumerCatalog";
 import { OUTCOME_ARTWORK } from "@/design/outcomeArtwork";
 import { editorial } from "@/design/editorialTheme";
 import { fonts, spacing } from "@/design/theme";
 
-export default function OutcomeCatalogScreen() {
-  const router = useRouter();
+export default function OutcomeSessionScreen() {
   const { outcomeId } = useLocalSearchParams<{ outcomeId: string }>();
   const outcome = CONSUMER_OUTCOMES.find((item) => item.id === outcomeId);
   if (!outcome) return null;
-  const works = [...getWorksForOutcome(outcome.id as ConsumerOutcomeId)].sort(
-    (left, right) =>
-      Number(isPlayableWork(right)) - Number(isPlayableWork(left)),
-  );
 
   return (
     <EditorialScreen>
       <EditorialHeader label={outcome.functionLabel} showBack />
       <Image
+        accessible={false}
         accessibilityIgnoresInvertColors
         resizeMode="cover"
         source={OUTCOME_ARTWORK[outcome.id]}
@@ -36,23 +31,9 @@ export default function OutcomeCatalogScreen() {
         {outcome.cta}
       </Text>
       <Text style={styles.intro}>
-        Choose one complete work. No layers, setup or technical controls.
+        One simple choice, then let the session move with you.
       </Text>
-      <View style={styles.list}>
-        {works.map((work, index) => (
-          <ConsumerWorkCard
-            featured={index === 0 && isPlayableWork(work)}
-            key={work.id}
-            onPress={() =>
-              router.push(
-                `/listen/${work.id}${index === 0 ? "?start=1" : ""}` as Href,
-              )
-            }
-            startsPlayback={index === 0 && isPlayableWork(work)}
-            work={work}
-          />
-        ))}
-      </View>
+      <AdaptiveSessionSetup outcome={outcome.id as ConsumerOutcomeId} />
     </EditorialScreen>
   );
 }
@@ -80,5 +61,4 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     marginTop: spacing.md,
   },
-  list: { marginTop: spacing.xl },
 });

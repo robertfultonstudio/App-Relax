@@ -50,6 +50,8 @@ for (const requiredIgnore of [
   "/STATO.md",
   "/scripts/",
   "/public/audio-catalog/",
+  "/src/app-qa/",
+  "/src/qa/",
   "/eslint.config.js",
   "/jest.config.js",
 ]) {
@@ -63,6 +65,29 @@ assert(
   easJson.cli?.requireCommit === false,
   "requireCommit must stay false for the validated EAS_NO_VCS build path",
 );
+
+assert(
+  packageJson.scripts["qa:validate-boundary"] ===
+    "node scripts/validate-workbench-boundary.mjs",
+  "QA boundary validator script is missing",
+);
+assert(
+  packageJson.scripts["qa:validate-exports"] ===
+    "node scripts/validate-workbench-exports.mjs",
+  "QA export boundary validator script is missing",
+);
+assert(
+  packageJson.scripts["export:web:consumer"]?.includes(
+    "dist/m5-web-consumer",
+  ) && packageJson.scripts["export:web:qa"]?.includes("dist/m5-web-qa"),
+  "consumer and QA web exports must use separate output directories",
+);
+for (const [profileName, profile] of Object.entries(easJson.build ?? {})) {
+  assert(
+    profile.env?.APP_RELAX_SURFACE !== "qa",
+    `EAS profile ${profileName} must not select the QA router surface`,
+  );
+}
 
 const appleIdentifier = appConfig.ios?.bundleIdentifier;
 const androidIdentifier = appConfig.android?.package;

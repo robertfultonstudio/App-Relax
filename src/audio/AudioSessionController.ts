@@ -12,6 +12,8 @@ import type {
 import { AUDIO_SOURCE_IDS } from "@/domain/audio/types";
 import { assertValidPreset } from "@/domain/audio/presetValidation";
 import type { SingleTrackProgram } from "@/domain/audio/consumerTypes";
+import type { AdaptiveSessionProgram } from "@/domain/sessions/types";
+import type { TransitionAudition } from "@/domain/sessions/workbench";
 import type {
   PlayerPreferences,
   PlayerPreferencesStore,
@@ -96,6 +98,7 @@ export class AudioSessionController implements AudioEngine {
   private readonly listeners = new Set<SessionListener>();
   private currentPreset: AudioPreset | null = null;
   private currentProgram: SingleTrackProgram | null = null;
+  private currentAdaptiveProgram: AdaptiveSessionProgram | null = null;
   private restoredPreferences: PlayerPreferences | null = null;
   private restoredConsumerPreferences: ConsumerPlayerPreferences | null = null;
   private hydrationPromise: Promise<void> | null = null;
@@ -117,6 +120,7 @@ export class AudioSessionController implements AudioEngine {
       status: "idle",
       presetId: null,
       workId: null,
+      sessionPlanId: null,
       title: null,
       volume: 0.8,
       selectedDurationMinutes: 30,
@@ -135,6 +139,47 @@ export class AudioSessionController implements AudioEngine {
     }
     this.active = true;
     this.attachRemoteCommandHandlers();
+    this.attachAdaptiveSessionEventHandlers();
+  }
+
+  private attachAdaptiveSessionEventHandlers(): void {
+    this.driver.setAdaptiveSessionEventHandlers({
+      ended: (planId) => {
+        void this.enqueue(async () => {
+          if (
+            this.currentAdaptiveProgram?.plan.id !== planId ||
+            (this.snapshot.status !== "playing" &&
+              this.snapshot.status !== "fadingOut")
+          ) {
+            return;
+          }
+          this.deadlineGeneration += 1;
+          this.terminalStopQueued = false;
+          this.clearTicker();
+          await this.driver.stop();
+          this.patch({
+            status: "ready",
+            deadlineMs: null,
+            remainingMs:
+              this.currentAdaptiveProgram.plan.totalDurationSeconds * 1000,
+          });
+        });
+      },
+      error: (planId, error) => {
+        void this.enqueue(async () => {
+          if (this.currentAdaptiveProgram?.plan.id !== planId) return;
+          this.deadlineGeneration += 1;
+          this.terminalStopQueued = false;
+          this.clearTicker();
+          await this.driver.stop().catch(() => undefined);
+          this.patch({
+            status: "error",
+            deadlineMs: null,
+            error: errorMessage(error),
+          });
+        });
+      },
+    });
   }
 
   private attachRemoteCommandHandlers(): void {
@@ -210,6 +255,7 @@ export class AudioSessionController implements AudioEngine {
       await this.stopInternal(false);
       this.currentPreset = preset;
       this.currentProgram = null;
+      this.currentAdaptiveProgram = null;
       const restored =
         this.restoredPreferences?.presetId === preset.id
           ? this.restoredPreferences
@@ -240,6 +286,7 @@ export class AudioSessionController implements AudioEngine {
         status: "loading",
         presetId: preset.id,
         workId: null,
+        sessionPlanId: null,
         title: preset.title,
         selectedDurationMinutes: duration,
         remainingMs: duration * 60_000,
@@ -292,6 +339,7 @@ export class AudioSessionController implements AudioEngine {
       await this.stopInternal(false);
       this.currentPreset = null;
       this.currentProgram = program;
+      this.currentAdaptiveProgram = null;
       const restored =
         this.restoredConsumerPreferences?.workId === program.work.id
           ? this.restoredConsumerPreferences
@@ -307,6 +355,7 @@ export class AudioSessionController implements AudioEngine {
         status: "loading",
         presetId: null,
         workId: program.work.id,
+        sessionPlanId: null,
         title: program.work.title,
         volume: restored?.volume ?? 0.8,
         selectedDurationMinutes: duration,
@@ -324,6 +373,79 @@ export class AudioSessionController implements AudioEngine {
     });
   }
 
+  loadAdaptiveSession(program: AdaptiveSessionProgram): Promise<void> {
+    return this.enqueue(async () => {
+      await this.hydrate();
+      if (
+        program.kind !== "adaptive-session" ||
+        !program.plan.exactDuration ||
+        program.plan.mode !== "sound-only"
+      ) {
+        throw new Error("Invalid adaptive session program.");
+      }
+      if (
+        this.currentAdaptiveProgram?.plan.id === program.plan.id &&
+        this.snapshot.status !== "error"
+      ) {
+        return;
+      }
+      await this.stopInternal(false);
+      this.currentPreset = null;
+      this.currentProgram = null;
+      this.currentAdaptiveProgram = program;
+      const duration = program.plan.requestedDurationMinutes;
+      this.patch({
+        mode: "consumer",
+        status: "loading",
+        presetId: null,
+        workId: null,
+        sessionPlanId: program.plan.id,
+        title: `${program.plan.outcome} session`,
+        selectedDurationMinutes: duration,
+        remainingMs: program.plan.totalDurationSeconds * 1000,
+        deadlineMs: null,
+        sources: createSourceRecord(),
+        error: null,
+      });
+      try {
+        await this.driver.loadAdaptiveSession(program);
+        this.patch({ status: "ready" });
+      } catch (error) {
+        this.patch({ status: "error", error: errorMessage(error) });
+      }
+    });
+  }
+
+  seekAdaptiveSession(positionSeconds: number): Promise<void> {
+    return this.enqueue(async () => {
+      const program = this.currentAdaptiveProgram;
+      if (!program) throw new Error("No adaptive session is loaded.");
+      if (
+        !Number.isFinite(positionSeconds) ||
+        positionSeconds < 0 ||
+        positionSeconds >= program.plan.totalDurationSeconds
+      ) {
+        throw new Error("Session position is outside the plan.");
+      }
+      await this.driver.seekAdaptiveSession(positionSeconds);
+      const remainingMs =
+        (program.plan.totalDurationSeconds - positionSeconds) * 1000;
+      this.patch({
+        remainingMs,
+        deadlineMs:
+          this.snapshot.status === "playing"
+            ? this.runtime.now() + remainingMs
+            : null,
+      });
+    });
+  }
+
+  configureAdaptiveAudition(
+    audition: TransitionAudition | null,
+  ): Promise<void> {
+    return this.enqueue(() => this.driver.configureAdaptiveAudition(audition));
+  }
+
   play(): Promise<void> {
     this.activate();
     return this.enqueue(() => this.playInternal());
@@ -331,7 +453,9 @@ export class AudioSessionController implements AudioEngine {
 
   private async playInternal(): Promise<void> {
     if (
-      (!this.currentPreset && !this.currentProgram) ||
+      (!this.currentPreset &&
+        !this.currentProgram &&
+        !this.currentAdaptiveProgram) ||
       this.snapshot.status === "loading" ||
       this.snapshot.status === "error"
     ) {
@@ -348,6 +472,13 @@ export class AudioSessionController implements AudioEngine {
       const isResume = this.snapshot.status === "paused";
       if (isResume) {
         await this.driver.resume();
+      } else if (this.currentAdaptiveProgram) {
+        await this.driver.startAdaptiveSession(
+          this.currentAdaptiveProgram,
+          this.snapshot.volume,
+          this.currentAdaptiveProgram.plan.totalDurationSeconds -
+            this.snapshot.remainingMs / 1000,
+        );
       } else if (this.currentProgram) {
         await this.driver.startSingleTrack(
           this.currentProgram,
@@ -373,10 +504,12 @@ export class AudioSessionController implements AudioEngine {
       this.terminalStopQueued = false;
       this.pausedByInterruption = false;
       this.deadlineGeneration += 1;
-      await this.driver.scheduleFadeOut(
-        remainingMs,
-        this.activeFadeOutSeconds() * 1000,
-      );
+      if (!this.currentAdaptiveProgram) {
+        await this.driver.scheduleFadeOut(
+          remainingMs,
+          this.activeFadeOutSeconds() * 1000,
+        );
+      }
       this.patch({ status: "playing", remainingMs, deadlineMs, error: null });
       this.startTicker();
     } catch (error) {
@@ -420,11 +553,13 @@ export class AudioSessionController implements AudioEngine {
       await this.driver.dispose();
       this.currentPreset = null;
       this.currentProgram = null;
+      this.currentAdaptiveProgram = null;
       this.patch({
         mode: null,
         status: "idle",
         presetId: null,
         workId: null,
+        sessionPlanId: null,
         title: null,
         deadlineMs: null,
         sources: createSourceRecord(),
@@ -510,7 +645,7 @@ export class AudioSessionController implements AudioEngine {
 
   setVolume(volume: number, fadeMs = 180): Promise<void> {
     return this.enqueue(async () => {
-      if (!this.currentProgram) return;
+      if (!this.currentProgram && !this.currentAdaptiveProgram) return;
       const next = clampGain(volume);
       await this.driver.setMasterVolume(next, fadeMs);
       this.patch({ volume: next, error: null });
@@ -534,7 +669,10 @@ export class AudioSessionController implements AudioEngine {
       ? this.snapshot.selectedDurationMinutes * 60_000
       : this.snapshot.remainingMs;
     this.patch({
-      status: this.currentPreset || this.currentProgram ? "ready" : "idle",
+      status:
+        this.currentPreset || this.currentProgram || this.currentAdaptiveProgram
+          ? "ready"
+          : "idle",
       deadlineMs: null,
       remainingMs,
       sources: Object.fromEntries(
@@ -588,7 +726,9 @@ export class AudioSessionController implements AudioEngine {
       (this.snapshot.status !== "playing" &&
         this.snapshot.status !== "fadingOut") ||
       this.snapshot.deadlineMs === null ||
-      (!this.currentPreset && !this.currentProgram)
+      (!this.currentPreset &&
+        !this.currentProgram &&
+        !this.currentAdaptiveProgram)
     ) {
       return;
     }
@@ -678,6 +818,7 @@ export class AudioSessionController implements AudioEngine {
   }
 
   private async persist(): Promise<void> {
+    if (this.currentAdaptiveProgram) return;
     if (this.currentProgram) {
       try {
         await this.consumerPreferencesStore.save({
@@ -725,6 +866,9 @@ export class AudioSessionController implements AudioEngine {
   private activeDurationOptions(): readonly number[] {
     return (
       this.currentProgram?.durationOptionsMinutes ??
+      (this.currentAdaptiveProgram
+        ? [this.currentAdaptiveProgram.plan.requestedDurationMinutes]
+        : undefined) ??
       this.currentPreset?.durationOptionsMinutes ??
       []
     );
@@ -733,6 +877,7 @@ export class AudioSessionController implements AudioEngine {
   private activeFadeOutSeconds(): number {
     return (
       this.currentProgram?.fadeOutSeconds ??
+      this.currentAdaptiveProgram?.fadeOutSeconds ??
       this.currentPreset?.fadeOutSeconds ??
       0
     );

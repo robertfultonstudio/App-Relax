@@ -4,11 +4,121 @@ Aggiornato: 3 settembre 2026
 
 ## Milestone attiva
 
-M4 `Lossless Autonomous Catalog Foundation`: catalogo consumer single-source,
-derivati FLAC lossless, noise colours runtime e UI outcome-first. M3 resta
-preservata nel worktree.
-Il commit locale M3/M4 e autorizzato il 2 settembre 2026. EAS, build
+M5 `Adaptive Sessions & QA Workbench`: sessioni consumer duration-first,
+sequencer deterministico a vincoli, contratto Guided, pacchetti offline e
+Workbench tecnico separato. Il baseline M3/M4 e protetto dal commit locale
+`05a672eb4c2f878cba9fcdae94c4f6b5981ce5c1`; non viene riscritto.
+Il commit locale M5 è stato autorizzato dopo il gate visivo. EAS, build
 native/cloud, push, PR, Git LFS e asset delivery restano esclusi.
+
+## M5 implementato localmente
+
+- [x] Due modalità consumer: `Sound only` operativa esclusivamente nella
+      preview QA localhost e `Guided` visibile ma bloccata con
+      `RECORDED VOICES · IN PRODUCTION`. Nessuna voce sintetica, registrazione
+      fittizia o account.
+- [x] Home e Yoga seguono bisogno/attività → durata → Start. Le durate possibili
+      sono 10/20/30/45/60/90 minuti, filtrate per Meditation, Yoga, Massage,
+      Relax, Sleep e Focus. Restano letterali `What do you need right now?`,
+      `Start your yoga session`, `Start your massage session` e
+      `Play your last session`.
+- [x] La personalizzazione è progressiva e chiusa al primo render. La scelta
+      della voce compare soltanto in Guided; offline e modalità non ostacolano
+      il percorso principale Sound only.
+- [x] `Play your last session` persiste soltanto outcome, durata e modalità
+      dopo uno Start riuscito; la Home rilegge lo stato al ritorno, genera una
+      nuova variazione e non espone né conserva il seed QA nell'URL consumer.
+- [x] Registro Continuum separato dal catalogo: intenti, famiglia estetica,
+      famiglia armonica, energia iniziale/finale, densità, presenza melodica,
+      compatibilità voce, ruolo di fase, boundary di ingresso/uscita, classe di
+      transizione e stato offline. I metadata inferiti restano esplicitamente
+      `PROVISIONAL — CATALOG AND FILENAME INFERENCE`, sono esclusi per default
+      e richiedono un opt-in confinato alla preview QA locale.
+- [x] Planner puro e riproducibile tramite seed: arco Arrival → Flow →
+      Deepening → Return, nessuna opera o famiglia ripetuta nella stessa
+      sessione, esclusione delle tre sessioni recenti, regole specifiche per
+      fase, controlli di transizione ALL-OF e fallimento esplicito quando una
+      sequenza sicura non esiste. L'identità include input e timeline completi;
+      nessuno shuffle arbitrario o fallback musicale casuale.
+- [x] Durata esatta calcolata in frame interi a 48 kHz. I cambi avvengono sui
+      boundary di loop registrati; un finale editoriale richiesto e assente
+      fallisce chiuso. In assenza di outro editoriale, il contratto dichiara un
+      inviluppo finale controllato e non finge una chiusura composta.
+- [x] Crossfade equal-power configurabile, default 12 secondi; normalmente una
+      sola opera è udibile e soltanto il passaggio usa due deck. Peak combinato
+      stimato sul massimo matematico dell'intera curva e trim statico calcolato
+      per restare a massimo -1,1 dBTP. Ogni transizione resta
+      `PROVISIONAL — LISTENING REVIEW REQUIRED`.
+- [x] Preview Web Audio locale con validazione metadata di tutte le sorgenti,
+      preparazione del prossimo deck, seek, pausa/ripresa, volume, audition
+      outgoing/incoming/both e loop della finestra di cambio. Un errore futuro
+      torna al controller. È QA browser, non prova di precisione nativa.
+- [x] Workbench interno con timeline completa, fasi, entry/crossfade/exit,
+      scrubber, cambio precedente/successivo, finestre ±30/60 secondi, A/B di
+      durata/curva, metriche, audit regole, seed salvabile e controllo esatto di
+      tutti gli intervalli senza attesa reale.
+- [x] Il Workbench non è linkato dalla UI consumer. `app.config.js` seleziona
+      `src/app` per default e `src/app-qa` soltanto con
+      `APP_RELAX_SURFACE=qa`; `src/app-qa/` e `src/qa/` sono esclusi da
+      `.easignore` e un validatore dedicato controlla il confine.
+- [x] Manifest offline locale senza URL: pacchetto Water da 12 opere,
+      177.645.113 byte, con ID, revisione, SHA-256 e object key. Stato
+      download/verify/retry/remove, spazio libero sui byte mancanti, recovery
+      da interruzione, staging streaming, riconciliazione del contenuto e porte
+      atomiche source/storage sono implementati e testati. Gli adapter nativi e
+      la delivery remota non esistono e non vengono dichiarati.
+- [x] Il catalogo locale completo da 2.706.406.941 byte resta in
+      `public/audio-catalog/`, fuori da Git e dall'archivio EAS. Il local source
+      è esplicitamente read-only e non viene finto come download offline.
+- [x] Il percorso tecnico `AUDIO TEST / TEST ONLY` e il player autonomo M4
+      restano regressioni separate; nessun mixer è stato introdotto nelle
+      sessioni consumer.
+- [x] Gate logici finali eseguiti con Node 22.23.1 e pnpm 11.16.0:
+      Prettier, lint e TypeScript verdi; Jest 33 suite / 131 test; regressione
+      audio 6 suite / 44 test. Sono coperti durate, determinismo, vincoli,
+      regole di fase, peak, audit 90 minuti, controller, persistenza, offline e
+      confine QA.
+- [x] Validatori placeholder, ATP01, catalogo consumer, lossless, asset,
+      config, sicurezza e confine Workbench verdi. Il FLAC starter coincide col
+      report certificato e il confronto PCM reale col WAV sorgente è passato:
+      49.770.044 → 28.167.925 byte (-43,4039%). L'audit dipendenze accetta
+      soltanto i due residui `image-size` già documentati.
+- [x] Expo Doctor 20/20 e `expo install --check` verdi. Config prebuild
+      ispezionata senza generare directory native: radice consumer `src/app`,
+      plugin RNAA presente e identificativi iOS/Android
+      `com.robertfultonstudio.apprelax` invariati.
+- [x] Export isolati verdi: iOS 190.630.839 byte, Android 191.786.527 byte,
+      Web consumer 189.565.122 byte e Web QA 189.649.997 byte. I due export
+      nativi contengono esattamente tre WAV ATP01 e un FLAC starter per
+      183.688.057 byte; nessun file supera 100 MB, il catalogo da 2,6 GiB è
+      assente e la scansione mirata non trova segreti o path sorgente locali.
+      Il confronto Web trova 15 artifact testuali consumer puliti e il sentinel
+      QA soltanto nei 16 artifact della superficie QA.
+- [ ] Un nuovo archivio sorgente EAS reale non è stato generato né caricato:
+      `eas build:inspect` ed EAS restano fuori dall'autorizzazione M5. Il
+      validatore dell'archivio è predisposto e `.easignore` è verificato
+      staticamente, ma queste prove e gli export isolati non equivalgono a un
+      archivio EAS corrente: `NON DETERMINATO — EVIDENZA INSUFFICIENTE`.
+- [x] Prova browser reale localhost a 390×844: Home e sei outcome leggibili;
+      Guided mostra la voce solo come `IN PRODUCTION` e disabilita Start;
+      Sound only ha avviato Open Tide con timer in decremento, Pause ha fermato
+      il timer per 1,5 secondi e Play lo ha ripreso. Nessun errore console.
+      L'audit Workbench riporta durata esatta, nessun gap, massimo due sorgenti
+      e sette intervalli esatti; audition A avviata senza errori.
+- [x] Cinque screenshot runtime Web sono in `dist/m5-screenshots/`: Home,
+      Guided/offline, player in Play, piano Workbench e audit accelerato. Sono
+      prova della preview locale, non approvazione d'ascolto né prova nativa.
+      Metro, server localhost, emulatore e ADB risultano spenti a chiusura.
+- [x] Il 3 settembre 2026 l'utente ha approvato esplicitamente i cinque
+      screenshot M5. L'approvazione è visiva e non implica approvazione delle
+      transizioni musicali, commit, EAS o prove native.
+- [ ] Native adaptive dual-deck, seek schedulato, due decoder FLAC, pacchetti
+      scaricati, background/lock-screen/Bluetooth, durata lunga, batteria e
+      qualità delle transizioni: `NON DETERMINATO — EVIDENZA INSUFFICIENTE`.
+      Il driver nativo fallisce esplicitamente invece di simulare supporto.
+- [ ] Approvazione d'ascolto delle transizioni: gate umano separato. Il giudizio
+      positivo sui singoli file non approva automaticamente accoppiamenti,
+      durata o curva dei passaggi.
 
 ## M4 implementato localmente
 
@@ -253,7 +363,10 @@ native/cloud, push, PR, Git LFS e asset delivery restano esclusi.
 
 ## Limiti locali verificati
 
-- [F] Node di sistema 18.20.8 e insufficiente; il target di progetto e Node 22.23.1. I gate di questa sessione sono stati eseguiti con il runtime isolato Codex Node 24.19.0 e pnpm 11.16.0.
+- [F] Node di sistema 18.20.8 è insufficiente; il target di progetto è Node
+  22.23.1. I gate M5 sono stati eseguiti con Node 22.23.1 installato nello
+  spazio utente tramite nvm e pnpm 11.16.0 tramite Corepack, senza
+  installazioni globali o di sistema.
 - [F] macOS 13.7.8 e Xcode 15.2 non soddisfano Expo SDK 57, che richiede Node 22.13.x e Xcode 26.4+.
 - [F] Nessun runtime/device iOS Simulator e installato; CocoaPods e assente.
 - [F] Sono installati, su autorizzazione esplicita, Android SDK Platform Tools 37.0.1, Emulator 37.1.11, system image API 34 x86_64 e AVD `AppRelax_API_34_x86_64`. Emulator, Metro e server ADB sono spenti a chiusura test.
@@ -263,12 +376,12 @@ native/cloud, push, PR, Git LFS e asset delivery restano esclusi.
 
 ## Prossimo gate
 
-Il catalogo sonoro completo è pronto per il confronto in localhost. Il prossimo
-gate richiesto dall'utente è la revisione estetica e della gerarchia editoriale.
-La consegna mobile dei 39 file richiede una decisione separata su asset delivery
-o Git LFS; nessuna EAS è autorizzata. Bluetooth, background, lock-screen,
-interruzioni, batteria e percorso nativo restano `NON DETERMINATO — EVIDENZA
-INSUFFICIENTE`.
+Gli screenshot M5 sono approvati e l'utente ha autorizzato separatamente un
+commit locale. Resta aperto l'ascolto mirato delle tre transizioni del piano
+proposto. Adapter nativo dual-deck, download mobile, asset delivery e una futura
+build restano milestone distinte. Bluetooth, background, lock-screen,
+interruzioni, batteria e percorso nativo restano
+`NON DETERMINATO — EVIDENZA INSUFFICIENTE`.
 
 ## Lavoro parallelo escluso
 

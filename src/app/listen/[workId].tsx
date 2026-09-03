@@ -45,12 +45,14 @@ export default function ConsumerPlayerScreen() {
   const isFading = snapshot.status === "fadingOut";
   const canPlay = snapshot.status === "ready" || snapshot.status === "paused";
   const timerLocked = isPlaying || isFading;
+  const canStop = isPlaying || snapshot.status === "paused" || isFading;
   const volumePercent = Math.round(snapshot.volume * 100);
 
   return (
     <EditorialScreen>
       <EditorialHeader label={work.primaryOutcome.toUpperCase()} showBack />
       <Image
+        accessible={false}
         accessibilityIgnoresInvertColors
         resizeMode="cover"
         source={OUTCOME_ARTWORK[work.primaryOutcome]}
@@ -62,11 +64,9 @@ export default function ConsumerPlayerScreen() {
       <Text accessibilityRole="header" style={styles.title}>
         {work.title}
       </Text>
-      <Text style={styles.gate}>
-        {work.listeningStatus === "APPROVED — LISTENING PASSED"
-          ? "APPROVED AFTER LISTENING"
-          : "PROVISIONAL · LISTENING APPROVAL REQUIRED"}
-      </Text>
+      {work.listeningStatus === "APPROVED — LISTENING PASSED" ? null : (
+        <Text style={styles.gate}>PREVIEW · LISTENING REVIEW PENDING</Text>
+      )}
 
       <Text
         accessibilityLabel={`${formatRemaining(snapshot.remainingMs)} remaining`}
@@ -74,11 +74,15 @@ export default function ConsumerPlayerScreen() {
       >
         {formatRemaining(snapshot.remainingMs)}
       </Text>
-      <View accessibilityLabel="Session duration" style={styles.durationRow}>
+      <View
+        accessibilityLabel="Session duration"
+        accessibilityRole="radiogroup"
+        style={styles.durationRow}
+      >
         {program.durationOptionsMinutes.map((minutes) => (
           <Pressable
             accessibilityLabel={`${minutes} minutes`}
-            accessibilityRole="button"
+            accessibilityRole="radio"
             accessibilityState={{
               disabled: timerLocked,
               selected: snapshot.selectedDurationMinutes === minutes,
@@ -106,8 +110,10 @@ export default function ConsumerPlayerScreen() {
         <Pressable
           accessibilityLabel="Stop"
           accessibilityRole="button"
+          accessibilityState={{ disabled: !canStop }}
+          disabled={!canStop}
           onPress={() => void controller.stop()}
-          style={styles.secondaryButton}
+          style={[styles.secondaryButton, !canStop && styles.disabled]}
         >
           <Text style={styles.secondaryText}>Stop</Text>
         </Pressable>
@@ -165,8 +171,8 @@ export default function ConsumerPlayerScreen() {
       </View>
       <Text style={styles.note}>
         {work.sourceKind === "generated-noise"
-          ? "Generated on this device as one continuous source. No audio file, mixer or hidden layers."
-          : "One file plays alone in a lossless loop. No mixer or hidden layers."}
+          ? "A continuous sound created when you press play."
+          : "One complete work continues without interruption."}
       </Text>
     </EditorialScreen>
   );

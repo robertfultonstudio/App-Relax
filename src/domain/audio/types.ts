@@ -1,4 +1,6 @@
 import type { SingleTrackProgram } from "./consumerTypes";
+import type { AdaptiveSessionProgram } from "@/domain/sessions/types";
+import type { TransitionAudition } from "@/domain/sessions/workbench";
 
 export const AUDIO_SOURCE_IDS = [
   "drone",
@@ -80,6 +82,7 @@ export interface SessionSnapshot {
   status: PlaybackStatus;
   presetId: string | null;
   workId: string | null;
+  sessionPlanId: string | null;
   title: string | null;
   volume: number;
   selectedDurationMinutes: number;
@@ -96,6 +99,9 @@ export type SessionListener = (snapshot: SessionSnapshot) => void;
 export interface AudioEngine {
   loadPreset(preset: AudioPreset): Promise<void>;
   loadProgram(program: SingleTrackProgram): Promise<void>;
+  loadAdaptiveSession(program: AdaptiveSessionProgram): Promise<void>;
+  seekAdaptiveSession(positionSeconds: number): Promise<void>;
+  configureAdaptiveAudition(audition: TransitionAudition | null): Promise<void>;
   play(): Promise<void>;
   pause(): Promise<void>;
   stop(): Promise<void>;

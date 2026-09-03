@@ -1,19 +1,18 @@
 import { createHash } from "node:crypto";
 import { Buffer } from "node:buffer";
-import { createReadStream, existsSync, readdirSync, statSync } from "node:fs";
+import {
+  createReadStream,
+  existsSync,
+  readFileSync,
+  readdirSync,
+  statSync,
+} from "node:fs";
 import { open } from "node:fs/promises";
-import { basename, extname, join } from "node:path";
+import { basename, dirname, extname, join, resolve } from "node:path";
 import { spawn } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
-const [sourceDir, flacDir, flacBinary] = process.argv.slice(2);
-if (!sourceDir || !flacDir || !flacBinary) {
-  throw new Error(
-    "Usage: node scripts/verify-lossless-derivatives.mjs <wav-dir> <flac-dir> <flac-binary>",
-  );
-}
-if (![sourceDir, flacDir, flacBinary].every(existsSync)) {
-  throw new Error("One or more verification inputs do not exist.");
-}
+const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
 async function wavDataRegion(path) {
   const handle = await open(path, "r");
@@ -75,6 +74,83 @@ function decodedPcm(flacPath) {
     });
   });
   return child;
+}
+
+async function verifyPinnedStarter() {
+  const reportPath = join(
+    repositoryRoot,
+    "docs",
+    "M4_LOSSLESS_DERIVATIVE_REPORT.json",
+  );
+  const starterDir = join(
+    repositoryRoot,
+    "assets",
+    "audio",
+    "consumer-starter",
+  );
+  const report = JSON.parse(readFileSync(reportPath, "utf8"));
+  const starterFiles = readdirSync(starterDir)
+    .filter((name) => extname(name).toLowerCase() === ".flac")
+    .sort();
+
+  if (starterFiles.length === 0) {
+    throw new Error("No embedded FLAC starter derivative found.");
+  }
+
+  const verified = [];
+  for (const filename of starterFiles) {
+    const recorded = report.files.find((entry) => entry.filename === filename);
+    if (!recorded) {
+      throw new Error(`${filename} is not pinned in the lossless report.`);
+    }
+    const path = join(starterDir, filename);
+    const actualBytes = statSync(path).size;
+    const actualSha256 = (await hashStream(createReadStream(path))).hash;
+    if (
+      actualBytes !== recorded.flacBytes ||
+      actualSha256 !== recorded.flacSha256
+    ) {
+      throw new Error(`${filename} differs from the PCM-verified derivative.`);
+    }
+    verified.push({
+      filename,
+      bytes: actualBytes,
+      flacSha256: actualSha256,
+      decodedPcmSha256: recorded.decodedPcmSha256,
+    });
+  }
+
+  console.log(
+    JSON.stringify(
+      {
+        status: "REPORT_PINNED_HASH_MATCH",
+        evidence:
+          "Each embedded FLAC is byte-identical to its previously decoded PCM-verified derivative.",
+        fileCount: verified.length,
+        files: verified,
+      },
+      null,
+      2,
+    ),
+  );
+}
+
+const requestedArgs = process.argv
+  .slice(2)
+  .filter((argument) => argument !== "--");
+if (requestedArgs.length === 0) {
+  await verifyPinnedStarter();
+  process.exit(0);
+}
+
+const [sourceDir, flacDir, flacBinary] = requestedArgs;
+if (!sourceDir || !flacDir || !flacBinary) {
+  throw new Error(
+    "Usage: node scripts/verify-lossless-derivatives.mjs [<wav-dir> <flac-dir> <flac-binary>]",
+  );
+}
+if (![sourceDir, flacDir, flacBinary].every(existsSync)) {
+  throw new Error("One or more verification inputs do not exist.");
 }
 
 const wavFiles = readdirSync(sourceDir)

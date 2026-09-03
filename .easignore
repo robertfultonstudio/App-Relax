@@ -49,5 +49,7 @@ yarn-error.*
 /jest.config.js
 /assets/audio/placeholders/
 /public/audio-catalog/
+/src/app-qa/
+/src/qa/
 /output/
 /tmp/

@@ -1,9 +1,12 @@
 import type {
+  AdaptiveSessionEventHandlers,
   AudioGraphDriver,
   RemoteCommandHandlers,
 } from "@/audio/AudioGraphDriver";
 import type { AudioPreset, AudioSourceId } from "@/domain/audio/types";
 import type { SingleTrackProgram } from "@/domain/audio/consumerTypes";
+import type { AdaptiveSessionProgram } from "@/domain/sessions/types";
+import type { TransitionAudition } from "@/domain/sessions/workbench";
 
 export class FakeAudioDriver implements AudioGraphDriver {
   readonly capabilities = {
@@ -14,10 +17,15 @@ export class FakeAudioDriver implements AudioGraphDriver {
   };
 
   handlers: RemoteCommandHandlers | null = null;
+  adaptiveHandlers: AdaptiveSessionEventHandlers | null = null;
   loadCalls = 0;
   loadProgramCalls = 0;
+  loadAdaptiveCalls = 0;
   startCalls = 0;
   startProgramCalls = 0;
+  startAdaptiveCalls = 0;
+  adaptiveSeekCalls: number[] = [];
+  adaptiveAuditions: (TransitionAudition | null)[] = [];
   resumeCalls = 0;
   pauseCalls = 0;
   pauseFocusReleases: boolean[] = [];
@@ -38,12 +46,22 @@ export class FakeAudioDriver implements AudioGraphDriver {
     this.handlers = handlers;
   }
 
+  setAdaptiveSessionEventHandlers(
+    handlers: AdaptiveSessionEventHandlers,
+  ): void {
+    this.adaptiveHandlers = handlers;
+  }
+
   async loadPreset(_preset: AudioPreset): Promise<void> {
     this.loadCalls += 1;
   }
 
   async loadSingleTrack(_program: SingleTrackProgram): Promise<void> {
     this.loadProgramCalls += 1;
+  }
+
+  async loadAdaptiveSession(_program: AdaptiveSessionProgram): Promise<void> {
+    this.loadAdaptiveCalls += 1;
   }
 
   async start(
@@ -64,6 +82,25 @@ export class FakeAudioDriver implements AudioGraphDriver {
     if (this.startError) throw this.startError;
   }
 
+  async startAdaptiveSession(
+    _program: AdaptiveSessionProgram,
+    _volume: number,
+    _positionSeconds = 0,
+  ): Promise<void> {
+    this.startAdaptiveCalls += 1;
+    if (this.startError) throw this.startError;
+  }
+
+  async seekAdaptiveSession(positionSeconds: number): Promise<void> {
+    this.adaptiveSeekCalls.push(positionSeconds);
+  }
+
+  async configureAdaptiveAudition(
+    audition: TransitionAudition | null,
+  ): Promise<void> {
+    this.adaptiveAuditions.push(audition);
+  }
+
   async resume(): Promise<void> {
     this.resumeCalls += 1;
   }
@@ -80,6 +117,7 @@ export class FakeAudioDriver implements AudioGraphDriver {
   async dispose(): Promise<void> {
     this.disposeCalls += 1;
     this.handlers = null;
+    this.adaptiveHandlers = null;
   }
 
   async setSourceGain(
@@ -106,5 +144,9 @@ export class FakeAudioDriver implements AudioGraphDriver {
 
   emitInterruption(began: boolean, shouldResume = false): void {
     this.handlers?.interruption(began, shouldResume);
+  }
+
+  emitAdaptiveError(planId: string, error: Error): void {
+    this.adaptiveHandlers?.error(planId, error);
   }
 }

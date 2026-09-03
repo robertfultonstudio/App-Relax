@@ -16,6 +16,8 @@ assert(
 
 const files = [];
 let totalBytes = 0;
+const MAX_ARCHIVE_BYTES = 512 * 1024 * 1024;
+const MAX_FILE_BYTES = 100 * 1024 * 1024;
 
 function walk(directory) {
   for (const entry of readdirSync(directory, { withFileTypes: true })) {
@@ -32,8 +34,10 @@ function walk(directory) {
       continue;
     }
     assert(entry.isFile(), `unexpected archive entry type: ${archivePath}`);
+    const bytes = lstatSync(absolutePath).size;
+    assert(bytes <= MAX_FILE_BYTES, `file exceeds 100 MiB: ${archivePath}`);
     files.push({ absolutePath, archivePath });
-    totalBytes += lstatSync(absolutePath).size;
+    totalBytes += bytes;
   }
 }
 
@@ -44,6 +48,10 @@ function assert(condition, message) {
 }
 
 walk(archiveRoot);
+assert(
+  totalBytes <= MAX_ARCHIVE_BYTES,
+  "archive exceeds the 512 MiB safety cap",
+);
 files.sort((left, right) => left.archivePath.localeCompare(right.archivePath));
 
 const forbiddenSegments = new Set([
@@ -52,12 +60,14 @@ const forbiddenSegments = new Set([
   ".expo",
   ".vscode",
   "android",
+  "app-qa",
   "coverage",
   "dist",
   "docs",
   "ios",
   "node_modules",
   "output",
+  "qa",
   "scripts",
   "tests",
   "tmp",
@@ -79,6 +89,7 @@ const forbiddenCredentialExtensions = new Set([
   ".pem",
 ]);
 const requiredFiles = [
+  "app.config.js",
   "app.json",
   "eas.json",
   "metro.config.js",
@@ -139,8 +150,16 @@ for (const { absolutePath, archivePath } of files) {
     `credential extension: ${archivePath}`,
   );
 
-  if (!archivePath.toLowerCase().endsWith(".wav")) {
+  if (!/\.(?:wav|flac)$/i.test(archivePath)) {
     const contents = readFileSync(absolutePath).toString("utf8");
+    assert(
+      !contents.includes("AUDIO QA WORKBENCH · DEVELOPMENT ONLY"),
+      `QA Workbench sentinel entered the archive in ${archivePath}`,
+    );
+    assert(
+      !contents.includes("@app-relax/qa-workbench-draft"),
+      `QA Workbench storage key entered the archive in ${archivePath}`,
+    );
     for (const pattern of secretPatterns) {
       assert(
         !pattern.test(contents),

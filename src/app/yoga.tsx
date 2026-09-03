@@ -2,10 +2,9 @@ import { type Href, useRouter } from "expo-router";
 import { StyleSheet, Text, View } from "react-native";
 import { EditorialHeader } from "@/components/EditorialHeader";
 import { EditorialScreen } from "@/components/EditorialScreen";
-import { OutcomeActionCard } from "@/components/OutcomeActionCard";
+import { AdaptiveSessionSetup } from "@/components/AdaptiveSessionSetup";
 import { ProductTabBar } from "@/components/ProductTabBar";
-import { ProductionCard } from "@/components/ProductionCard";
-import { CONSUMER_OUTCOMES, YOGA_JOURNEYS } from "@/content/productShell";
+import { CONSUMER_OUTCOMES } from "@/content/productShell";
 import { editorial } from "@/design/editorialTheme";
 import { fonts, spacing } from "@/design/theme";
 
@@ -31,17 +30,10 @@ export default function YogaScreen() {
       </Text>
 
       <View style={styles.primaryAction}>
-        <OutcomeActionCard outcome={yogaOutcome} primary />
-      </View>
-
-      <Text style={styles.sectionLabel}>CHOOSE A FUTURE DURATION</Text>
-      <View accessibilityLabel="Planned yoga journeys" style={styles.list}>
-        {YOGA_JOURNEYS.map((journey) => (
-          <ProductionCard key={journey.id} {...journey} />
-        ))}
+        <AdaptiveSessionSetup outcome="yoga" />
       </View>
       <Text style={styles.note}>
-        These formats are planned. No yoga session or audio is available yet.
+        Start with duration. Mode, voice and offline choices stay optional.
       </Text>
     </EditorialScreen>
   );
@@ -69,15 +61,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     maxWidth: 340,
   },
-  list: { marginTop: spacing.xl },
   primaryAction: { marginTop: spacing.xl },
-  sectionLabel: {
-    color: editorial.inkFaint,
-    fontFamily: fonts.sansSemiBold,
-    fontSize: 11,
-    letterSpacing: 1.15,
-    marginTop: spacing.xl,
-  },
   note: {
     color: editorial.inkFaint,
     fontFamily: fonts.sans,

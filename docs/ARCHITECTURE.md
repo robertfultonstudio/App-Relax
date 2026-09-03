@@ -3,29 +3,74 @@
 ## Decisione sintetica
 
 L'app usa Expo SDK 57, React Native 0.86.3 ed Expo Router. La Home outcome-first
-e i tab `RITUALS`, `YOGA` e `SOUNDSCAPES` leggono il catalogo consumer M4; le
-opere disponibili aprono un player single-source. Yoga, Massage, Relax,
-Meditation, Sleep e Focus restano entita consumer prive di preset. Sia il
-player consumer sia la route separata `AUDIO TEST / TEST ONLY` usano
-`AudioSessionController`, con modalità e contratti distinti. Il controller
-resta il solo proprietario della sessione. `ReactNativeAudioDriver` su
-Android/iOS e `WebAudioDriver` nell'anteprima browser restano entrambi dietro
-`AudioGraphDriver` e `AudioEngine`.
+offre due percorsi distinti: opere autonome M4 e sessioni adattive M5. Yoga,
+Massage, Relax, Meditation, Sleep e Focus scelgono prima la durata; Sound only
+può costruire un piano Continuum, mentre Guided resta bloccato finché non
+esistono voci registrate. Il player autonomo, le sessioni adattive e la route
+separata `AUDIO TEST / TEST ONLY` usano tutti `AudioSessionController`, con
+contratti distinti. Il controller resta il solo proprietario della sessione.
+`ReactNativeAudioDriver` e `WebAudioDriver` restano dietro `AudioGraphDriver` e
+`AudioEngine`.
 
 RNAA dichiara peer aperti verso React Native ma la sua matrice pubblica non documenta ancora RN 0.86. Due compilazioni EAS Android e il playback della preview standalone con Metro spento dimostrano il percorso Android corrente; compatibilita iOS e comportamento su telefono reale restano `NON DETERMINATO — EVIDENZA INSUFFICIENTE`.
+
+## Adaptive Sessions M5
+
+`SessionWorkProfile` è un registro di orchestrazione separato da
+`ConsumerAudioWork`. Aggiunge intenti, famiglia estetica e armonica, energia,
+densità, presenza melodica, compatibilità voce, ruoli di fase, boundary sicuri,
+classe di transizione e stato offline. I valori correnti sono metadata QA
+provvisori, non approvazione musicale.
+
+`createAdaptiveSessionProgram()` è una funzione pura. Ordina stabilmente gli
+input, usa il seed soltanto per spareggi riproducibili, costruisce quattro fasi
+contigue e applica regole di fase più regole di transizione ALL-OF. Non ripete
+opera o famiglia e accetta la storia delle tre sessioni recenti. I profili
+provvisori sono esclusi per default e richiedono l'opt-in QA. Se non trova
+quattro lavori e tre passaggi compatibili, fallisce esplicitamente.
+
+Tutti i tempi del piano sono frame interi a 48 kHz. I passaggi rispettano i
+boundary di loop registrati. La durata totale termina esattamente al frame
+target; un'opera che richieda un finale editoriale non può essere tagliata. Per
+i loop continui senza outro, il piano dichiara apertamente un inviluppo finale
+controllato.
+
+Il Web valida in anticipo i metadata di tutte le sorgenti, usa due deck
+HTMLAudio soltanto durante il cambio, prepara la sorgente successiva e applica
+curve Web Audio. Gli errori di una sorgente futura tornano al controller invece
+di fermare silenziosamente la sessione. Il nativo fallisce chiuso: risoluzione dei
+pacchetti scaricati, due decoder FLAC, scheduling e seek non sono ancora
+implementati o validati su telefono.
+
+Il manifest offline è indipendente dal catalogo e non contiene endpoint. Un
+`OfflinePackageManager` orchestra spazio sui soli byte mancanti, staging
+streaming, verifica, promozione/rollback atomici, retry, rimozione e recovery
+attraverso interfacce `PackageSource`, `AudioBinaryStore` e
+`OfflineStateStore`. Lo stato `available` viene riconciliato con presenza,
+dimensione e hash dei file committed. La cartella localhost non è una delivery
+mobile; l'implementazione nativa delle porte resta assente.
+
+Il Router ha due radici: `src/app` consumer per default e `src/app-qa` soltanto
+con `APP_RELAX_SURFACE=qa`. Il Workbench è in `src/qa`, non ha link consumer ed
+è escluso dall'archivio EAS.
 
 ## Moduli
 
 ```text
 src/app/                       route Expo Router
+src/app-qa/                    root Router QA locale, esclusa da EAS
 src/components/                componenti consumer
 src/content/                   tab e registro editoriale consumer
 src/domain/audio/              tipi e contratti puri
+src/domain/sessions/           planner, curve e audit Continuum
+src/domain/offline/            manifest e porte offline
 src/audio/                     controller e porta graph driver
 src/audio/reactNativeAudioApi/ adattatore nativo
 src/audio/web/                 adattatore Web Audio per anteprima locale
 src/audio/generators/          funzioni DSP pure/testabili
-src/state/                     persistenza serializzabile
+src/offline/                   manager, store e source adapter
+src/qa/                        Workbench tecnico, escluso da EAS
+src/state/                     persistenza serializzabile consumer
 src/presets/                   registry dei preset
 assets/audio/test-pack-01/     tre stem reali e manifest
 assets/audio/placeholders/     fixture tecniche non referenziate
@@ -35,10 +80,15 @@ public/audio-catalog/           byte audio localhost, ignorati da Git
 ## Flusso di controllo
 
 ```text
-Consumer tabs -> catalogo -> SingleTrackProgram -> AudioSessionController
-                                                   |
-                                                   v
-                                     file source OPPURE noise buffer
+Consumer tabs -> durata -> AdaptiveSessionPlan -> AudioSessionController
+                         |                            |
+                         v                            v
+                  4 fasi / 3 cambi             Web dual deck QA
+
+Soundscapes -> catalogo -> SingleTrackProgram -> AudioSessionController
+                                                    |
+                                                    v
+                                      file source OPPURE noise buffer
 
 Audio Test UI -> AudioSessionController -> AudioGraphDriver -> driver di piattaforma -> graph audio
                  |                     |
@@ -61,6 +111,9 @@ Il contratto copre:
 
 - `loadPreset(preset)`;
 - `loadProgram(singleTrackProgram)`;
+- `loadAdaptiveSession(adaptiveSessionProgram)`;
+- `seekAdaptiveSession(positionSeconds)`;
+- `configureAdaptiveAudition(audition)`;
 - `play()`, `pause()`, `stop()`, `dispose()`;
 - `setSourceGain(sourceId, gain, fadeMs)`;
 - `setSourceMuted(sourceId, muted, fadeMs)`;
@@ -127,13 +180,23 @@ type AudioPreset = {
 
 ## Timer e fade
 
-Il controller memorizza una deadline assoluta. Il driver pianifica master fade e `stop(endAt)` di file source, buffer noise e oscillatori sul clock audio, cosi il suono termina anche se i timer JavaScript vengono sospesi. Il ticker JS aggiorna la UI e, al risveglio, chiude notification/audio session una sola volta. Un cambio timer durante playback e rifiutato; dopo pausa la deadline viene ricostruita sul tempo residuo.
+Il controller memorizza una deadline assoluta. Per preset e opere autonome il
+driver pianifica master fade e `stop(endAt)`. Per le sessioni adattive il piano
+possiede già transizioni e inviluppo finale, quindi il controller non aggiunge
+un secondo fade globale. Il ticker JS aggiorna la UI e chiude una sola volta.
+Un cambio timer durante playback è rifiutato; dopo pausa la deadline viene
+ricostruita sul tempo residuo.
 
 La pulizia immediata di notification/foreground service con JavaScript totalmente sospeso resta da osservare su telefono: il graph audio si arresta sul clock nativo, mentre la finalizzazione di sistema viene riconciliata quando JS riprende.
 
 ## Persistenza
 
-AsyncStorage salva un payload versionato con ultimo preset, durata, gain e mute. L'idratazione precede atomicamente il load del preset. Non si salvano nodi nativi, deadline o stato `playing`; l'app non riparte in autoplay.
+AsyncStorage salva payload versionati. Il percorso tecnico conserva preset,
+durata, gain e mute; il player autonomo conserva opera, durata e volume; M5
+conserva soltanto l'ultima richiesta Sound only e le tre sequenze recenti. Seed,
+piano, nodi, deadline e stato `playing` non vengono ripristinati dal consumer.
+Il Workbench ha uno store QA separato che può salvare il seed per riprodurre un
+test.
 
 ## Background e sistema
 
@@ -150,9 +213,14 @@ La configurazione e stata verificata tramite prebuild isolato, ma lock-screen, i
 - `extra.eas.projectId` collega il progetto EAS autorizzato `@robert-fulton-studio/app-relax`.
 - Identificativo provvisorio comune: `com.robertfultonstudio.apprelax`; sintassi validata, disponibilita sugli account non verificabile senza login.
 
-## Variabilita futura
+## Limiti M5 dichiarati
 
-`VariationPlan` puo descrivere pool di layer, finestre di rotazione, macro-mix states e seed, ma il sequencer non viene implementato ora. Questa estensione non modifica il contratto UI-controller-engine.
+- Preview Web Audio: adatta a pianificazione, audit e ascolto locale; scheduling
+  HTMLAudio non è prova sample-accurate.
+- Native adaptive playback e download reali: `NON DETERMINATO — EVIDENZA
+INSUFFICIENTE`.
+- Guided: contratto/UI soltanto, senza voce fittizia.
+- Qualità di ogni transizione: gate umano distinto dall'approvazione dei file.
 
 ## Alternative escluse
 

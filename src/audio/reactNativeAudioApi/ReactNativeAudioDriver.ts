@@ -19,6 +19,7 @@ import {
 } from "@/domain/audio/consumerTypes";
 import {
   SourceLoadError,
+  type AdaptiveSessionEventHandlers,
   type AudioGraphDriver,
   type RemoteCommandHandlers,
 } from "@/audio/AudioGraphDriver";
@@ -30,6 +31,8 @@ import {
 } from "@/audio/generators/coloredNoise";
 import { STEM_ASSETS } from "./stemAssets";
 import { CONSUMER_ASSETS } from "./consumerAssets";
+import type { AdaptiveSessionProgram } from "@/domain/sessions/types";
+import type { TransitionAudition } from "@/domain/sessions/workbench";
 import {
   createStreamingStemSource,
   stopStreamingStemSource,
@@ -143,6 +146,13 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
     if (interruption) {
       this.subscriptions.push(interruption);
     }
+  }
+
+  setAdaptiveSessionEventHandlers(
+    _handlers: AdaptiveSessionEventHandlers,
+  ): void {
+    // Adaptive playback is intentionally fail-closed in native builds until
+    // downloaded-package storage and transition playback are implemented.
   }
 
   async loadPreset(preset: AudioPreset): Promise<void> {
@@ -264,6 +274,21 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
       if (context.state === "running") await context.suspend();
       throw error;
     }
+  }
+
+  async loadAdaptiveSession(program: AdaptiveSessionProgram): Promise<void> {
+    await this.stop();
+    const missing = program.works.filter(
+      (work) => work.sourceKind !== "file" || !CONSUMER_ASSETS[work.assetKey],
+    );
+    if (missing.length > 0) {
+      throw new Error(
+        "Adaptive mobile sessions need verified downloaded packages; mobile asset delivery is in production.",
+      );
+    }
+    throw new Error(
+      "Adaptive dual-deck playback is prepared for native integration but is not device-validated.",
+    );
   }
 
   async start(
@@ -418,6 +443,26 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
       await this.stop();
       throw error;
     }
+  }
+
+  async startAdaptiveSession(
+    _program: AdaptiveSessionProgram,
+    _volume: number,
+    _positionSeconds = 0,
+  ): Promise<void> {
+    throw new Error(
+      "Adaptive dual-deck playback is not enabled in this native build.",
+    );
+  }
+
+  async seekAdaptiveSession(_positionSeconds: number): Promise<void> {
+    throw new Error("Adaptive session seeking is not enabled natively.");
+  }
+
+  async configureAdaptiveAudition(
+    _audition: TransitionAudition | null,
+  ): Promise<void> {
+    throw new Error("The QA audition surface is not enabled natively.");
   }
 
   async resume(): Promise<void> {

@@ -94,7 +94,7 @@ export default function SoundscapesScreen() {
         Where would you like to go?
       </Text>
       <Text style={styles.intro}>
-        Complete works, curated as destinations rather than layers.
+        Choose a complete soundscape and begin listening.
       </Text>
 
       <View
@@ -134,9 +134,8 @@ export default function SoundscapesScreen() {
         ))}
       </View>
       <Text style={styles.note}>
-        Approved works are available in this localhost listening preview. Noise
-        colours are generated on demand; the mobile delivery package remains a
-        separate release gate.
+        Choose one complete work at a time. Noise colours continue for as long
+        as your session needs.
       </Text>
     </EditorialScreen>
   );

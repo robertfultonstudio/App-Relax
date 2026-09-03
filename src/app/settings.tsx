@@ -16,16 +16,16 @@ export default function SettingsScreen() {
         A quiet place to begin.
       </Text>
       <Text style={styles.intro}>
-        Consumer sections contain no playable audio yet. Technical playback is
-        kept separately in Audio Test.
+        Sessions begin with a purpose and duration. Guided voices and offline
+        downloads remain clearly marked while they are being produced.
       </Text>
 
       <View style={styles.card}>
         <SettingRow label="Autoplay" value="Off" />
         <SettingRow label="Reduce motion" value="Follows your device" />
         <SettingRow label="Background mode" value="Device test pending" />
-        <SettingRow label="Saved locally" value="Audio test timer and mix" />
-        <SettingRow label="Build" value={`M3 ${version}`} last />
+        <SettingRow label="Saved locally" value="Last session choices" />
+        <SettingRow label="Version" value={version} last />
       </View>
 
       <SettingLink

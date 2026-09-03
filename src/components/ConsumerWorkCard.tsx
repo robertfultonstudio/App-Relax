@@ -22,24 +22,20 @@ export function ConsumerWorkCard({
   work: ConsumerAudioWork;
 }) {
   const available = isPlayableWork(work);
-  const generated = work.sourceKind === "generated-noise";
   const rejected = work.availability === "rejected-listening";
-  const localPreview = work.availability === "local-preview-file";
   const approved = work.listeningStatus === "APPROVED — LISTENING PASSED";
   return (
     <Pressable
       accessibilityHint={
         rejected
-          ? "Rejected after listening; a consumer replacement is required"
+          ? "A replacement is being prepared"
           : available
             ? startsPlayback
-              ? "Starts this work in the single-track player"
-              : "Opens the single-track player"
-            : localPreview
-              ? "Available in the localhost listening preview"
-              : "The lossless file is ready outside this build"
+              ? "Starts this sound"
+              : "Opens this sound"
+            : "This sound is in production"
       }
-      accessibilityLabel={`${work.title}. ${work.primaryOutcome}. ${rejected ? "Rejected after listening. Replacement required" : approved ? "Approved after listening" : available ? "Available locally. Listening approval required" : "Audio delivery required. Listening approval required"}.`}
+      accessibilityLabel={`${work.title}. ${work.primaryOutcome}. ${rejected || !available ? "In production" : "Available"}.`}
       accessibilityRole="button"
       accessibilityState={{ disabled: !available }}
       disabled={!available}
@@ -56,34 +52,26 @@ export function ConsumerWorkCard({
         <Text style={styles.outcome}>{work.primaryOutcome.toUpperCase()}</Text>
         <Text style={styles.state}>
           {rejected
-            ? "REPLACEMENT REQUIRED"
+            ? "IN PRODUCTION"
             : available
               ? startsPlayback
-                ? "START FEATURED"
-                : generated
-                  ? "GENERATED LOCALLY"
-                  : localPreview
-                    ? "LOCALHOST READY"
-                    : "AVAILABLE LOCALLY"
-              : localPreview
-                ? "WEB PREVIEW ONLY"
-                : "DELIVERY REQUIRED"}
+                ? "START"
+                : "AVAILABLE"
+              : "IN PRODUCTION"}
         </Text>
       </View>
       <Text style={styles.title}>{work.title}</Text>
       <Text style={styles.meta}>
         {rejected
-          ? "Consumer replacement required · technical test asset only"
-          : generated
-            ? `${work.spectralDefinition} · generated continuously`
-            : `Single work · loops · ${formatSourceDuration(work.durationSeconds)} source`}
+          ? "A new version is being prepared"
+          : `Complete sound · ${formatSourceDuration(work.durationSeconds)}`}
       </Text>
       <Text style={styles.gate}>
         {rejected
           ? "REJECTED AFTER LISTENING"
           : approved
-            ? "APPROVED AFTER LISTENING"
-            : "LISTENING APPROVAL REQUIRED"}
+            ? "READY TO LISTEN"
+            : "PREVIEW · LISTENING REVIEW PENDING"}
       </Text>
     </Pressable>
   );

@@ -4,6 +4,8 @@ import type {
   AudioSourceId,
 } from "@/domain/audio/types";
 import type { SingleTrackProgram } from "@/domain/audio/consumerTypes";
+import type { AdaptiveSessionProgram } from "@/domain/sessions/types";
+import type { TransitionAudition } from "@/domain/sessions/workbench";
 
 export interface RemoteCommandHandlers {
   play: () => void;
@@ -12,16 +14,30 @@ export interface RemoteCommandHandlers {
   interruption: (began: boolean, shouldResume: boolean) => void;
 }
 
+export interface AdaptiveSessionEventHandlers {
+  ended: (planId: string) => void;
+  error: (planId: string, error: Error) => void;
+}
+
 export interface AudioGraphDriver {
   readonly capabilities: AudioCapabilities;
   setRemoteCommandHandlers(handlers: RemoteCommandHandlers): void;
+  setAdaptiveSessionEventHandlers(handlers: AdaptiveSessionEventHandlers): void;
   loadPreset(preset: AudioPreset): Promise<void>;
   loadSingleTrack(program: SingleTrackProgram): Promise<void>;
+  loadAdaptiveSession(program: AdaptiveSessionProgram): Promise<void>;
   start(
     preset: AudioPreset,
     mix: Readonly<Record<AudioSourceId, number>>,
   ): Promise<void>;
   startSingleTrack(program: SingleTrackProgram, volume: number): Promise<void>;
+  startAdaptiveSession(
+    program: AdaptiveSessionProgram,
+    volume: number,
+    positionSeconds?: number,
+  ): Promise<void>;
+  seekAdaptiveSession(positionSeconds: number): Promise<void>;
+  configureAdaptiveAudition(audition: TransitionAudition | null): Promise<void>;
   resume(): Promise<void>;
   pause(releaseAudioFocus: boolean): Promise<void>;
   stop(): Promise<void>;

@@ -6,6 +6,7 @@ import { ReactNativeAudioDriver } from "@/audio/reactNativeAudioApi/ReactNativeA
 import { DEEP_SLEEP_432 } from "@/presets/deepSleep432";
 import { getConsumerWork } from "@/content/consumerCatalog";
 import { createSingleTrackProgram } from "@/domain/audio/consumerTypes";
+import { createAdaptiveSessionProgram } from "@/domain/sessions/continuumPlanner";
 
 jest.mock("react-native-audio-api", () => ({
   AudioContext: jest.fn(),
@@ -171,6 +172,23 @@ describe("ReactNativeAudioDriver lifecycle", () => {
     expect(context.createBufferSource).toHaveBeenCalledTimes(1);
     expect(source.loop).toBe(true);
     expect(source.start).toHaveBeenCalledWith(1.1);
+  });
+
+  it("fails closed instead of pretending native adaptive delivery is ready", async () => {
+    const driver = new ReactNativeAudioDriver();
+    const program = createAdaptiveSessionProgram({
+      outcome: "meditation",
+      durationMinutes: 20,
+      mode: "sound-only",
+      seed: "native-gate",
+      allowProvisionalMetadata: true,
+    });
+    await expect(driver.loadAdaptiveSession(program)).rejects.toThrow(
+      "verified downloaded packages",
+    );
+    await expect(driver.startAdaptiveSession(program, 0.8)).rejects.toThrow(
+      "not enabled in this native build",
+    );
   });
 
   it("does not block audible start while Android notification setup is pending", async () => {

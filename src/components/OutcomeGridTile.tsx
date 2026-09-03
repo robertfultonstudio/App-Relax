@@ -12,7 +12,6 @@ import { OUTCOME_ARTWORK } from "@/design/outcomeArtwork";
 import { fonts, spacing } from "@/design/theme";
 
 interface OutcomeGridTileProps {
-  available: boolean;
   featuredTitle: string;
   onPress: () => void;
   outcome: ConsumerOutcome;
@@ -28,7 +27,6 @@ const OUTCOME_NUMBER: Readonly<Record<ConsumerOutcomeId, string>> = {
 };
 
 export function OutcomeGridTile({
-  available,
   featuredTitle,
   onPress,
   outcome,
@@ -38,15 +36,9 @@ export function OutcomeGridTile({
 
   return (
     <Pressable
-      accessibilityHint={
-        available
-          ? "Opens a filtered list with locally available audio"
-          : "The audio for this outcome requires delivery"
-      }
-      accessibilityLabel={`${outcome.functionLabel}. ${outcome.cta}. ${outcome.homeFormat}. ${available ? "Audio available locally" : "Audio delivery required"}.`}
+      accessibilityHint="Opens the duration choice for this session"
+      accessibilityLabel={`${outcome.functionLabel}. ${outcome.cta}. ${outcome.homeFormat}. Choose a duration.`}
       accessibilityRole="button"
-      accessibilityState={{ disabled: !available }}
-      disabled={!available}
       onPress={onPress}
       style={[styles.tile, { borderColor: outcome.wash }]}
       testID={`outcome-${outcome.id}`}
@@ -85,7 +77,7 @@ export function OutcomeGridTile({
           </Text>
         </View>
         <Text style={[styles.state, { borderTopColor: outcome.wash }]}>
-          {available ? "START HERE" : "DELIVERY REQUIRED"}
+          CHOOSE A DURATION
         </Text>
       </View>
     </Pressable>

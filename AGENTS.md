@@ -2,7 +2,13 @@
 
 ## Ambito
 
-Questo repository contiene una vera app mobile consumer iOS/Android basata su React Native ed Expo. La milestone attiva e M3 `Product Shell & Impressionist UI Foundation`: tre tab consumer `RITUALS`, `YOGA` e `SOUNDSCAPES`, tutti strutturati ma senza audio disponibile. La Home e outcome-first e rende immediatamente visibili Yoga, Massage, Relax, Meditation, Sleep e Focus; funzione e futura azione precedono durata/formato e naming evocativo. `Moon Current`, il preset tecnico `deep-sleep-432` e i tre stem reali di `AUDIO TEST PACK 01` restano confinati nel percorso separato `AUDIO TEST / TEST ONLY`.
+Questo repository contiene una vera app mobile consumer iOS/Android basata su
+React Native ed Expo. La milestone attiva è M5 `Adaptive Sessions & QA
+Workbench`: modalità `Sound only` e `Guided`, durata prima dello Start,
+sequencer deterministico a vincoli, contratto per pacchetti offline e
+Workbench tecnico escluso dalla superficie consumer. Il catalogo M4 resta
+formato da opere autonome; `Moon Current`, `deep-sleep-432` e i tre stem di
+`AUDIO TEST PACK 01` restano confinati in `AUDIO TEST / TEST ONLY`.
 
 Il materiale in `output/strategia-app-audio/` e `tmp/strategia-app-audio/` appartiene a un flusso parallelo e non va modificato, spostato, cancellato, staged o assorbito senza istruzione esplicita.
 
@@ -28,9 +34,14 @@ In caso di conflitto, fermarsi, registrare il conflitto e non inventare una solu
 - `AudioEngine` resta indipendente dall'implementazione.
 - `tuningLabel`, `carrierHz` e `beatHz` sono concetti distinti.
 - Nessun claim medico, terapeutico o clinico.
-- Nessun backend, login, billing, analytics, community o marketplace in M3.
-- Nessun file audio reale oltre i tre stem di `AUDIO TEST PACK 01` durante M3.
-- Le sezioni consumer non possono referenziare preset, asset audio o route player.
+- Nessun backend, login, billing, analytics, community o marketplace in M5.
+- Il catalogo locale da circa 2,6 GiB resta fuori da Git, APK ed EAS; nessuna
+  delivery remota viene inventata.
+- Ogni opera consumer è autonoma; nessun mixer multilayer consumer. Soltanto
+  una transizione controllata può sovrapporre temporaneamente due opere.
+- Guided resta `IN PRODUCTION` finché non esistono registrazioni reali.
+- I metadata Continuum dedotti dal catalogo o dai filename sono provvisori e
+  utilizzabili soltanto nel QA locale; non valgono come revisione musicale.
 - Il mixer multilayer resta soltanto nel percorso tecnico `AUDIO TEST`.
 - Functionality and time-to-sound first; evocative naming is secondary metadata.
 - Gli artwork outcome seguono un contemporary minimal Japanese impressionism
@@ -73,25 +84,32 @@ pnpm exec expo export --platform android
 
 ## Definition of Done
 
-Il gate repository/non nativo M3 e chiuso solo quando:
+Il gate repository/non nativo M5 è chiuso solo quando:
 
-- i tab `RITUALS`, `YOGA` e `SOUNDSCAPES`, Settings e Legal sono implementati;
-- Yoga espone formati futuri 20/30/45/60 minuti, tutti `IN PRODUCTION` e privi di audio;
-- Soundscapes espone opere autonome, Elemental Worlds, field recording, Cosmic/Zen Ambient ed Esoteric Series, tutti `IN PRODUCTION` e privi di audio;
-- la Home espone i sei bisogni Yoga, Massage, Relax, Meditation, Sleep e Focus,
-  tutti `IN PRODUCTION`, bloccati e privi di audio;
-- `Moon Current` e il solo preset tecnico riproducibile sono visibili esclusivamente in `AUDIO TEST / TEST ONLY`;
-- i quattro artwork rituali e i font locali sono validati;
-- i sei artwork outcome originali sono presenti uno per funzione, documentati in
-  `docs/M3_OUTCOME_ARTWORK_PROVENANCE.md` e verificati con SHA-256;
-- tre stem reali separati, binaural e brown noise sono cablati senza playback duplicato;
-- gain, mute, loading, error e fade sono esposti per ogni sorgente;
-- timer assoluto, fade, stop nativo schedulato e persistenza minima sono coperti da test;
-- lint, typecheck, test, validatori, Expo Doctor ed export Metro iOS/Android sono verdi;
-- `eas.json`, config plugin e identificativi sono validati offline;
-- nessun segreto o asset audio reale oltre `AUDIO TEST PACK 01` e presente.
+- i sei outcome mostrano soltanto durate pertinenti tra 10/20/30/45/60/90 e
+  mantengono la sequenza funzione → durata → Start;
+- Guided e scelta voce sono presenti ma bloccati e onesti;
+- il planner produce Arrival → Flow → Deepening → Return, è riproducibile da
+  seed, evita ripetizioni e fallisce senza fallback casuale;
+- safe entry/exit, regole di fase, compatibilità e stima conservativa del picco
+  sono coperte da test;
+- la preview adattiva è limitata al browser loopback non-production e il
+  driver nativo fallisce esplicitamente;
+- il manifest offline non contiene URL e stato, spazio, integrità, retry,
+  rimozione e astrazioni streaming/atomiche sono verificati senza dichiarare
+  adapter o delivery inesistenti;
+- il Workbench esiste soltanto nella radice Router QA, è escluso da `.easignore`
+  e assente dall'export consumer verificato;
+- lint, typecheck, test, test audio, validatori, Expo Doctor, controllo Expo
+  install ed export Metro Android/iOS e Web consumer/QA sono verdi;
+- nessun segreto o nuovo byte audio entra in Git/EAS e gli screenshot locali
+  richiesti sono pronti per il gate umano.
 
-M3 non e completa finche gli screenshot runtime non sono approvati. La task corrente si ferma prima di EAS, commit, push o PR. I test su telefono reale restano obbligatori per memoria/startup, speaker, cuffie/Bluetooth, background/lock-screen, interruzioni, latenza, batteria e qualita sonora. Nessun asset audio ulteriore e autorizzato in M3.
+Il 3 settembre 2026 l'utente ha autorizzato un solo commit locale M5 dopo il
+gate visivo. La task si ferma prima di EAS, build native/cloud, push o PR.
+Native adaptive playback, download mobile e comportamento su telefono reale
+restano `NON DETERMINATO — EVIDENZA INSUFFICIENTE` finché non esistono adapter,
+build e prove autorizzate.
 
 ## Autorizzazioni
 

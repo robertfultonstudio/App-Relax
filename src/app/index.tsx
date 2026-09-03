@@ -1,20 +1,53 @@
-import { type Href, useRouter } from "expo-router";
+import { type Href, useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { EditorialHeader } from "@/components/EditorialHeader";
 import { EditorialScreen } from "@/components/EditorialScreen";
 import { OutcomeGridTile } from "@/components/OutcomeGridTile";
+import { LastSessionAction } from "@/components/LastSessionAction";
 import { ProductTabBar } from "@/components/ProductTabBar";
 import { CONSUMER_OUTCOMES } from "@/content/productShell";
-import {
-  getPlayableWorksForOutcome,
-  getWorksForOutcome,
-} from "@/content/consumerCatalog";
 import { editorial } from "@/design/editorialTheme";
 import { RITUALS_HOME_BACKGROUND } from "@/design/shellArtwork";
 import { fonts, spacing } from "@/design/theme";
+import {
+  createAdaptiveSessionHistoryStore,
+  type SavedSessionRequest,
+} from "@/state/adaptiveSessionPersistence";
+import { isAdaptivePlaybackAvailable } from "@/domain/sessions/playbackAvailability";
+
+const sessionHistoryStore = createAdaptiveSessionHistoryStore();
 
 export default function HomeScreen() {
   const router = useRouter();
+  const [lastRequest, setLastRequest] = useState<SavedSessionRequest | null>(
+    null,
+  );
+  const playbackAvailable = isAdaptivePlaybackAvailable();
+
+  useFocusEffect(
+    useCallback(() => {
+      let mounted = true;
+      void sessionHistoryStore
+        .load()
+        .then((history) => {
+          if (mounted) setLastRequest(history.lastRequest);
+        })
+        .catch(() => {
+          if (mounted) setLastRequest(null);
+        });
+      return () => {
+        mounted = false;
+      };
+    }, []),
+  );
+
+  function playLastSession(): void {
+    if (!lastRequest) return;
+    router.push(
+      `/adaptive-session/${lastRequest.outcome}?duration=${lastRequest.durationMinutes}&start=1` as Href,
+    );
+  }
 
   return (
     <EditorialScreen
@@ -35,10 +68,15 @@ export default function HomeScreen() {
         Choose your moment. Press start. Leave the phone behind.
       </Text>
       <Text style={styles.availability}>
-        Lossless works and real-time noise colours are available locally.
-        Available works remain provisional; rejected material stays
-        technical-only.
+        Choose a need, choose a duration, then start. Personalisation stays
+        optional.
       </Text>
+
+      <LastSessionAction
+        available={playbackAvailable}
+        onPress={playLastSession}
+        request={lastRequest}
+      />
 
       <View
         accessibilityLabel="Planned consumer actions"
@@ -46,15 +84,9 @@ export default function HomeScreen() {
         testID="outcome-grid"
       >
         {CONSUMER_OUTCOMES.map((outcome) => {
-          const playableWorks = getPlayableWorksForOutcome(outcome.id);
           return (
             <OutcomeGridTile
-              available={playableWorks.length > 0}
-              featuredTitle={
-                playableWorks[0]?.title ??
-                getWorksForOutcome(outcome.id)[0]?.title ??
-                outcome.evocativeTitle
-              }
+              featuredTitle={outcome.evocativeTitle}
               key={outcome.id}
               onPress={() => router.push(`/outcome/${outcome.id}` as Href)}
               outcome={outcome}
@@ -64,8 +96,7 @@ export default function HomeScreen() {
       </View>
 
       <Text style={styles.footerNote}>
-        Function first. Each consumer work plays alone; the multilayer engine
-        remains isolated in Audio Test.
+        Choose the purpose first. Music names and deeper choices come later.
       </Text>
     </EditorialScreen>
   );

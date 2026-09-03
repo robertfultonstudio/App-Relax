@@ -4,6 +4,57 @@
 
 La milestone usa cinque livelli distinti: test puri, integrazione con driver fake, validazione config/asset, bundle/prebuild e prove su device. Nessun livello sostituisce il successivo.
 
+## M5 — Adaptive Sessions & QA Workbench
+
+### Planner e timeline
+
+- Guided fallisce finché non esistono voci registrate; Sound only usa soltanto
+  durate ammesse dalla policy dell'outcome.
+- I profili provvisori sono esclusi per default e richiedono opt-in QA; un set
+  editoriale revisionato funziona senza override.
+- Stesso input e seed producono lo stesso piano; curve, storia o disponibilità
+  diverse producono identità diverse.
+- Ogni piano ha quattro fasi, quattro opere e tre transizioni; nessuna opera o
+  famiglia si ripete e la storia recente viene esclusa.
+- Regole di fase e transizione sono ALL-OF; un solo fallimento blocca la
+  sequenza senza fallback casuale.
+- Entry/exit usano marker validi. Il target termina sul frame esatto; un finale
+  editoriale obbligatorio mancante fallisce.
+- Il bound peak usa il massimo completo della curva equal-power o lineare e il
+  rischio post-trim resta al massimo -1,1 dBTP.
+- L'audit ispeziona tutti gli intervalli delimitati dagli eventi e rileva anche
+  gap o triple overlap inferiori a un secondo.
+
+### Controller, UI e persistenza
+
+- Le modalità sono Sound only e Guided; la voce appare soltanto in Guided e il
+  CTA resta disabilitato.
+- Le durate sono 10/20/30/45/60/90 con subset per categoria e ruolo radio
+  accessibile.
+- La preview adattiva è ammessa soltanto su Web loopback non-production; deep
+  link e `Play your last session` rispettano lo stesso gate.
+- Preflight e player usano la stessa storia recente; un errore storage blocca
+  esplicitamente lo Start.
+- Il seed non compare nell'URL consumer e non viene persistito. La Home rilegge
+  l'ultima richiesta quando torna in focus.
+- Errore di una sorgente futura viene propagato al controller; il driver nativo
+  rifiuta esplicitamente le sessioni adattive.
+
+### Offline e confine QA
+
+- Manifest runtime, catalogo e manifest M4 coincidono per work ID, object key,
+  byte e SHA-256.
+- Stato persistito con schema/revisione incoerenti viene ignorato; `available`
+  è riconfermato con i file committed.
+- Download usa sink streaming, progress finito e bounded, spazio sui soli byte
+  mancanti, verifica di ogni asset e promozione/rollback di tentativo.
+- Operazioni sullo stesso pacchetto sono serializzate; una rimozione fallita
+  conserva l'evidenza precedente.
+- Config consumer e QA hanno root distinte; source QA e draft store sono
+  esclusi da EAS.
+- Dopo export, sentinel, route e storage key QA sono assenti dall'artifact
+  consumer e presenti nel solo artifact QA.
+
 ## Test automatici
 
 ### Dominio e prodotto
@@ -16,7 +67,7 @@ La milestone usa cinque livelli distinti: test puri, integrazione con driver fak
   distingue gli asset di preview dai byte realmente incorporati nel mobile.
 - La gerarchia verificabile e funzione, CTA, durata/formato, naming evocativo.
 - Il solo `audioPresetId` appartiene a `AUDIO_TEST_RITUAL` con stato `test-only`.
-- Yoga espone soltanto formati futuri 20/30/45/60 minuti.
+- Yoga espone soltanto 20/30/45/60/90 minuti.
 - Soundscapes espone le famiglie richieste e la collezione `Noise Colours`.
 - `AUDIO TEST PACK 01` integrato e limitato a tre nomi canonici.
 - Copy senza promesse mediche affermative.
@@ -51,8 +102,8 @@ La milestone usa cinque livelli distinti: test puri, integrazione con driver fak
 - Tab e copy esatti per Rituals, Yoga e Soundscapes.
 - Copy IA esatto per `Start your yoga session`, `Set the room for massage`,
   `Relax now`, `Begin meditation`, `Prepare for sleep` e `Focus`.
-- Le card distinguono file incorporato, localhost-only, generatore locale,
-  delivery richiesta, approvazione d'ascolto e rifiuto.
+- Le card usano copy consumer `AVAILABLE`/`IN PRODUCTION`; i dettagli di source,
+  delivery e generazione restano fuori dal percorso consumer.
 - `Aquarian Sky`, Cosmic/Zen Ambient, Esoteric Series ed Elemental Worlds restano
   famiglie editoriali future visibili.
 - Settings collega il percorso separato `Audio Test — Test only`.
@@ -70,6 +121,7 @@ La milestone usa cinque livelli distinti: test puri, integrazione con driver fak
 pnpm install --frozen-lockfile
 pnpm peers check
 pnpm exec expo install --check
+pnpm format:check
 pnpm lint
 pnpm typecheck
 pnpm test
@@ -77,14 +129,27 @@ pnpm test:audio
 pnpm audio:validate-placeholders
 pnpm audio:validate-test-pack
 pnpm audio:validate-consumer
+pnpm audio:verify-lossless
 pnpm assets:validate-safety
 pnpm assets:validate-rituals
 pnpm security:audit
 pnpm config:validate
+pnpm qa:validate-boundary
 pnpm expo:doctor
 pnpm exec expo config --type prebuild --json
-pnpm exec expo export --platform ios --output-dir dist/m3-final-export-ios
-pnpm exec expo export --platform android --output-dir dist/m3-final-export-android
+pnpm exec expo export --platform ios --output-dir dist/m5-export-ios
+pnpm exec expo export --platform android --output-dir dist/m5-export-android
+pnpm export:web:consumer
+pnpm export:web:qa
+pnpm qa:validate-exports
+```
+
+Senza argomenti il gate lossless confronta byte size e SHA-256 di ogni FLAC
+incorporato con il report PCM gia verificato. La riverifica completa del PCM,
+quando WAV sorgenti e decoder FLAC sono disponibili, usa:
+
+```bash
+pnpm audio:verify-lossless -- <wav-dir> <flac-dir> <flac-binary>
 ```
 
 Il validatore consumer legge `docs/M4_LOCAL_LISTENING_MANIFEST.json`, richiede
@@ -94,15 +159,15 @@ se entra `SLEEP_TEXTURE_001.wav`. Il collaudo browser apre separatamente tutte l
 
 `security:audit` accetta soltanto i due advisory `image-size` esplicitamente documentati in D-015 e fallisce su qualsiasi altro advisory o cambio di versione. Il comando raw `pnpm audit --audit-level high` resta atteso exit 1 finche non esiste una release corretta; entrambi gli esiti vanno riportati.
 
-Baseline M2 verificata il 12 agosto 2026: lint, TypeScript, 12 suite/47 test,
-subset audio 26/26, validatori, config ed Expo Doctor 20/20 verdi. M3 deve
-rigenerare tutte le prove, gli export e gli screenshot prima del visual gate.
+Gli export M5 vanno prodotti da una copia temporanea che esclude
+`public/audio-catalog/`: quei 2,6 GiB servono al solo ascolto localhost e non
+sono parte del bundle mobile o dell'artifact di confine QA.
 
 Il prebuild di verifica va eseguito soltanto in una copia temporanea e con `--no-install`; non deve generare `ios/` o `android/` nel checkout.
 
 ## Gate EAS cloud storico e futuro
 
-M3 non autorizza nuove build cloud. Le sezioni seguenti registrano build
+M5 non autorizza nuove build cloud. Le sezioni seguenti registrano build
 precedenti o comandi futuri e non sono parte del gate corrente.
 
 I profili sono separati per evitare autorizzazioni implicite.

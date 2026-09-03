@@ -8,6 +8,7 @@ const mockPush = jest.fn();
 const mockReplace = jest.fn();
 
 jest.mock("expo-router", () => ({
+  useFocusEffect: (callback: () => void) => callback(),
   useRouter: () => ({ push: mockPush, replace: mockReplace }),
 }));
 
@@ -15,13 +16,13 @@ jest.mock("expo-linear-gradient", () => ({
   LinearGradient: "LinearGradient",
 }));
 
-describe("M3 Rituals shell", () => {
+describe("outcome-first Rituals shell", () => {
   beforeEach(() => {
     mockPush.mockClear();
     mockReplace.mockClear();
   });
 
-  it("renders six outcome-first actions with local files or generators", async () => {
+  it("renders six outcome-first actions before music metadata", async () => {
     const screen = await render(<HomeScreen />);
     expect(screen.getByText("What do you need right now?")).toBeTruthy();
     expect(
@@ -31,25 +32,20 @@ describe("M3 Rituals shell", () => {
     ).toBeTruthy();
     expect(
       screen.getByText(
-        "Lossless works and real-time noise colours are available locally. Available works remain provisional; rejected material stays technical-only.",
+        "Choose a need, choose a duration, then start. Personalisation stays optional.",
       ),
     ).toBeTruthy();
     expect(screen.getByText("Start your yoga session")).toBeTruthy();
-    expect(screen.getByText("Set the room for massage")).toBeTruthy();
+    expect(screen.getByText("Start your massage session")).toBeTruthy();
     expect(screen.getByText("Relax now")).toBeTruthy();
     expect(screen.getByText("Begin meditation")).toBeTruthy();
     expect(screen.getByText("Prepare for sleep")).toBeTruthy();
     expect(screen.getByText("Focus")).toBeTruthy();
-    expect(screen.getByText("Green Noise")).toBeTruthy();
-    expect(screen.getAllByText("White Noise")).toHaveLength(2);
-    expect(screen.getByText("Deep River")).toBeTruthy();
-    expect(screen.getByText("Eclipse Veil")).toBeTruthy();
-    expect(screen.getByText("Moon Drone")).toBeTruthy();
-    expect(screen.queryByText("Soft Air")).toBeNull();
-    expect(screen.getByText("20 / 30 / 45 / 60 min")).toBeTruthy();
-    expect(screen.getByText("Room format · duration planned")).toBeTruthy();
-    expect(screen.getAllByText("START HERE")).toHaveLength(6);
-    expect(screen.queryByText("DELIVERY REQUIRED")).toBeNull();
+    expect(screen.getByText("Aquarian Sky")).toBeTruthy();
+    expect(screen.getByText("Quiet Tide")).toBeTruthy();
+    expect(screen.getAllByText("20 / 30 / 45 / 60 / 90 min")).toHaveLength(2);
+    expect(screen.getAllByText("30 / 45 / 60 / 90 min")).toHaveLength(2);
+    expect(screen.getAllByText("CHOOSE A DURATION")).toHaveLength(6);
     expect(screen.getByTestId("outcome-grid")).toBeTruthy();
     expect(
       within(screen.getByTestId("outcome-meditation")).getByText("01"),
@@ -68,7 +64,7 @@ describe("M3 Rituals shell", () => {
     });
     expect(
       StyleSheet.flatten(
-        screen.getByText(/Function first\. Each consumer work/).props.style,
+        screen.getByText(/Choose the purpose first/).props.style,
       ).backgroundColor,
     ).toBe("rgba(248, 242, 232, 0.92)");
     for (const id of [
@@ -89,11 +85,8 @@ describe("M3 Rituals shell", () => {
       });
     }
     expect(screen.queryByText("IN PRODUCTION")).toBeNull();
-    expect(screen.getByTestId("outcome-yoga").props.accessibilityState).toEqual(
-      { disabled: false },
-    );
     expect(screen.getByTestId("outcome-yoga").props.accessibilityLabel).toBe(
-      "YOGA. Start your yoga session. 20 / 30 / 45 / 60 min. Audio available locally.",
+      "YOGA. Start your yoga session. 20 / 30 / 45 / 60 / 90 min. Choose a duration.",
     );
     for (const outcome of CONSUMER_OUTCOMES) {
       const tile = screen.getByTestId(`outcome-${outcome.id}`);

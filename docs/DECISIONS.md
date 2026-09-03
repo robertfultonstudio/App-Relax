@@ -824,3 +824,149 @@ nell'archivio sorgente EAS; `validate-project-config.mjs` richiede la regola e
 `validate-eas-archive.mjs` fallisce se trova la cartella. Il validatore riconosce
 inoltre correttamente i quattro asset audio incorporati: tre WAV ATP01 e un
 consumer starter FLAC.
+
+## D-046 - Sessioni adattive: funzione, durata, Start
+
+Data: 3 settembre 2026
+Stato: decisione umana implementata localmente, gate QA aperto
+
+[F] Le modalità consumer sono `Sound only` e `Guided`. La scelta primaria resta
+bisogno/attività → durata → Start; Customize è facoltativo e chiuso. La voce
+compare soltanto dopo la scelta Guided.
+
+[F] Non esistono registrazioni vocali autorizzate. Guided e la scelta voce
+restano `IN PRODUCTION`; non vengono sintetizzate voci e il CTA non può
+avviare una sessione Guided fittizia.
+
+[F] Le durate strutturali sono 10/20/30/45/60/90 minuti, ma ogni outcome espone
+soltanto il proprio subset sensato. `Play your last session` riusa l'ultima
+richiesta avviata con successo con un nuovo seed; il replay identico resta una funzione
+del solo Workbench.
+
+## D-047 - Continuum è un sequencer deterministico e fail-closed
+
+Data: 3 settembre 2026
+Stato: contratto e implementazione locale QA
+
+[F] Continuum costruisce Arrival → Flow → Deepening → Return in frame interi a
+48 kHz. Il seed rende il piano riproducibile; opere e famiglie non si ripetono
+nella stessa sessione e le tre sessioni recenti alimentano una finestra di
+esclusione.
+
+[F] Ogni passaggio deve superare contemporaneamente gruppo editoriale,
+famiglia armonica, classe di transizione, delta energetico, densità, presenza
+melodica e boundary di ingresso/uscita. Se non esiste una sequenza compatibile,
+il planner restituisce un errore esplicito e non ripiega su accoppiamenti
+casuali.
+
+[I] I metadata Continuum correnti derivano dal catalogo e, in alcuni casi, dal
+filename; sono quindi marcati `PROVISIONAL — CATALOG AND FILENAME INFERENCE`.
+L'approvazione d'ascolto delle opere singole non prova la qualità dei passaggi.
+Il planner consumer li esclude per default; soltanto il QA locale può abilitarli
+esplicitamente. Arrival, Flow, Deepening e Return applicano anche regole di
+energia, densità e presenza melodica proprie della fase.
+
+[F] Il default ambient è un crossfade equal-power di 12 secondi. L'overlap è
+limitato a uscente ed entrante; il limite peak usa il massimo matematico
+dell'intera curva, non un campione al punto medio, ed è compensato con trim
+statico per un limite calcolato di -1,1 dBTP. Nessun limiter o modifica ai
+master. L'ID del piano deriva da input e timeline completi, così varianti di
+curva, disponibilità o storia non collidono.
+
+[U] La precisione reale delle transizioni, due decoder FLAC simultanei, seek,
+preload, background e comportamento su device restano
+`NON DETERMINATO — EVIDENZA INSUFFICIENTE` fino a un'implementazione nativa e a
+prove su telefono.
+
+## D-048 - Offline è un contratto senza delivery inventata
+
+Data: 3 settembre 2026
+Stato: fondazione locale, sorgente remota assente
+
+[F] Il manifest offline non contiene URL. Il primo pacchetto logico Water
+registra 12 opere e 177.645.113 byte, con revisione, object key, dimensione e
+SHA-256. Lo stato copre queued, downloading, verifying, available, removing e
+failed; spazio, retry, rimozione e recovery da interruzione sono separati dagli
+adapter di storage e source.
+
+[F] Il contratto non accetta buffer generici: la sorgente scrive in uno staging
+streaming, ogni asset viene verificato e l'intero tentativo viene promosso o
+annullato. `available` viene riconfermato interrogando byte e SHA-256 reali; una
+revisione catalogo diversa o un file mancante/corrotto degrada in modo
+fail-closed. Le operazioni sullo stesso pacchetto sono serializzate.
+
+[F] `public/audio-catalog/` rimane una sorgente di ascolto read-only su
+localhost. I suoi 2.706.406.941 byte non entrano in Git o EAS e non vengono
+presentati come pacchetto scaricato.
+
+[U] CDN/backend, autenticità del manifest remoto, range/resume, adapter nativo
+che implementi staging/promozione atomica, lease durante playback e SHA-256
+incrementale su iOS/Android non esistono ancora:
+`NON DETERMINATO — EVIDENZA INSUFFICIENTE`.
+
+## D-049 - Il QA Workbench usa una radice Router separata
+
+Data: 3 settembre 2026
+Stato: confine locale verificabile
+
+[F] La configurazione predefinita usa `src/app`; la superficie QA esiste in
+`src/app-qa` ed è selezionata soltanto con `APP_RELAX_SURFACE=qa`. Il Workbench
+non ha link in Home, tab o Settings e porta il sentinel
+`AUDIO QA WORKBENCH · DEVELOPMENT ONLY`.
+
+[F] `.easignore` esclude fisicamente `src/app-qa/` e `src/qa/`, inclusa la
+persistenza del draft QA. Il development
+client può ricevere la radice QA dal Metro locale, mentre la configurazione
+destinata all'archivio EAS predefinito resta consumer. Un validatore esegue
+entrambe le configurazioni e
+scansiona le route consumer. Un secondo validatore confronta gli export Web:
+sentinel, route e chiave di storage devono essere assenti dal consumer e
+presenti nel solo artifact QA.
+
+[F] Il Workbench espone seed, timeline, scrubber, passaggio
+precedente/successivo, loop ±30/60 secondi, outgoing/incoming/both, A/B di
+durata/curva, metriche e audit accelerato. Nessuno di questi termini viene
+mostrato nel percorso consumer.
+
+## D-050 - M5 supera il gate visivo e resta aperta all'ascolto
+
+Data: 3 settembre 2026
+Stato: gate repository/non nativo e screenshot approvati, ascolto aperto
+
+[F] Tutti i controlli M5 sono stati eseguiti con Node 22.23.1 e pnpm 11.16.0:
+formattazione, lint, TypeScript, 33 suite / 131 test, regressione audio 44/44,
+validatori audio/asset/config/security/QA, Expo Doctor 20/20 ed Expo install
+check sono verdi. Il residuo sicurezza resta limitato ai due advisory
+`image-size` già accettati e vincolati dall'asset safety gate.
+
+[F] Gli export da una copia temporanea priva di `public/audio-catalog/` sono
+riusciti per iOS, Android, Web consumer e Web QA. I bundle nativi referenziano
+soltanto tre WAV ATP01 e un FLAC starter; il Workbench e la sua chiave di
+persistenza sono assenti dall'export consumer e presenti solo nell'artifact QA.
+
+[U] Un nuovo archivio sorgente EAS non è stato generato. Il relativo validatore
+è predisposto e `.easignore` è verificato staticamente, ma gli export isolati
+non costituiscono prova dell'archivio prodotto da `eas build:inspect`. Questo
+gate resta `NON DETERMINATO — EVIDENZA INSUFFICIENTE` perché EAS non è
+autorizzato nella milestone.
+
+[F] Nel browser loopback la sequenza Home → Meditation → 20 min → Sound only →
+Start ha raggiunto lo stato Play con Open Tide e timer attivo. Pause ha
+mantenuto il tempo stabile e Play ha ripreso. Il Workbench ha prodotto lo
+stesso piano dal seed e l'audit accelerato ha verificato durata esatta, nessun
+gap, massimo due sorgenti e sette intervalli esatti. Cinque screenshot 390×844
+sono stati salvati in `dist/m5-screenshots/`; i server sono stati spenti.
+
+[F] Il 3 settembre 2026 l'utente ha approvato esplicitamente i cinque
+screenshot M5. Questa decisione chiude il gate visivo ma non costituisce
+approvazione d'ascolto, autorizzazione al commit o prova nativa.
+
+[F] In un ordine successivo l'utente ha autorizzato esplicitamente un solo
+commit locale M5. Push, EAS, build e pubblicazione restano azioni separate e
+non autorizzate.
+
+[U] Questa prova non certifica precisione sample-accurate nativa, due decoder
+FLAC su telefono, background, lock-screen, Bluetooth, batteria o qualità
+musicale delle transizioni. Tali aspetti restano
+`NON DETERMINATO — EVIDENZA INSUFFICIENTE`. Nessun EAS, push o pubblicazione è
+autorizzato o eseguito.
