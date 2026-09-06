@@ -1,84 +1,53 @@
 import { type Href, useRouter } from "expo-router";
-import { Image, StyleSheet, Text, View } from "react-native";
+import { useState } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { EditorialHeader } from "@/components/EditorialHeader";
 import { EditorialScreen } from "@/components/EditorialScreen";
 import { ProductTabBar } from "@/components/ProductTabBar";
-import { ConsumerWorkCard } from "@/components/ConsumerWorkCard";
-import { CONSUMER_AUDIO_WORKS } from "@/content/consumerCatalog";
+import {
+  getVisibleConsumerWorks,
+  isPlayableWork,
+} from "@/content/consumerCatalog";
+import type { ConsumerAudioWork } from "@/domain/audio/consumerTypes";
 import { editorial } from "@/design/editorialTheme";
-import { OUTCOME_ARTWORK } from "@/design/outcomeArtwork";
 import { fonts, spacing } from "@/design/theme";
+
+const FAMILIES = [
+  { id: "sea", label: "Sea" },
+  { id: "rain", label: "Rain" },
+  { id: "stream", label: "Stream" },
+  { id: "music", label: "Music" },
+  { id: "noise", label: "Noise" },
+  { id: "air", label: "Air" },
+] as const;
+type FamilyId = (typeof FAMILIES)[number]["id"];
+
+function familyFor(work: ConsumerAudioWork): FamilyId {
+  if (work.sourceKind === "generated-noise") return "noise";
+  if (work.familyId.startsWith("field-sea-")) return "sea";
+  if (work.familyId.startsWith("field-rain-")) return "rain";
+  if (work.familyId.startsWith("field-stream-") || work.id === "deep-river")
+    return "stream";
+  if (
+    work.collectionIds.includes("elemental-air") ||
+    work.collectionIds.includes("esoteric-series")
+  )
+    return "air";
+  return "music";
+}
 
 export default function SoundscapesScreen() {
   const router = useRouter();
-  const cosmicWorks = CONSUMER_AUDIO_WORKS.filter((work) =>
-    work.collectionIds.includes("cosmic-zen-ambient"),
+  const [expandedFamily, setExpandedFamily] = useState<FamilyId | null>(null);
+  const visibleWorks = getVisibleConsumerWorks().filter(
+    (work) => work.listeningStatus !== "REJECTED — REPLACEMENT REQUIRED",
   );
-  const stillwaterHalo = cosmicWorks.find(
-    (work) => work.id === "stillwater-halo",
-  );
-  const orderedCosmicWorks = cosmicWorks.filter(
-    (work) => work.id !== "stillwater-halo",
-  );
-  if (stillwaterHalo) orderedCosmicWorks.push(stillwaterHalo);
+  const families = FAMILIES.map((family) => ({
+    ...family,
+    works: visibleWorks.filter((work) => familyFor(work) === family.id),
+  })).filter(({ works }) => works.length > 0);
+  const selected = families.find(({ id }) => id === expandedFamily);
 
-  const collections = [
-    {
-      id: "cosmic-zen-ambient",
-      label: "COSMIC / ZEN AMBIENT",
-      works: orderedCosmicWorks,
-    },
-    {
-      id: "standalone-works",
-      label: "STANDALONE WORKS",
-      works: CONSUMER_AUDIO_WORKS.filter((work) =>
-        work.collectionIds.includes("standalone-works"),
-      ),
-    },
-    {
-      id: "noise-colours",
-      label: "NOISE COLOURS",
-      works: CONSUMER_AUDIO_WORKS.filter((work) =>
-        work.collectionIds.includes("noise-colours"),
-      ),
-    },
-    {
-      id: "elemental-rain",
-      label: "ELEMENTAL WORLDS · RAIN",
-      works: CONSUMER_AUDIO_WORKS.filter((work) =>
-        work.familyId.startsWith("field-rain-"),
-      ),
-    },
-    {
-      id: "elemental-stream",
-      label: "ELEMENTAL WORLDS · STREAM",
-      works: CONSUMER_AUDIO_WORKS.filter(
-        (work) =>
-          work.familyId.startsWith("field-stream-") || work.id === "deep-river",
-      ),
-    },
-    {
-      id: "elemental-sea",
-      label: "ELEMENTAL WORLDS · SEA",
-      works: CONSUMER_AUDIO_WORKS.filter((work) =>
-        work.familyId.startsWith("field-sea-"),
-      ),
-    },
-    {
-      id: "elemental-air",
-      label: "ELEMENTAL WORLDS · AIR",
-      works: CONSUMER_AUDIO_WORKS.filter((work) =>
-        work.collectionIds.includes("elemental-air"),
-      ),
-    },
-    {
-      id: "esoteric-series",
-      label: "ESOTERIC SERIES · AIR",
-      works: CONSUMER_AUDIO_WORKS.filter((work) =>
-        work.collectionIds.includes("esoteric-series"),
-      ),
-    },
-  ] as const;
   return (
     <EditorialScreen
       footer={<ProductTabBar activeTab="soundscapes" />}
@@ -86,115 +55,184 @@ export default function SoundscapesScreen() {
     >
       <EditorialHeader
         actionLabel="Settings"
-        label="SOUNDSCAPES"
+        label="SOUNDS"
         onAction={() => router.push("/settings" as Href)}
       />
-      <Text style={styles.kicker}>SOUNDSCAPES</Text>
       <Text accessibilityRole="header" style={styles.title}>
-        Where would you like to go?
+        Find your sound.
       </Text>
       <Text style={styles.intro}>
-        Choose a complete soundscape and begin listening.
+        Open a family, choose a sound, then set your listening time.
       </Text>
 
       <View
-        accessibilityElementsHidden
-        importantForAccessibility="no-hide-descendants"
-        style={styles.editorialArtwork}
+        accessibilityLabel="Sound families"
+        style={styles.index}
+        testID="sound-family-index"
       >
-        <Image
-          accessibilityIgnoresInvertColors
-          accessible={false}
-          resizeMode="cover"
-          source={OUTCOME_ARTWORK.meditation}
-          style={styles.editorialArtworkImage}
-          testID="soundscapes-editorial-artwork"
-        />
+        {families.map((family) => {
+          const expanded = family.id === expandedFamily;
+          return (
+            <Pressable
+              key={family.id}
+              accessibilityRole="button"
+              accessibilityLabel={`${family.label}, ${family.works.length} ${family.works.length === 1 ? "sound" : "sounds"}`}
+              accessibilityHint={
+                expanded ? "Closes this family" : "Shows sounds in this family"
+              }
+              accessibilityState={{ expanded }}
+              aria-expanded={expanded}
+              aria-controls={expanded ? `sound-family-${family.id}` : undefined}
+              onPress={() => setExpandedFamily(expanded ? null : family.id)}
+              style={({ pressed }) => [
+                styles.family,
+                expanded && styles.selectedFamily,
+                pressed && styles.pressed,
+              ]}
+              testID={`sound-family-toggle-${family.id}`}
+            >
+              <View style={styles.familyCopy}>
+                <Text style={styles.familyLabel}>{family.label}</Text>
+                <Text style={styles.count}>
+                  {family.works.length}{" "}
+                  {family.works.length === 1 ? "sound" : "sounds"}
+                </Text>
+              </View>
+              <Text accessible={false} style={styles.mark}>
+                {expanded ? "−" : "+"}
+              </Text>
+            </Pressable>
+          );
+        })}
       </View>
-      <Text style={styles.artworkCaption}>
-        IMAGE STUDY 01 / A LISTENING FIELD
-      </Text>
 
-      <View accessibilityLabel="Soundscape collections" style={styles.list}>
-        {collections.map((collection) => (
-          <View
-            key={collection.id}
-            style={styles.collection}
-            testID={`soundscape-collection-${collection.id}`}
-          >
-            <Text style={styles.collectionLabel}>{collection.label}</Text>
-            {collection.works.map((work) => (
-              <ConsumerWorkCard
+      {selected ? (
+        <View
+          accessibilityLabel={`${selected.label} sounds`}
+          nativeID={`sound-family-${selected.id}`}
+          style={styles.collection}
+          testID={`soundscape-collection-${selected.id}`}
+        >
+          <Text accessibilityRole="header" style={styles.collectionTitle}>
+            {selected.label}
+          </Text>
+          {selected.works.map((work) => {
+            const available = isPlayableWork(work);
+            return (
+              <Pressable
                 key={work.id}
+                accessibilityRole="button"
+                accessibilityLabel={`${work.title}. ${available ? "Choose listening time" : "Not available on this device"}.`}
+                accessibilityState={{ disabled: !available }}
+                disabled={!available}
                 onPress={() => router.push(`/listen/${work.id}` as Href)}
-                work={work}
-              />
-            ))}
-          </View>
-        ))}
-      </View>
-      <Text style={styles.note}>
-        Choose one complete work at a time. Noise colours continue for as long
-        as your session needs.
-      </Text>
+                style={({ pressed }) => [
+                  styles.work,
+                  pressed && styles.pressed,
+                ]}
+                testID={`consumer-work-${work.id}`}
+              >
+                <View style={styles.workCopy}>
+                  <Text style={styles.workTitle}>{work.title}</Text>
+                  <Text style={styles.workNote}>
+                    {!available
+                      ? "Not available on this device"
+                      : work.sourceKind === "generated-noise"
+                        ? "Continuous sound · Choose duration"
+                        : "Choose duration"}
+                  </Text>
+                </View>
+                {available ? (
+                  <Text accessible={false} style={styles.mark}>
+                    →
+                  </Text>
+                ) : null}
+              </Pressable>
+            );
+          })}
+        </View>
+      ) : null}
     </EditorialScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  kicker: {
-    color: editorial.mineralBlue,
-    fontFamily: fonts.sansSemiBold,
-    fontSize: 11,
-    letterSpacing: 1.8,
-  },
   title: {
     color: editorial.ink,
     fontFamily: fonts.serif,
-    fontSize: 43,
-    lineHeight: 46,
-    marginTop: spacing.sm,
-    maxWidth: 350,
+    fontSize: 36,
+    lineHeight: 40,
   },
   intro: {
     color: editorial.inkMuted,
     fontFamily: fonts.sans,
     fontSize: 15,
-    lineHeight: 23,
-    marginTop: spacing.md,
+    lineHeight: 22,
+    marginTop: spacing.sm,
     maxWidth: 340,
   },
-  list: { marginTop: spacing.xl },
-  collection: { marginBottom: spacing.xl },
-  collectionLabel: {
-    color: editorial.mineralBlue,
-    fontFamily: fonts.sansSemiBold,
-    fontSize: 11,
-    letterSpacing: 1.3,
-    marginBottom: spacing.md,
+  index: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    marginTop: spacing.lg,
   },
-  editorialArtwork: {
-    height: 190,
-    overflow: "hidden",
-    marginTop: spacing.xl,
-  },
-  editorialArtworkImage: { height: "100%", width: "100%" },
-  artworkCaption: {
-    color: editorial.inkFaint,
-    fontFamily: fonts.sansSemiBold,
-    fontSize: 11,
-    letterSpacing: 0.9,
-    marginTop: spacing.sm,
-    textAlign: "right",
-  },
-  note: {
-    color: editorial.inkFaint,
-    fontFamily: fonts.sans,
-    fontSize: 11,
-    lineHeight: 17,
-    marginTop: spacing.xl,
+  family: {
+    width: "48%",
+    minHeight: 76,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    borderTopColor: editorial.lineStrong,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: editorial.line,
-    paddingTop: spacing.md,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
+  selectedFamily: { backgroundColor: editorial.paperDeep },
+  familyCopy: { flex: 1, paddingRight: spacing.xs },
+  familyLabel: {
+    color: editorial.ink,
+    fontFamily: fonts.serif,
+    fontSize: 25,
+    lineHeight: 30,
+  },
+  count: {
+    color: editorial.inkMuted,
+    fontFamily: fonts.sans,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  mark: { color: editorial.ink, fontSize: 22 },
+  collection: { marginTop: spacing.lg },
+  collectionTitle: {
+    color: editorial.ink,
+    fontFamily: fonts.serif,
+    fontSize: 30,
+    lineHeight: 36,
+    marginBottom: spacing.sm,
+  },
+  work: {
+    minHeight: 76,
+    paddingVertical: spacing.md,
+    borderTopColor: editorial.line,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  workCopy: { flex: 1, paddingRight: spacing.md },
+  workTitle: {
+    color: editorial.ink,
+    fontFamily: fonts.serif,
+    fontSize: 23,
+    lineHeight: 28,
+  },
+  workNote: {
+    color: editorial.inkMuted,
+    fontFamily: fonts.sans,
+    fontSize: 14,
+    lineHeight: 20,
+    marginTop: spacing.xs,
+  },
+  pressed: { backgroundColor: editorial.paperDeep },
 });

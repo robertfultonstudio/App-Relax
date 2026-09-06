@@ -7,6 +7,7 @@ import { useEffect } from "react";
 import { View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AudioProvider } from "@/audio/AudioProvider";
+import { createAudioGraphDriver } from "@/audio/createAudioDriver";
 import { colors } from "@/design/theme";
 
 void SplashScreen.preventAutoHideAsync();
@@ -31,14 +32,13 @@ export default function QaRootLayout() {
 
   const usesTechnicalShell =
     pathname === "/audio-test" ||
-    pathname === "/qa-workbench" ||
     pathname === "/legal" ||
     pathname.startsWith("/category/") ||
     pathname.startsWith("/session/");
 
   return (
     <SafeAreaProvider>
-      <AudioProvider>
+      <AudioProvider createDriver={createAudioGraphDriver}>
         <Stack
           screenOptions={{
             headerShown: false,

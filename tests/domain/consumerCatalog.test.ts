@@ -1,8 +1,10 @@
 import {
   CONSUMER_AUDIO_WORKS,
+  getConsumerWork,
   getEmbeddedWorksForOutcome,
   getPlayableWorksForOutcome,
   getWorksForOutcome,
+  getVisibleConsumerWorks,
   isPlayableWorkOnWeb,
 } from "@/content/consumerCatalog";
 import { CONSUMER_OUTCOMES } from "@/content/productShell";
@@ -12,12 +14,12 @@ import {
 } from "@/domain/audio/consumerTypes";
 
 describe("M4 autonomous consumer catalog", () => {
-  it("registers 42 file works and 8 autonomous noise generators", () => {
-    expect(CONSUMER_AUDIO_WORKS).toHaveLength(50);
-    expect(new Set(CONSUMER_AUDIO_WORKS.map((work) => work.id)).size).toBe(50);
+  it("registers 40 file works and 8 autonomous noise generators", () => {
+    expect(CONSUMER_AUDIO_WORKS).toHaveLength(48);
+    expect(new Set(CONSUMER_AUDIO_WORKS.map((work) => work.id)).size).toBe(48);
     expect(
       new Set(CONSUMER_AUDIO_WORKS.map((work) => work.assetKey)).size,
-    ).toBe(50);
+    ).toBe(48);
     expect(
       CONSUMER_AUDIO_WORKS.every(
         (work) => createSingleTrackProgram(work).kind === "single-track",
@@ -25,15 +27,15 @@ describe("M4 autonomous consumer catalog", () => {
     ).toBe(true);
   });
 
-  it("makes all 39 listening-approved works playable in the web preview", () => {
+  it("makes all 37 listening-approved works playable in the web preview", () => {
     const approved = CONSUMER_AUDIO_WORKS.filter(
       (work) => work.listeningStatus === "APPROVED — LISTENING PASSED",
     );
-    expect(approved).toHaveLength(39);
+    expect(approved).toHaveLength(37);
     expect(approved.every(isPlayableWorkOnWeb)).toBe(true);
     expect(
       approved.filter((work) => work.availability === "local-preview-file"),
-    ).toHaveLength(38);
+    ).toHaveLength(37);
   });
 
   it("keeps every generated colour single-source, local and asset-free", () => {
@@ -72,11 +74,17 @@ describe("M4 autonomous consumer catalog", () => {
         ),
       ).toBe(true);
     }
-    expect(
-      CONSUMER_OUTCOMES.filter(
-        (outcome) => getEmbeddedWorksForOutcome(outcome.id).length > 0,
-      ).map((outcome) => outcome.id),
-    ).toEqual(["meditation", "relax", "sleep"]);
+    for (const outcome of CONSUMER_OUTCOMES) {
+      expect(getEmbeddedWorksForOutcome(outcome.id)).toEqual([]);
+      for (const technicalId of ["moon-drone", "deep-river", "soft-air"]) {
+        expect(
+          getWorksForOutcome(outcome.id).map(({ id }) => id),
+        ).not.toContain(technicalId);
+        expect(
+          getPlayableWorksForOutcome(outcome.id).map(({ id }) => id),
+        ).not.toContain(technicalId);
+      }
+    }
     expect(
       CONSUMER_OUTCOMES.filter(
         (outcome) => getPlayableWorksForOutcome(outcome.id).length > 0,
@@ -84,7 +92,7 @@ describe("M4 autonomous consumer catalog", () => {
     ).toEqual(["meditation", "yoga", "massage", "relax", "sleep", "focus"]);
   });
 
-  it("features the approved sea works before Eclipse Veil in Meditation", () => {
+  it("features the approved sea works and excludes both removed works", () => {
     const meditationWorks = getWorksForOutcome("meditation");
     expect(meditationWorks.slice(0, 6).map((work) => work.id)).toEqual([
       "field-sea-003-open-tide",
@@ -95,9 +103,14 @@ describe("M4 autonomous consumer catalog", () => {
       "field-sea-004-night-shore",
     ]);
     expect(meditationWorks[0]?.title).toBe("Open Tide");
+    expect(getConsumerWork("eclipse-veil")).toBeUndefined();
     expect(
-      meditationWorks.findIndex((work) => work.id === "eclipse-veil"),
-    ).toBeGreaterThanOrEqual(6);
+      CONSUMER_AUDIO_WORKS.some((work) => work.assetKey === "eclypsis001"),
+    ).toBe(false);
+    expect(getConsumerWork("stillwater-halo")).toBeUndefined();
+    expect(
+      CONSUMER_AUDIO_WORKS.some((work) => work.assetKey === "nirvanaWaves001"),
+    ).toBe(false);
   });
 
   it("keeps every post-gain true peak below -1 dBTP", () => {
@@ -113,7 +126,7 @@ describe("M4 autonomous consumer catalog", () => {
     }
   });
 
-  it("reuses ATP01 asset keys without declaring new consumer WAV copies", () => {
+  it("retains ATP01 technical lookup and original asset keys without exposing them as consumer works", () => {
     const reused = CONSUMER_AUDIO_WORKS.filter(
       (work) => work.availability === "embedded-wav",
     );
@@ -124,6 +137,8 @@ describe("M4 autonomous consumer catalog", () => {
     expect(reused.every((work) => work.familyId === "audio-test-pack-01")).toBe(
       true,
     );
+    expect(getConsumerWork("moon-drone")?.assetKey).toBe("sleepDrone001");
+    expect(getConsumerWork("deep-river")?.assetKey).toBe("sleepAmbience001");
     const rejected = CONSUMER_AUDIO_WORKS.find(
       (work) => work.id === "soft-air",
     );
@@ -134,6 +149,26 @@ describe("M4 autonomous consumer catalog", () => {
     });
     expect(getPlayableWorksForOutcome("focus")).not.toContainEqual(rejected);
   });
+
+  it.each(["0", "1"])(
+    "excludes each ATP work from consumer lists with PWA flag %s",
+    (flag) => {
+      const previous = process.env.EXPO_PUBLIC_APP_RELAX_PWA;
+      try {
+        process.env.EXPO_PUBLIC_APP_RELAX_PWA = flag;
+        const visible = getVisibleConsumerWorks();
+        expect(visible).toHaveLength(45);
+        for (const technicalId of ["moon-drone", "deep-river", "soft-air"]) {
+          expect(visible.map(({ id }) => id)).not.toContain(technicalId);
+          expect(getConsumerWork(technicalId)).toBeDefined();
+        }
+      } finally {
+        if (previous === undefined)
+          delete process.env.EXPO_PUBLIC_APP_RELAX_PWA;
+        else process.env.EXPO_PUBLIC_APP_RELAX_PWA = previous;
+      }
+    },
+  );
 
   it("keeps pair members as separate editorial variants", () => {
     for (const familyId of [

@@ -67,23 +67,26 @@ const styles = StyleSheet.create({
   header: {
     minHeight: 62,
     flexDirection: "row",
+    flexWrap: "wrap",
+    columnGap: spacing.sm,
+    rowGap: spacing.xs,
     alignItems: "center",
     justifyContent: "space-between",
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: editorial.line,
-    marginBottom: spacing.xl,
+    marginBottom: spacing.md,
   },
   brandBlock: { width: 92 },
   brand: {
     color: editorial.ink,
     fontFamily: fonts.sansSemiBold,
-    fontSize: 11,
+    fontSize: 14,
     letterSpacing: 1.1,
   },
   edition: {
     color: editorial.inkFaint,
     fontFamily: fonts.sans,
-    fontSize: 11,
+    fontSize: 12,
     lineHeight: 16,
     letterSpacing: 0.75,
     marginTop: 2,
@@ -91,7 +94,9 @@ const styles = StyleSheet.create({
   section: {
     color: editorial.inkMuted,
     fontFamily: fonts.sansMedium,
-    fontSize: 11,
+    fontSize: 14,
+    flexShrink: 1,
+    textAlign: "center",
     letterSpacing: 1.5,
   },
   sideAction: {
@@ -103,13 +108,13 @@ const styles = StyleSheet.create({
   action: {
     color: editorial.gold,
     fontFamily: fonts.sansSemiBold,
-    fontSize: 12,
+    fontSize: 14,
   },
   backLabel: {
     alignSelf: "flex-start",
     color: editorial.ink,
     fontFamily: fonts.sansSemiBold,
-    fontSize: 11,
+    fontSize: 14,
     letterSpacing: 0.65,
   },
   pressed: {

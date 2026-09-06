@@ -31,7 +31,10 @@ import {
 } from "@/audio/generators/coloredNoise";
 import { STEM_ASSETS } from "./stemAssets";
 import { CONSUMER_ASSETS } from "./consumerAssets";
-import type { AdaptiveSessionProgram } from "@/domain/sessions/types";
+import type {
+  AdaptiveSessionProgram,
+  NatureMixLevel,
+} from "@/domain/sessions/types";
 import type { TransitionAudition } from "@/domain/sessions/workbench";
 import {
   createStreamingStemSource,
@@ -39,6 +42,8 @@ import {
   type NativeFileSourceNode,
   type StreamingStemSource,
 } from "./StreamingStemSource";
+import { AdaptiveNativePlayback } from "./AdaptiveNativePlayback";
+import type { NativeAudioSourceResolver } from "./NativeAudioSourceResolver";
 
 interface RemovableSubscription {
   remove(): void;
@@ -80,6 +85,14 @@ function safeStop(node: AudioBufferSourceNode | OscillatorNode): void {
   }
 }
 
+function safeDisconnect(node: GainNode): void {
+  try {
+    node.disconnect();
+  } catch {
+    /* Continue stopping the remaining graph. */
+  }
+}
+
 export class ReactNativeAudioDriver implements AudioGraphDriver {
   readonly capabilities = {
     backgroundPlayback: true,
@@ -106,12 +119,24 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
   private programNoiseBuffer: AudioBuffer | null = null;
   private programPlaybackGain = 1;
   private programVolume = 1;
+  private singleTrackPositionSeconds = 0;
   private graphStarted = false;
   private handlers: RemoteCommandHandlers | null = null;
   private subscriptions: RemovableSubscription[] = [];
   private notificationPermissionGranted = false;
   private notificationGeneration = 0;
   private notificationDesiredState: NotificationPlaybackState = "hidden";
+  private adaptive: AdaptiveNativePlayback | null = null;
+  private loadedAdaptivePlanId: string | null = null;
+  private adaptiveHandlers: AdaptiveSessionEventHandlers | null = null;
+
+  constructor(
+    private readonly nativeSourceResolver?: NativeAudioSourceResolver,
+  ) {}
+
+  activateUserGesture(): void {
+    // Native playback does not use browser user-activation policy.
+  }
 
   setRemoteCommandHandlers(handlers: RemoteCommandHandlers): void {
     this.handlers = handlers;
@@ -149,10 +174,9 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
   }
 
   setAdaptiveSessionEventHandlers(
-    _handlers: AdaptiveSessionEventHandlers,
+    handlers: AdaptiveSessionEventHandlers,
   ): void {
-    // Adaptive playback is intentionally fail-closed in native builds until
-    // downloaded-package storage and transition playback are implemented.
+    this.adaptiveHandlers = handlers;
   }
 
   async loadPreset(preset: AudioPreset): Promise<void> {
@@ -235,6 +259,7 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
     const context = this.requireContext();
     this.programLocalUri = null;
     this.programNoiseBuffer = null;
+    this.singleTrackPositionSeconds = 0;
     if (program.work.sourceKind === "generated-noise") {
       if (!program.work.noiseColor) {
         throw new Error(`${program.work.title} has no noise colour defined.`);
@@ -278,17 +303,52 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
 
   async loadAdaptiveSession(program: AdaptiveSessionProgram): Promise<void> {
     await this.stop();
-    const missing = program.works.filter(
-      (work) => work.sourceKind !== "file" || !CONSUMER_ASSETS[work.assetKey],
-    );
-    if (missing.length > 0) {
+    if (!this.nativeSourceResolver) {
       throw new Error(
         "Adaptive mobile sessions need verified downloaded packages; mobile asset delivery is in production.",
       );
     }
-    throw new Error(
-      "Adaptive dual-deck playback is prepared for native integration but is not device-validated.",
+    this.ensureContext();
+    const planId = program.plan.id;
+    const adaptive = new AdaptiveNativePlayback(
+      this.requireContext(),
+      this.masterGain!,
+      this.nativeSourceResolver,
+      {
+        ended: () => {
+          if (this.adaptive !== adaptive) return;
+          void this.stop().then(
+            () => this.adaptiveHandlers?.ended(planId),
+            (error: unknown) =>
+              this.adaptiveHandlers?.error(
+                planId,
+                error instanceof Error
+                  ? error
+                  : new Error("Native cleanup failed."),
+              ),
+          );
+        },
+        error: (error) => {
+          if (this.adaptive !== adaptive) return;
+          void this.stop().then(
+            () => this.adaptiveHandlers?.error(planId, error),
+            () => this.adaptiveHandlers?.error(planId, error),
+          );
+        },
+      },
     );
+    this.adaptive = adaptive;
+    try {
+      await adaptive.load(program);
+      if (this.adaptive !== adaptive)
+        throw new Error("Native adaptive load cancelled.");
+      this.loadedAdaptivePlanId = planId;
+      this.loadedProgramId = null;
+      this.loadedPresetId = null;
+    } catch (error) {
+      await this.stop();
+      throw error;
+    }
   }
 
   async start(
@@ -430,6 +490,11 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
         this.singleTrackNoiseRuntime.source.start(startAt);
       } else {
         this.singleTrackRuntime?.source.start(startAt);
+        if (this.singleTrackPositionSeconds > 0) {
+          this.singleTrackRuntime?.source.seekToTime(
+            this.singleTrackPositionSeconds,
+          );
+        }
       }
       this.graphStarted = true;
       this.notificationDesiredState = "playing";
@@ -446,23 +511,78 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
   }
 
   async startAdaptiveSession(
-    _program: AdaptiveSessionProgram,
-    _volume: number,
-    _positionSeconds = 0,
+    program: AdaptiveSessionProgram,
+    volume: number,
+    positionSeconds = 0,
   ): Promise<void> {
-    throw new Error(
-      "Adaptive dual-deck playback is not enabled in this native build.",
-    );
+    if (this.graphStarted) return;
+    if (this.loadedAdaptivePlanId !== program.plan.id)
+      await this.loadAdaptiveSession(program);
+    try {
+      AudioManager.setAudioSessionOptions({
+        iosCategory: "playback",
+        iosMode: "default",
+        iosOptions: ["allowAirPlay"],
+      });
+      AudioManager.observeAudioInterruptions(true);
+      await AudioManager.setAudioSessionActivity(true);
+      this.masterGain!.gain.cancelScheduledValues(
+        this.requireContext().currentTime,
+      );
+      this.masterGain!.gain.setValueAtTime(
+        1,
+        this.requireContext().currentTime,
+      );
+      await this.adaptive!.start(volume, positionSeconds);
+      this.graphStarted = true;
+      this.notificationDesiredState = "playing";
+      const generation = ++this.notificationGeneration;
+      void this.showPlaybackNotification(
+        "App Relax",
+        program.plan.outcome,
+        generation,
+      );
+    } catch (error) {
+      await this.stop();
+      throw error;
+    }
   }
 
-  async seekAdaptiveSession(_positionSeconds: number): Promise<void> {
-    throw new Error("Adaptive session seeking is not enabled natively.");
+  async seekSingleTrack(positionSeconds: number): Promise<void> {
+    if (!this.loadedProgramId) {
+      throw new Error("No single-track program is loaded.");
+    }
+    if (this.programNoiseBuffer) {
+      throw new Error("Continuous generators do not have a file position.");
+    }
+    this.singleTrackPositionSeconds = positionSeconds;
+    this.singleTrackRuntime?.source.seekToTime(positionSeconds);
+  }
+
+  async seekAdaptiveSession(positionSeconds: number): Promise<void> {
+    if (!this.adaptive)
+      throw new Error("No native adaptive session is loaded.");
+    try {
+      await this.adaptive.seek(positionSeconds);
+    } catch (error) {
+      await this.stop();
+      throw error;
+    }
   }
 
   async configureAdaptiveAudition(
     _audition: TransitionAudition | null,
   ): Promise<void> {
     throw new Error("The QA audition surface is not enabled natively.");
+  }
+
+  async setAdaptiveNatureLevel(
+    level: NatureMixLevel,
+    fadeMs: number,
+  ): Promise<void> {
+    if (!this.adaptive)
+      throw new Error("No native adaptive session is loaded.");
+    this.adaptive.setNatureLevel(level, fadeMs);
   }
 
   async resume(): Promise<void> {
@@ -474,6 +594,7 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
     await this.context.resume();
     AudioManager.observeAudioInterruptions(true);
     await AudioManager.setAudioSessionActivity(true);
+    this.adaptive?.resume();
     if (this.notificationPermissionGranted) {
       try {
         await PlaybackNotificationManager.show({ state: "playing", speed: 1 });
@@ -495,6 +616,7 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
     const notificationGeneration = ++this.notificationGeneration;
     this.notificationDesiredState = "paused";
     await this.context.suspend();
+    this.adaptive?.pause();
     if (releaseAudioFocus) {
       AudioManager.observeAudioInterruptions(false);
       try {
@@ -518,49 +640,65 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
   }
 
   async stop(): Promise<void> {
+    const adaptive = this.adaptive;
+    this.adaptive = null;
+    this.loadedAdaptivePlanId = null;
     const notificationGeneration = ++this.notificationGeneration;
     this.notificationDesiredState = "hidden";
-    if (this.context && this.masterGain) {
-      const now = this.context.currentTime;
-      this.masterGain.gain.cancelScheduledValues(now);
-      this.masterGain.gain.setValueAtTime(SILENT_GAIN, now);
+    let adaptiveCleanupError: unknown;
+    try {
+      await adaptive?.stop();
+    } catch (error) {
+      adaptiveCleanupError = error;
+    }
+    try {
+      if (this.context && this.masterGain) {
+        const now = this.context.currentTime;
+        this.masterGain.gain.cancelScheduledValues(now);
+        this.masterGain.gain.setValueAtTime(SILENT_GAIN, now);
+      }
+    } catch {
+      /* Source pause/stop must not depend on a healthy AudioParam. */
     }
 
     for (const runtime of this.stemRuntime.values()) {
       stopStreamingStemSource(runtime);
-      runtime.gain.disconnect();
+      safeDisconnect(runtime.gain);
     }
     this.stemRuntime.clear();
 
     if (this.singleTrackRuntime) {
       stopStreamingStemSource(this.singleTrackRuntime);
-      this.singleTrackRuntime.gain.disconnect();
+      safeDisconnect(this.singleTrackRuntime.gain);
       this.singleTrackRuntime = null;
     }
 
     if (this.singleTrackNoiseRuntime) {
       safeStop(this.singleTrackNoiseRuntime.source);
-      this.singleTrackNoiseRuntime.gain.disconnect();
+      safeDisconnect(this.singleTrackNoiseRuntime.gain);
       this.singleTrackNoiseRuntime = null;
     }
 
     if (this.brownNoiseRuntime) {
       safeStop(this.brownNoiseRuntime.source);
-      this.brownNoiseRuntime.gain.disconnect();
+      safeDisconnect(this.brownNoiseRuntime.gain);
       this.brownNoiseRuntime = null;
     }
     if (this.binauralRuntime) {
       safeStop(this.binauralRuntime.left);
       safeStop(this.binauralRuntime.right);
-      this.binauralRuntime.gain.disconnect();
+      safeDisconnect(this.binauralRuntime.gain);
       this.binauralRuntime = null;
     }
     this.sourceGains.clear();
     this.graphStarted = false;
+    this.singleTrackPositionSeconds = 0;
     AudioManager.observeAudioInterruptions(false);
 
-    if (this.context?.state === "running") {
-      await this.context.suspend();
+    try {
+      if (this.context?.state === "running") await this.context.suspend();
+    } catch {
+      /* Sources are stopped; still hide metadata and release focus. */
     }
     try {
       await PlaybackNotificationManager.hide();
@@ -577,6 +715,7 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
     } catch {
       // The graph is already silent; native lifecycle tests cover platform cleanup.
     }
+    if (adaptiveCleanupError) throw adaptiveCleanupError;
   }
 
   async dispose(): Promise<void> {
@@ -619,6 +758,10 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
   }
 
   async setMasterVolume(volume: number, fadeMs: number): Promise<void> {
+    if (this.adaptive) {
+      this.adaptive.setVolume(volume, fadeMs);
+      return;
+    }
     this.programVolume = Math.min(1, Math.max(0, volume));
     const node =
       this.singleTrackRuntime?.gain ?? this.singleTrackNoiseRuntime?.gain;
@@ -636,6 +779,9 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
   }
 
   async scheduleFadeOut(remainingMs: number, fadeMs: number): Promise<void> {
+    // Adaptive segment envelopes and stop deadlines are already on the native
+    // clock. Do not overwrite them with the legacy single-track timer.
+    if (this.adaptive) return;
     if (!this.context || !this.masterGain || !this.graphStarted) {
       return;
     }

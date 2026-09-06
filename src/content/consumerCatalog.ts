@@ -1,5 +1,8 @@
 import type { ConsumerOutcomeId } from "./productShell";
-import { Platform } from "react-native";
+import {
+  isAdaptivePlaybackAvailable,
+  isPwaWebSurface,
+} from "@/domain/sessions/playbackAvailability";
 import type {
   ConsumerAudioWork,
   ConsumerCollectionId,
@@ -50,37 +53,6 @@ const NOISE_COMMON = {
 };
 
 export const CONSUMER_AUDIO_WORKS: readonly ConsumerAudioWork[] = [
-  work(
-    "eclipse-veil",
-    "Eclipse Veil",
-    "eclypsis-001",
-    "eclypsis001",
-    "SOUNDSCAPE_ECLYPSIS_001_EMINOR_48K24_LOOP.wav",
-    "meditation",
-    [],
-    ["cosmic-zen-ambient"],
-    172.8125,
-    8295000,
-    -17.999,
-    -5.93,
-    -0.001,
-    "embedded-flac",
-  ),
-  work(
-    "stillwater-halo",
-    "Stillwater Halo",
-    "nirvana-waves-001",
-    "nirvanaWaves001",
-    "SOUNDSCAPE_NIRVANA_WAVES_001_EMINOR_48K24_LOOP.wav",
-    "relax",
-    [],
-    ["cosmic-zen-ambient"],
-    170,
-    8160000,
-    -18.002,
-    -5.07,
-    0.002,
-  ),
   work(
     "mineral-drift",
     "Mineral Drift",
@@ -277,57 +249,61 @@ export const CONSUMER_AUDIO_WORKS: readonly ConsumerAudioWork[] = [
     2.329,
   ),
   ...APPROVED_ELEMENTAL_WORKS,
-  work(
-    "moon-drone",
-    "Moon Drone",
-    "audio-test-pack-01",
-    "sleepDrone001",
-    "SLEEP_DRONE_001.wav",
-    "sleep",
-    [],
-    ["cosmic-zen-ambient"],
-    180,
-    8640000,
-    -14,
-    -2.02,
-    -4,
-    "embedded-wav",
-    "PROVISIONAL — LISTENING APPROVAL REQUIRED",
-  ),
-  work(
-    "deep-river",
-    "Deep River",
-    "audio-test-pack-01",
-    "sleepAmbience001",
-    "SLEEP_AMBIENCE_001.wav",
-    "relax",
-    ["sleep"],
-    ["elemental-water"],
-    180,
-    8640000,
-    -20.028,
-    -8.01,
-    2.028,
-    "embedded-wav",
-    "PROVISIONAL — LISTENING APPROVAL REQUIRED",
-  ),
-  work(
-    "soft-air",
-    "Soft Air",
-    "audio-test-pack-01",
-    "sleepTexture001",
-    "SLEEP_TEXTURE_001.wav",
-    "focus",
-    ["relax"],
-    ["elemental-air"],
-    180,
-    8640000,
-    -13.999,
-    -2.02,
-    -4.001,
-    "rejected-listening",
-    "REJECTED — REPLACEMENT REQUIRED",
-  ),
+  ...(process.env.EXPO_PUBLIC_APP_RELAX_PWA === "1"
+    ? []
+    : [
+        work(
+          "moon-drone",
+          "Moon Drone",
+          "audio-test-pack-01",
+          "sleepDrone001",
+          "SLEEP_DRONE_001.wav",
+          "sleep",
+          [],
+          ["cosmic-zen-ambient"],
+          180,
+          8640000,
+          -14,
+          -2.02,
+          -4,
+          "embedded-wav",
+          "PROVISIONAL — LISTENING APPROVAL REQUIRED",
+        ),
+        work(
+          "deep-river",
+          "Deep River",
+          "audio-test-pack-01",
+          "sleepAmbience001",
+          "SLEEP_AMBIENCE_001.wav",
+          "relax",
+          ["sleep"],
+          ["elemental-water"],
+          180,
+          8640000,
+          -20.028,
+          -8.01,
+          2.028,
+          "embedded-wav",
+          "PROVISIONAL — LISTENING APPROVAL REQUIRED",
+        ),
+        work(
+          "soft-air",
+          "Soft Air",
+          "audio-test-pack-01",
+          "sleepTexture001",
+          "SLEEP_TEXTURE_001.wav",
+          "focus",
+          ["relax"],
+          ["elemental-air"],
+          180,
+          8640000,
+          -13.999,
+          -2.02,
+          -4.001,
+          "rejected-listening",
+          "REJECTED — REPLACEMENT REQUIRED",
+        ),
+      ]),
   noiseWork("white-noise", "white", "focus", ["massage"]),
   noiseWork("pink-noise", "pink", "sleep", ["relax", "massage"]),
   noiseWork("brown-red-noise", "brown", "sleep", ["relax"]),
@@ -413,10 +389,18 @@ export function isEmbeddedWork(work: ConsumerAudioWork): boolean {
 }
 
 export function isPlayableWork(work: ConsumerAudioWork): boolean {
+  if (isPwaWebSurface()) {
+    return (
+      work.availability === "generated-runtime" ||
+      (isAdaptivePlaybackAvailable() &&
+        work.availability === "local-preview-file")
+    );
+  }
   return (
     isEmbeddedWork(work) ||
     work.availability === "generated-runtime" ||
-    (Platform.OS === "web" && work.availability === "local-preview-file")
+    (isAdaptivePlaybackAvailable() &&
+      work.availability === "local-preview-file")
   );
 }
 
@@ -426,6 +410,17 @@ export function isPlayableWorkOnWeb(work: ConsumerAudioWork): boolean {
     work.availability === "generated-runtime" ||
     work.availability === "local-preview-file"
   );
+}
+
+export function isVisibleConsumerWork(work: ConsumerAudioWork): boolean {
+  return (
+    work.availability === "local-preview-file" ||
+    work.availability === "generated-runtime"
+  );
+}
+
+export function getVisibleConsumerWorks(): readonly ConsumerAudioWork[] {
+  return CONSUMER_AUDIO_WORKS.filter(isVisibleConsumerWork);
 }
 
 const MEDITATION_EDITORIAL_PRIORITY = [
@@ -444,7 +439,7 @@ const MEDITATION_EDITORIAL_RANK = new Map<string, number>(
 export function getWorksForOutcome(
   outcome: ConsumerOutcomeId,
 ): readonly ConsumerAudioWork[] {
-  const works = CONSUMER_AUDIO_WORKS.filter(
+  const works = getVisibleConsumerWorks().filter(
     (work) =>
       work.primaryOutcome === outcome ||
       work.secondaryOutcomes.includes(outcome),
@@ -474,7 +469,7 @@ export function getPlayableWorksForOutcome(
 export function getWorksForCollection(
   collectionId: ConsumerCollectionId,
 ): readonly ConsumerAudioWork[] {
-  return CONSUMER_AUDIO_WORKS.filter((work) =>
+  return getVisibleConsumerWorks().filter((work) =>
     work.collectionIds.includes(collectionId),
   );
 }

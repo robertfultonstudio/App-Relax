@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { getSessionPolicy } from "@/content/sessionPolicies";
+import { PROVISIONAL_MUSIC_SESSION_PAIRINGS } from "@/content/sessionWorkProfiles";
 import type { SavedSessionRequest } from "@/state/adaptiveSessionPersistence";
 import { editorial } from "@/design/editorialTheme";
 import { fonts, spacing } from "@/design/theme";
@@ -13,18 +14,23 @@ export function LastSessionAction({
   request: SavedSessionRequest | null;
   onPress: () => void;
 }) {
+  const unavailableMusicRequest =
+    request?.soundKind === "music" &&
+    PROVISIONAL_MUSIC_SESSION_PAIRINGS.length === 0;
   const summary = request
-    ? `${getSessionPolicy(request.outcome).startLabel} · ${request.durationMinutes} min · Sound only`
+    ? `${getSessionPolicy(request.outcome).startLabel} · ${request.durationMinutes} min · ${request.soundKind === "music" ? "Music · In production" : "Natural sounds"} · Sound only`
     : "Your first started session will appear here.";
-  const disabled = !available || !request;
+  const disabled = !available || !request || unavailableMusicRequest;
   return (
     <Pressable
       accessibilityHint={
-        request
-          ? "Prepares a fresh variation using your last choices"
-          : !request
-            ? "No previous session is available"
-            : "Session playback is in production on this device"
+        unavailableMusicRequest
+          ? "Music sessions are in production"
+          : request
+            ? "Prepares a fresh variation using your last choices"
+            : !request
+              ? "No previous session is available"
+              : "Session playback is in production on this device"
       }
       accessibilityLabel={`Play your last session. ${summary}`}
       accessibilityRole="button"

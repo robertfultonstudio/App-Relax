@@ -33,7 +33,7 @@ class Runtime implements ControllerRuntime {
 
 describe("consumer single-track session", () => {
   it("loads one program, starts one source path and persists timer and volume", async () => {
-    const work = getConsumerWork("eclipse-veil");
+    const work = getConsumerWork("deep-river");
     expect(work).toBeDefined();
     const program = createSingleTrackProgram(work!);
     const saved: ConsumerPlayerPreferences[] = [];
@@ -55,7 +55,7 @@ describe("consumer single-track session", () => {
     await controller.loadProgram(program);
     expect(controller.getSnapshot()).toMatchObject({
       mode: "consumer",
-      workId: "eclipse-veil",
+      workId: "deep-river",
       status: "ready",
     });
     await controller.setTimer(60);
@@ -69,7 +69,7 @@ describe("consumer single-track session", () => {
       fadeMs: 180,
     });
     expect(saved.at(-1)).toMatchObject({
-      workId: "eclipse-veil",
+      workId: "deep-river",
       durationMinutes: 60,
       volume: 0.6,
     });
@@ -98,6 +98,48 @@ describe("consumer single-track session", () => {
     expect(controller.getSnapshot()).toMatchObject({
       selectedDurationMinutes: 15,
       volume: 0.4,
+    });
+  });
+
+  it("seeks a loaded file work while rejecting positions outside its source", async () => {
+    const work = getConsumerWork("deep-river")!;
+    const driver = new FakeAudioDriver();
+    const controller = new AudioSessionController(
+      driver,
+      technicalStore,
+      new Runtime(),
+    );
+    await controller.loadProgram(createSingleTrackProgram(work));
+    await controller.seekSingleTrack(42.5);
+    expect(driver.singleTrackSeekCalls).toEqual([42.5]);
+    await expect(
+      controller.seekSingleTrack(work.durationSeconds),
+    ).rejects.toThrow("File position is outside the source.");
+  });
+
+  it("stops playback and exposes an error when a file seek is not confirmed", async () => {
+    const work = getConsumerWork("deep-river")!;
+    const driver = new FakeAudioDriver();
+    const runtime = new Runtime();
+    const controller = new AudioSessionController(
+      driver,
+      technicalStore,
+      runtime,
+    );
+    await controller.loadProgram(createSingleTrackProgram(work));
+    await controller.play();
+    const stopsBeforeSeek = driver.stopCalls;
+    driver.singleTrackSeekError = new Error("Browser seek was not confirmed");
+
+    await expect(controller.seekSingleTrack(42.5)).rejects.toThrow(
+      "Browser seek was not confirmed",
+    );
+    expect(driver.stopCalls).toBe(stopsBeforeSeek + 1);
+    expect(runtime.callback).toBeNull();
+    expect(controller.getSnapshot()).toMatchObject({
+      status: "error",
+      error: "Browser seek was not confirmed",
+      deadlineMs: null,
     });
   });
 });

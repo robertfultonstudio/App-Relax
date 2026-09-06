@@ -9,6 +9,7 @@ describe("Adaptive QA workbench model", () => {
     outcome: "meditation",
     durationMinutes: 90,
     mode: "sound-only",
+    soundKind: "nature",
     seed: "ninety-minute-nrt",
     allowProvisionalMetadata: true,
   });
@@ -55,5 +56,14 @@ describe("Adaptive QA workbench model", () => {
     expect(auditPlanAccelerated(broken)).toEqual(
       expect.objectContaining({ pass: false, noGap: false }),
     );
+  });
+
+  it("fails closed for an empty plan instead of passing vacuous lane checks", () => {
+    expect(
+      auditPlanAccelerated({
+        ...program,
+        plan: { ...program.plan, segments: [], transitions: [] },
+      }),
+    ).toMatchObject({ pass: false, exactEnd: false, noGap: false });
   });
 });

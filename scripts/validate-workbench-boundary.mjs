@@ -32,6 +32,7 @@ function filesBelow(directory) {
 
 const consumer = expoConfig("consumer");
 const qa = expoConfig("qa");
+const pwa = expoConfig("pwa");
 assert(
   consumer.extra?.router?.root === "src/app",
   "consumer root is not src/app",
@@ -42,6 +43,11 @@ assert(
 );
 assert(qa.extra?.router?.root === "src/app-qa", "QA root is not src/app-qa");
 assert(qa.extra?.buildSurface === "qa", "QA surface marker is missing");
+assert(
+  pwa.extra?.router?.root === "src/app-pwa",
+  "PWA root is not src/app-pwa",
+);
+assert(pwa.extra?.buildSurface === "pwa", "PWA surface marker is missing");
 
 const easIgnore = readFileSync(join(projectRoot, ".easignore"), "utf8").split(
   "\n",
@@ -51,6 +57,10 @@ assert(
   "src/app-qa is not excluded from EAS",
 );
 assert(easIgnore.includes("/src/qa/"), "src/qa is not excluded from EAS");
+assert(
+  easIgnore.includes("/src/app-pwa/"),
+  "src/app-pwa is not excluded from EAS",
+);
 
 const consumerFiles = filesBelow(join(projectRoot, "src", "app"));
 const consumerSource = consumerFiles
@@ -68,6 +78,28 @@ for (const forbidden of [
     !consumerSource.includes(forbidden),
     `consumer route source contains ${forbidden}`,
   );
+}
+
+const pwaFiles = filesBelow(join(projectRoot, "src", "app-pwa"));
+const pwaRoutes = pwaFiles.map((path) => relative(projectRoot, path));
+for (const forbiddenRoute of [
+  "src/app-pwa/audio-test.tsx",
+  "src/app-pwa/qa-workbench.tsx",
+  "src/app-pwa/category",
+  "src/app-pwa/session",
+]) {
+  assert(
+    !pwaRoutes.some((path) => path.startsWith(forbiddenRoute)),
+    `PWA route source contains ${forbiddenRoute}`,
+  );
+}
+const pwaSource = pwaFiles
+  .map(
+    (path) => `${relative(projectRoot, path)}\n${readFileSync(path, "utf8")}`,
+  )
+  .join("\n");
+for (const forbidden of ["AUDIO QA WORKBENCH", "qa-workbench", "@/qa/"]) {
+  assert(!pwaSource.includes(forbidden), `PWA source contains ${forbidden}`);
 }
 
 const qaRoute = readFileSync(
@@ -88,5 +120,5 @@ assert(
 );
 
 console.log(
-  `QA Workbench boundary: PASS (${consumerFiles.length} consumer route files clean; roots ${consumer.extra.router.root}/${qa.extra.router.root}; QA source excluded from EAS).`,
+  `QA/PWA boundary: PASS (${consumerFiles.length} consumer and ${pwaFiles.length} PWA route files clean; roots ${consumer.extra.router.root}/${qa.extra.router.root}/${pwa.extra.router.root}; QA/PWA source excluded from EAS).`,
 );

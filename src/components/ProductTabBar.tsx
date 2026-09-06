@@ -68,7 +68,7 @@ const styles = StyleSheet.create({
   label: {
     color: editorial.inkFaint,
     fontFamily: fonts.sansMedium,
-    fontSize: 12,
+    fontSize: 14,
     letterSpacing: 0.8,
   },
   labelSelected: {

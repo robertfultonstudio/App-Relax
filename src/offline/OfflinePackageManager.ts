@@ -8,6 +8,7 @@ import type {
   OfflineStateStore,
   PackageSource,
 } from "@/domain/offline/types";
+import { OfflineTransferError } from "./SameOriginPackageSource";
 
 const SPACE_RESERVE_BYTES = 64 * 1024 * 1024;
 
@@ -43,7 +44,35 @@ export class OfflinePackageManager {
     return this.exclusive(packageId, () => this.hydrateUnlocked(packageId));
   }
 
-  download(packageId: string): Promise<OfflinePackageRecord> {
+  /** Rebuild shared-package availability from actual files without any network action. */
+  reconcile(packageId: string): Promise<OfflinePackageRecord> {
+    return this.exclusive(packageId, async () => {
+      const entry = this.requirePackage(packageId);
+      const stored = await this.stateStore.load(packageId);
+      for (const assetId of entry.assetIds) {
+        if (
+          (await this.binaryStore.inspectCommitted(
+            this.requireAsset(assetId),
+          )) !== "verified"
+        ) {
+          return this.hydrateUnlocked(packageId);
+        }
+      }
+      return this.save(
+        entry,
+        stored?.attempt ?? 0,
+        "available",
+        entry.totalBytes,
+        entry.assetIds,
+        null,
+      );
+    });
+  }
+
+  download(
+    packageId: string,
+    signal?: AbortSignal,
+  ): Promise<OfflinePackageRecord> {
     return this.exclusive(packageId, async () => {
       const entry = this.requirePackage(packageId);
       const assets = entry.assetIds.map((assetId) =>
@@ -94,6 +123,8 @@ export class OfflinePackageManager {
       );
       try {
         for (const asset of missing) {
+          if (signal?.aborted)
+            throw new OfflineTransferError("cancelled", "Download cancelled.");
           await this.save(
             entry,
             attempt,
@@ -105,38 +136,50 @@ export class OfflinePackageManager {
           const sink = await this.binaryStore.openStagingSink(asset, attempt);
           let assetProgress = 0;
           try {
-            await this.source.transfer(asset, sink, async (bytesDelta) => {
-              if (!Number.isFinite(bytesDelta) || bytesDelta <= 0) {
-                throw new Error("Invalid offline transfer progress.");
-              }
-              assetProgress += bytesDelta;
-              if (assetProgress > asset.bytes) {
-                throw new Error("Offline transfer exceeded the manifest size.");
-              }
-              bytesDownloaded =
-                existingBytes +
-                staged.reduce((sum, item) => sum + item.bytes, 0) +
-                assetProgress;
-              await this.save(
-                entry,
-                attempt,
-                "downloading",
-                bytesDownloaded,
-                verifiedAssetIds,
-                null,
-              );
-            });
+            await this.source.transfer(
+              asset,
+              sink,
+              async (bytesDelta) => {
+                if (!Number.isFinite(bytesDelta) || bytesDelta <= 0) {
+                  throw new OfflineTransferError(
+                    "integrity-mismatch",
+                    "Invalid offline transfer progress.",
+                  );
+                }
+                assetProgress += bytesDelta;
+                if (assetProgress > asset.bytes) {
+                  throw new OfflineTransferError(
+                    "integrity-mismatch",
+                    "Offline transfer exceeded the manifest size.",
+                  );
+                }
+                bytesDownloaded =
+                  existingBytes +
+                  staged.reduce((sum, item) => sum + item.bytes, 0) +
+                  assetProgress;
+                await this.save(
+                  entry,
+                  attempt,
+                  "downloading",
+                  bytesDownloaded,
+                  verifiedAssetIds,
+                  null,
+                );
+              },
+              signal,
+            );
             await sink.close();
           } catch (error) {
             await sink.abort().catch(() => undefined);
             throw error;
           }
+          staged.push(asset);
           if (assetProgress !== asset.bytes) {
-            throw new Error(
+            throw new OfflineTransferError(
+              "integrity-mismatch",
               "Offline transfer size did not match the manifest.",
             );
           }
-          staged.push(asset);
           await this.save(
             entry,
             attempt,
@@ -157,6 +200,9 @@ export class OfflinePackageManager {
           }
           verifiedAssetIds.push(asset.assetId);
         }
+        if (signal?.aborted) {
+          throw new OfflineTransferError("cancelled", "Download cancelled.");
+        }
         await this.binaryStore.promoteAttempt(staged, attempt);
         return this.save(
           entry,
@@ -166,14 +212,20 @@ export class OfflinePackageManager {
           assets.map(({ assetId }) => assetId),
           null,
         );
-      } catch {
+      } catch (error) {
         await this.binaryStore
           .rollbackAttempt(staged, attempt)
           .catch(() => undefined);
         return this.fail(
           entry,
           attempt,
-          "storage-error",
+          error instanceof OfflineTransferError
+            ? error.failureCode
+            : signal?.aborted
+              ? "cancelled"
+              : error instanceof Error && error.name === "QuotaExceededError"
+                ? "insufficient-space"
+                : "storage-error",
           existingBytes,
           alreadyVerified.map(({ assetId }) => assetId),
         );

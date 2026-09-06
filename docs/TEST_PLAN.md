@@ -24,21 +24,39 @@ La milestone usa cinque livelli distinti: test puri, integrazione con driver fak
   rischio post-trim resta al massimo -1,1 dBTP.
 - L'audit ispeziona tutti gli intervalli delimitati dagli eventi e rileva anche
   gap o triple overlap inferiori a un secondo.
+- Le coppie musicali approvate usano 180 secondi equal-power; al momento la
+  whitelist è vuota dopo le due esclusioni d'ascolto, quindi ogni richiesta
+  musicale consumer fallisce chiusa. Le coppie QA provvisorie non diventano
+  automaticamente sessioni consumer.
+- `Ocean waves` seleziona soltanto opere Sea e `Rain` soltanto opere Rain; due
+  registrazioni diverse della stessa famiglia vengono alternate senza
+  passaggio automatico da una famiglia all'altra.
 
 ### Controller, UI e persistenza
 
 - Le modalità sono Sound only e Guided; la voce appare soltanto in Guided e il
   CTA resta disabilitato.
+- `Music + nature` è visibile ma disabilitato come `IN PRODUCTION` finché non
+  esiste una coppia approvata; una richiesta musicale salvata non viene
+  convertita silenziosamente in natura.
 - Le durate sono 10/20/30/45/60/90 con subset per categoria e ruolo radio
   accessibile.
-- La preview adattiva è ammessa soltanto su Web loopback non-production; deep
-  link e `Play your last session` rispettano lo stesso gate.
+- La preview adattiva è ammessa soltanto su Web non-production. Gli script
+  ordinari si legano a `--localhost`; la modalità esplicita `web:iphone`
+  autorizza in development un solo IPv4 LAN privato rilevato dal launcher,
+  senza tunnel. Deep link e `Play your last session` rispettano lo stesso gate.
+- Su LAN il parametro Start prepara la sessione ma non invoca autoplay: il
+  browser deve ricevere un tap Play diretto. Loopback conserva l'auto-start per
+  il QA deterministico.
 - Preflight e player usano la stessa storia recente; un errore storage blocca
   esplicitamente lo Start.
 - Il seed non compare nell'URL consumer e non viene persistito. La Home rilegge
   l'ultima richiesta quando torna in focus.
 - Errore di una sorgente futura viene propagato al controller; il driver nativo
   rifiuta esplicitamente le sessioni adattive.
+- Il player musicale espone volume principale e volume ambiente distinti. Il
+  secondo accetta 0–100%, mute/unmute e passi del 10%, senza esporre stem, dB o
+  un mixer multilayer; la scelta Rain/Ocean waves e accessibile come radio.
 
 ### Offline e confine QA
 
@@ -54,6 +72,19 @@ La milestone usa cinque livelli distinti: test puri, integrazione con driver fak
   esclusi da EAS.
 - Dopo export, sentinel, route e storage key QA sono assenti dall'artifact
   consumer e presenti nel solo artifact QA.
+- La radice PWA dedicata contiene soltanto route consumer. L'artefatto statico
+  ha 45 route player predisposte, manifest e service worker, ma zero WAV,
+  FLAC, Audio Test o Workbench.
+- Il service worker PWA bypassa audio e richieste Range; il playback di
+  produzione richiede delivery same-origin esplicita in un secure context.
+- L'export PWA viene prodotto con `pnpm export:web:pwa` e verificato con
+  `pnpm pwa:validate`; il conteggio e il peso riportati si riferiscono
+  all'artefatto appena rigenerato, non a un export precedente.
+- `pnpm pwa:test-server` verifica il server statico senza aprire socket:
+  root/URL pulite, MIME, GET/HEAD/Range, 416/404, esclusione host esterni e
+  traversal, allowlist manifest e byte iniziali/finali di tutti i 37 audio.
+  `pnpm pwa:check-local` controlla l'avvio prima di aprire la porta. Il test
+  browser/ascolto resta distinto dalle richieste simulate al gestore HTTP.
 
 ## Test automatici
 
@@ -65,6 +96,9 @@ La milestone usa cinque livelli distinti: test puri, integrazione con driver fak
 - La Home espone esattamente Yoga, Massage, Relax, Meditation, Sleep e Focus.
 - Le sei azioni consumer hanno almeno una sorgente riproducibile; il localhost
   distingue gli asset di preview dai byte realmente incorporati nel mobile.
+- Eclypsis / Eclipse Veil e Nirvana Waves / Stillwater Halo sono assenti da
+  catalogo, mapping asset, QA, relazioni Continuum ed export; il report
+  lossless storico resta immutato.
 - La gerarchia verificabile e funzione, CTA, durata/formato, naming evocativo.
 - Il solo `audioPresetId` appartiene a `AUDIO_TEST_RITUAL` con stato `test-only`.
 - Yoga espone soltanto 20/30/45/60/90 minuti.
@@ -95,6 +129,14 @@ La milestone usa cinque livelli distinti: test puri, integrazione con driver fak
 - Una pausa manuale concorrente prevale sull'auto-resume e rilascia il focus; resume lo riacquisisce.
 - Stop nasconde sempre i controlli notification best-effort, anche dopo un errore di update.
 - Start failure e gain failure producono cleanup/stato leggibile.
+- Seek file o sessione non confermato ferma il driver, invalida deadline/ticker
+  e produce uno stato errore leggibile; lo scrubber torna al punto precedente.
+- Nel dual-deck nessun Play avviene finché tutti i file attivi non hanno
+  confermato il seek. Un errore con il deck partner ancora pendente lascia
+  entrambi silenziosi e li pulisce dopo il loro esito.
+- I bus musica e natura sono separati: cambiare il volume ambiente aggiorna il
+  relativo bilanciamento senza mutare il volume principale, e Stop li pulisce
+  entrambi.
 - Persistenza versionata ignora dati corrotti e non salva autoplay.
 
 ### UI
@@ -110,6 +152,9 @@ La milestone usa cinque livelli distinti: test puri, integrazione con driver fak
 - Player e preset tecnico mostrano `TEST ONLY`; nessun tab consumer li apre.
 - `Volume & mute` e `Test details` sono chiusi al primo render.
 - I controlli Play/Pause/Stop, timer, volume e mute hanno target almeno 44x44.
+- La sessione musicale mostra `Ocean waves`/`Rain`, il titolo dell'ambiente e
+  un controllo volume ambiente 0–100% con mute; la sessione di soli suoni
+  naturali non presenta un secondo controllo duplicato.
 - La UI consumer non usa imitazioni di sfere/pianeti neri luminosi, waveform,
   neuro-grafiche, frequency-first, mandala, chakra, Buddha o torii.
 - Reduce Motion rende l'artwork statico; target touch minimi 44x44.
@@ -137,31 +182,64 @@ pnpm config:validate
 pnpm qa:validate-boundary
 pnpm expo:doctor
 pnpm exec expo config --type prebuild --json
-pnpm exec expo export --platform ios --output-dir dist/m5-export-ios
-pnpm exec expo export --platform android --output-dir dist/m5-export-android
+pnpm run export:ios:consumer --output-dir dist/m5-export-ios
+pnpm run export:android:consumer --output-dir dist/m5-export-android
+pnpm export:validate-native dist/m5-export-ios dist/m5-export-android
 pnpm export:web:consumer
 pnpm export:web:qa
 pnpm qa:validate-exports
+pnpm export:web:pwa
+pnpm pwa:validate
 ```
 
-Senza argomenti il gate lossless confronta byte size e SHA-256 di ogni FLAC
-incorporato con il report PCM gia verificato. La riverifica completa del PCM,
-quando WAV sorgenti e decoder FLAC sono disponibili, usa:
+Il gate export accetta esattamente i tre WAV ATP01, 155.520.132 byte, e nessun
+FLAC starter consumer.
+
+### Prova iPhone Web sulla stessa Wi-Fi
+
+1. Avviare `pnpm web:iphone` con Node 22.23.1 e annotare il link privato.
+2. Collegare Mac e iPhone alla stessa rete fidata; aprire il link in Safari o
+   Chrome senza sostituire l'IP con `localhost`.
+3. Scegliere funzione, durata e tipo di suono; premere Start e poi il Play
+   esplicito mostrato dal player.
+4. Verificare un file naturale e una sessione musica+natura: Play/Pause/Stop,
+   volume principale, Rain/Ocean waves, volume ambiente, seek e cambio lento.
+5. A fine prova interrompere il server e verificare che la porta non risponda.
+
+Il test richiede il Mac acceso e non installa un'app. Un risultato sul browser
+iPhone non certifica background, lock-screen, Bluetooth, batteria o driver
+nativo.
+
+Per la revisione completa, sostituire il primo comando con
+`pnpm web:iphone:review` e aprire il link `/qa-workbench` stampato dal launcher.
+La radice QA conserva anche Home e route consumer, ma aggiunge catalogo
+completo, ascolto singolo, transizioni dirette, sessione completa e scrubber.
+Il catalogo resta on-demand e non viene copiato sull'iPhone.
+
+Senza argomenti il gate lossless richiede zero FLAC starter, verifica l'assenza
+di Eclypsis dal catalogo attivo e conserva nel report soltanto l'evidenza
+storica della conversione PCM-identica. La riverifica completa del PCM, quando
+WAV sorgenti e decoder FLAC sono disponibili, usa:
 
 ```bash
 pnpm audio:verify-lossless -- <wav-dir> <flac-dir> <flac-binary>
 ```
 
 Il validatore consumer legge `docs/M4_LOCAL_LISTENING_MANIFEST.json`, richiede
-esattamente 38 asset locali, verifica per ciascuno byte size e SHA-256 e fallisce
+esattamente 37 asset locali, verifica per ciascuno byte size e SHA-256 e fallisce
 se entra `SLEEP_TEXTURE_001.wav`. Il collaudo browser apre separatamente tutte le
-39 route approvate, preme Play e richiede la transizione a Pause senza alert.
+37 route file-backed ancora approvate, preme Play e richiede la transizione a Pause senza
+alert.
 
-`security:audit` accetta soltanto i due advisory `image-size` esplicitamente documentati in D-015 e fallisce su qualsiasi altro advisory o cambio di versione. Il comando raw `pnpm audit --audit-level high` resta atteso exit 1 finche non esiste una release corretta; entrambi gli esiti vanno riportati.
+`security:audit` fallisce su qualsiasi advisory non previsto o cambio di
+versione. La policy conserva come soli residui eventualmente accettabili i due
+advisory `image-size` documentati in D-015; il run corrente non ne rileva.
 
-Gli export M5 vanno prodotti da una copia temporanea che esclude
-`public/audio-catalog/`: quei 2,6 GiB servono al solo ascolto localhost e non
-sono parte del bundle mobile o dell'artifact di confine QA.
+Gli export M5 nativi usano obbligatoriamente gli script consumer, che impostano
+`EXPO_PUBLIC_FOLDER=public-mobile`. I 2,6 GiB in `public/audio-catalog/` servono
+al solo ascolto localhost: il validatore richiede esattamente i tre WAV ATP01 e
+nessun FLAC starter, rifiuta file audio pubblici non processati, file oltre 100 MiB,
+output oltre 512 MiB e qualsiasi path `audio-catalog`.
 
 Il prebuild di verifica va eseguito soltanto in una copia temporanea e con `--no-install`; non deve generare `ios/` o `android/` nel checkout.
 

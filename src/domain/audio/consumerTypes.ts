@@ -1,4 +1,5 @@
 import type { ConsumerOutcomeId } from "@/content/productShell";
+import { getSessionPolicy } from "@/content/sessionPolicies";
 
 export type ConsumerCollectionId =
   | "cosmic-zen-ambient"
@@ -75,11 +76,14 @@ export function dbToLinear(db: number): number {
 
 export function createSingleTrackProgram(
   work: ConsumerAudioWork,
+  outcome?: ConsumerOutcomeId,
 ): SingleTrackProgram {
   return {
     kind: "single-track",
     work,
-    durationOptionsMinutes: [15, 30, 60],
+    durationOptionsMinutes: outcome
+      ? getSessionPolicy(outcome).durations
+      : [15, 30, 60],
     fadeInSeconds: 2,
     fadeOutSeconds: 12,
   };

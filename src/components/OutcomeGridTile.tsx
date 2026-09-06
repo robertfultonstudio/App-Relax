@@ -1,62 +1,30 @@
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
-import type {
-  ConsumerOutcome,
-  ConsumerOutcomeId,
-} from "@/content/productShell";
-import {
-  editorial,
-  OUTCOME_EDITORIAL_ACCENT,
-  OUTCOME_EDITORIAL_SURFACE,
-} from "@/design/editorialTheme";
+import type { ConsumerOutcome } from "@/content/productShell";
+import { editorial, OUTCOME_EDITORIAL_SURFACE } from "@/design/editorialTheme";
 import { OUTCOME_ARTWORK } from "@/design/outcomeArtwork";
 import { fonts, spacing } from "@/design/theme";
 
-interface OutcomeGridTileProps {
-  featuredTitle: string;
-  onPress: () => void;
-  outcome: ConsumerOutcome;
-}
-
-const OUTCOME_NUMBER: Readonly<Record<ConsumerOutcomeId, string>> = {
-  meditation: "01",
-  yoga: "02",
-  massage: "03",
-  relax: "04",
-  sleep: "05",
-  focus: "06",
-};
-
 export function OutcomeGridTile({
-  featuredTitle,
   onPress,
   outcome,
-}: OutcomeGridTileProps) {
-  const accent = OUTCOME_EDITORIAL_ACCENT[outcome.id];
-  const surface = OUTCOME_EDITORIAL_SURFACE[outcome.id];
-
+}: {
+  onPress: () => void;
+  outcome: ConsumerOutcome;
+}) {
   return (
     <Pressable
-      accessibilityHint="Opens the duration choice for this session"
-      accessibilityLabel={`${outcome.functionLabel}. ${outcome.cta}. ${outcome.homeFormat}. Choose a duration.`}
+      accessibilityHint="Choose a listening duration and sound"
+      accessibilityLabel={`${outcome.functionLabel}. Choose your listening time.`}
       accessibilityRole="button"
       onPress={onPress}
-      style={[styles.tile, { borderColor: outcome.wash }]}
+      style={({ pressed }) => [
+        styles.tile,
+        { borderColor: outcome.wash },
+        pressed && styles.pressed,
+      ]}
       testID={`outcome-${outcome.id}`}
     >
-      <View
-        style={[
-          styles.metaRow,
-          {
-            backgroundColor: outcome.accent,
-            borderBottomColor: outcome.wash,
-          },
-        ]}
-      >
-        <Text style={styles.functionLabel}>{outcome.functionLabel}</Text>
-        <Text style={styles.number}>{OUTCOME_NUMBER[outcome.id]}</Text>
-      </View>
-
-      <View style={[styles.artworkFrame, { borderBottomColor: outcome.wash }]}>
+      <View style={styles.artworkFrame}>
         <Image
           accessibilityIgnoresInvertColors
           accessible={false}
@@ -66,18 +34,15 @@ export function OutcomeGridTile({
           testID={`outcome-artwork-${outcome.id}`}
         />
       </View>
-
-      <View style={[styles.copy, { backgroundColor: surface }]}>
-        <Text style={styles.cta}>{outcome.cta}</Text>
-        <Text style={styles.format}>{outcome.homeFormat}</Text>
-        <View style={styles.futureRow}>
-          <Text style={styles.futureLabel}>FEATURED</Text>
-          <Text style={[styles.evocativeTitle, { color: accent }]}>
-            {featuredTitle}
-          </Text>
-        </View>
-        <Text style={[styles.state, { borderTopColor: outcome.wash }]}>
-          CHOOSE A DURATION
+      <View
+        style={[
+          styles.caption,
+          { backgroundColor: OUTCOME_EDITORIAL_SURFACE[outcome.id] },
+        ]}
+      >
+        <Text style={styles.label}>{outcome.functionLabel}</Text>
+        <Text accessible={false} style={styles.arrow}>
+          →
         </Text>
       </View>
     </Pressable>
@@ -87,90 +52,29 @@ export function OutcomeGridTile({
 const styles = StyleSheet.create({
   tile: {
     width: "48%",
-    minHeight: 348,
+    minHeight: 148,
     backgroundColor: editorial.paperLight,
     borderWidth: StyleSheet.hairlineWidth,
   },
-  metaRow: {
-    minHeight: 40,
+  artworkFrame: { height: 102, width: "100%", overflow: "hidden" },
+  artwork: { height: "100%", width: "100%" },
+  caption: {
+    minHeight: 46,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     gap: spacing.xs,
     paddingHorizontal: spacing.sm,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingVertical: spacing.xs,
   },
-  functionLabel: {
+  label: {
     flexShrink: 1,
     color: editorial.ink,
     fontFamily: fonts.sansSemiBold,
-    fontSize: 11,
-    letterSpacing: 0.9,
-  },
-  number: {
-    color: editorial.inkMuted,
-    fontFamily: fonts.sansSemiBold,
-    fontSize: 11,
-    letterSpacing: 0.7,
-  },
-  artworkFrame: {
-    width: "100%",
-    aspectRatio: 1.25,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    overflow: "hidden",
-  },
-  artwork: {
-    width: "100%",
-    height: "100%",
-  },
-  copy: {
-    flex: 1,
-    paddingHorizontal: spacing.sm,
-    paddingBottom: spacing.sm,
-    paddingTop: 10,
-  },
-  cta: {
-    minHeight: 66,
-    color: editorial.ink,
-    fontFamily: fonts.serif,
-    fontSize: 20,
-    lineHeight: 21,
-    letterSpacing: -0.25,
-  },
-  format: {
-    minHeight: 34,
-    color: editorial.inkMuted,
-    fontFamily: fonts.sansMedium,
-    fontSize: 11,
-    lineHeight: 16,
-    marginTop: 6,
-  },
-  futureRow: {
-    alignItems: "baseline",
-    flexDirection: "row",
-    gap: 5,
-    marginTop: spacing.sm,
-    minHeight: 20,
-  },
-  futureLabel: {
-    color: editorial.inkFaint,
-    fontFamily: fonts.sansSemiBold,
-    fontSize: 11,
-    letterSpacing: 0.65,
-  },
-  evocativeTitle: {
-    flexShrink: 1,
-    fontFamily: fonts.serifItalic,
     fontSize: 14,
-    lineHeight: 18,
+    lineHeight: 20,
+    letterSpacing: 0.3,
   },
-  state: {
-    color: editorial.inkFaint,
-    fontFamily: fonts.sansSemiBold,
-    fontSize: 11,
-    letterSpacing: 0.65,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    marginTop: 6,
-    paddingTop: 6,
-  },
+  arrow: { color: editorial.ink, fontSize: 18 },
+  pressed: { opacity: 0.82 },
 });

@@ -98,16 +98,22 @@ Il registro e le misure sono documentati in `docs/M4_CONSUMER_AUDIO_CATALOG.md`.
 ### Catalogo locale approvato
 
 [F] Il 3 settembre 2026 l'utente ha confermato l'esito positivo dell'ascolto dei
-15 lavori analogici e dei 24 lavori Water/Air raccolti dalla Strategia. I 39
-lavori sono perciò `APPROVED — LISTENING PASSED`; i working title restano
-metadata modificabili.
+15 lavori analogici e dei 24 lavori Water/Air raccolti dalla Strategia. Il 4
+settembre ha poi respinto Eclypsis / Eclipse Veil perché troppo dissonante e ha
+ordinato di eliminare Nirvana Waves / Stillwater Halo. Il catalogo attivo
+conserva quindi 13 lavori analogici e 24 Water/Air, 37 opere
+`APPROVED — LISTENING PASSED`; i working title restano metadata modificabili.
 
-[F] Il localhost serve 38 file da `public/audio-catalog/`: 14 WAV PCM24/48 kHz
-invariati da `APP_READY_AUDIO_01` e 24 FLAC lossless invariati da
-`APP_READY_AUDIO_02_ELEMENTAL_WATER_AIR`. Eclipse Veil usa invece il FLAC
-starter già incorporato. I byte locali sono esclusi da Git e dal pacchetto
+[F] Il localhost serve 37 file da `public/audio-catalog/`: i 13 WAV PCM24/48
+kHz ancora approvati da `APP_READY_AUDIO_01` e 24 FLAC lossless invariati da
+`APP_READY_AUDIO_02_ELEMENTAL_WATER_AIR`. I byte locali sono esclusi da Git e dal pacchetto
 nativo; `docs/M4_LOCAL_LISTENING_MANIFEST.json` ne fissa nome, dimensione e
 SHA-256.
+
+[F] Eclipse Veil e Nirvana Waves sono stati rimossi dal pacchetto, dal catalogo
+e dalla Review dell'app. I master canonici esterni e le prove storiche delle
+conversioni PCM-identiche restano intatti; non costituiscono disponibilità
+consumer.
 
 ## Generator noise runtime
 

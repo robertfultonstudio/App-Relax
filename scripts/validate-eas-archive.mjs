@@ -60,6 +60,7 @@ const forbiddenSegments = new Set([
   ".expo",
   ".vscode",
   "android",
+  "app-pwa",
   "app-qa",
   "coverage",
   "dist",
@@ -67,6 +68,7 @@ const forbiddenSegments = new Set([
   "ios",
   "node_modules",
   "output",
+  "public-pwa",
   "qa",
   "scripts",
   "tests",
@@ -99,7 +101,6 @@ const requiredFiles = [
   "tsconfig.json",
 ];
 const expectedAudioFiles = [
-  "assets/audio/consumer-starter/SOUNDSCAPE_ECLYPSIS_001_EMINOR_48K24_LOOP.flac",
   "assets/audio/test-pack-01/SLEEP_AMBIENCE_001.wav",
   "assets/audio/test-pack-01/SLEEP_DRONE_001.wav",
   "assets/audio/test-pack-01/SLEEP_TEXTURE_001.wav",
@@ -178,5 +179,5 @@ assert(
 );
 
 console.log(
-  `EAS archive: PASS (${files.length} files, ${totalBytes} bytes, no Git metadata/secrets/local paths, 3 AUDIO TEST PACK 01 WAV files and 1 consumer starter FLAC).`,
+  `EAS archive: PASS (${files.length} files, ${totalBytes} bytes, no Git metadata/secrets/local paths, exactly 3 AUDIO TEST PACK 01 WAV files and no consumer starter FLAC).`,
 );

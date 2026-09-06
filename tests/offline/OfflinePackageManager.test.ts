@@ -47,6 +47,7 @@ function harness(
     committedIds?: string[];
     mismatchIds?: string[];
     removeFails?: boolean;
+    truncateTransfer?: boolean;
   } = {},
 ) {
   let current: OfflinePackageRecord | null = null;
@@ -96,8 +97,9 @@ function harness(
     canDownload: options.canDownload ?? true,
     transfer: async (asset, sink, progress) => {
       transferCalls.push(asset.assetId);
-      await sink.write(new Uint8Array(asset.bytes));
-      await progress(asset.bytes);
+      const bytes = asset.bytes - (options.truncateTransfer ? 1 : 0);
+      await sink.write(new Uint8Array(bytes));
+      await progress(bytes);
     },
   };
   const manager = new OfflinePackageManager(manifest, state, binary, source);
@@ -150,6 +152,34 @@ describe("OfflinePackageManager", () => {
       "verifying",
       "available",
     ]);
+  });
+
+  it("reconciles shared files without requesting a download", async () => {
+    const test = harness({ committedIds: ["a", "b"] });
+    await expect(test.manager.reconcile("pack")).resolves.toMatchObject({
+      status: "available",
+      bytesDownloaded: 25,
+    });
+    expect(test.transferCalls).toEqual([]);
+  });
+
+  it("cancels before transfer without promoting or requesting audio", async () => {
+    const test = harness();
+    const controller = new AbortController();
+    controller.abort();
+    await expect(
+      test.manager.download("pack", controller.signal),
+    ).resolves.toMatchObject({ status: "failed", failureCode: "cancelled" });
+    expect(test.transferCalls).toEqual([]);
+  });
+
+  it("rolls back a short closed file as an integrity failure", async () => {
+    const test = harness({ truncateTransfer: true });
+    await expect(test.manager.download("pack")).resolves.toMatchObject({
+      status: "failed",
+      failureCode: "integrity-mismatch",
+    });
+    expect(test.rolledBack).toEqual([["a"]]);
   });
 
   it("fails explicitly when source, space or integrity is unavailable", async () => {

@@ -34,9 +34,8 @@ export interface ConsumerOutcome {
 }
 
 export const PRODUCT_TABS: readonly ProductTab[] = [
-  { id: "rituals", label: "RITUALS", route: "/" },
-  { id: "yoga", label: "YOGA", route: "/yoga" },
-  { id: "soundscapes", label: "SOUNDSCAPES", route: "/soundscapes" },
+  { id: "rituals", label: "HOME", route: "/" },
+  { id: "soundscapes", label: "SOUNDS", route: "/soundscapes" },
 ] as const;
 
 export const CONSUMER_OUTCOMES: readonly ConsumerOutcome[] = [

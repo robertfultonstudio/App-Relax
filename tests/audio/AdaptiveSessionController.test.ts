@@ -4,6 +4,7 @@ import {
 } from "@/audio/AudioSessionController";
 import { createAdaptiveSessionProgram } from "@/domain/sessions/continuumPlanner";
 import { createTransitionAudition } from "@/domain/sessions/workbench";
+import { createQaPairProgram } from "@/qa/qaCatalog";
 import type { PlayerPreferencesStore } from "@/state/playerPersistence";
 import { FakeAudioDriver } from "../fakes/FakeAudioDriver";
 
@@ -39,6 +40,7 @@ describe("adaptive session controller", () => {
       outcome: "meditation",
       durationMinutes: 20,
       mode: "sound-only",
+      soundKind: "nature",
       seed: "controller-adaptive",
       allowProvisionalMetadata: true,
     });
@@ -71,11 +73,32 @@ describe("adaptive session controller", () => {
     );
   });
 
+  it("activates browser media synchronously before queuing adaptive playback", async () => {
+    const program = createAdaptiveSessionProgram({
+      outcome: "meditation",
+      durationMinutes: 20,
+      mode: "sound-only",
+      soundKind: "nature",
+      seed: "controller-user-gesture",
+      allowProvisionalMetadata: true,
+    });
+    const driver = new FakeAudioDriver();
+    const controller = new AudioSessionController(driver, store, new Runtime());
+    await controller.loadAdaptiveSession(program);
+
+    const playback = controller.playFromUserGesture();
+    expect(driver.userGestureActivations).toBe(1);
+    expect(driver.startAdaptiveCalls).toBe(0);
+    await playback;
+    expect(driver.startAdaptiveCalls).toBe(1);
+  });
+
   it("pauses, resumes and ends once at the exact absolute deadline", async () => {
     const program = createAdaptiveSessionProgram({
       outcome: "relax",
       durationMinutes: 10,
       mode: "sound-only",
+      soundKind: "nature",
       seed: "controller-exact-end",
       allowProvisionalMetadata: true,
     });
@@ -94,8 +117,8 @@ describe("adaptive session controller", () => {
     await drain();
     expect(driver.stopCalls).toBe(stopsBeforePlay + 1);
     expect(controller.getSnapshot()).toMatchObject({
-      status: "ready",
-      remainingMs: 600_000,
+      status: "completed",
+      remainingMs: 0,
       deadlineMs: null,
     });
   });
@@ -105,11 +128,13 @@ describe("adaptive session controller", () => {
       outcome: "meditation",
       durationMinutes: 20,
       mode: "sound-only",
+      soundKind: "nature",
       seed: "future-source-error",
       allowProvisionalMetadata: true,
     });
     const driver = new FakeAudioDriver();
-    const controller = new AudioSessionController(driver, store, new Runtime());
+    const runtime = new Runtime();
+    const controller = new AudioSessionController(driver, store, runtime);
     controller.activate();
     await controller.loadAdaptiveSession(program);
     await controller.play();
@@ -123,5 +148,134 @@ describe("adaptive session controller", () => {
       error: "Next sound unavailable",
       deadlineMs: null,
     });
+  });
+
+  it("ignores a stale adaptive error after the user has stopped", async () => {
+    const program = createAdaptiveSessionProgram({
+      outcome: "meditation",
+      durationMinutes: 20,
+      mode: "sound-only",
+      soundKind: "nature",
+      seed: "stale-error-after-stop",
+      allowProvisionalMetadata: true,
+    });
+    const driver = new FakeAudioDriver();
+    const controller = new AudioSessionController(driver, store, new Runtime());
+    controller.activate();
+    await controller.loadAdaptiveSession(program);
+    await controller.play();
+    await controller.stop();
+
+    driver.emitAdaptiveError(program.plan.id, new Error("Stale decoder error"));
+    await drain();
+
+    expect(controller.getSnapshot()).toMatchObject({
+      status: "ready",
+      error: null,
+      deadlineMs: null,
+    });
+  });
+
+  it("fails closed when pausing the audio graph fails", async () => {
+    const program = createAdaptiveSessionProgram({
+      outcome: "relax",
+      durationMinutes: 10,
+      mode: "sound-only",
+      soundKind: "nature",
+      seed: "pause-failure",
+      allowProvisionalMetadata: true,
+    });
+    const driver = new FakeAudioDriver();
+    const runtime = new Runtime();
+    const controller = new AudioSessionController(driver, store, runtime);
+    await controller.loadAdaptiveSession(program);
+    await controller.play();
+    driver.pauseError = new Error("Audio context refused to pause");
+
+    await expect(controller.pause()).rejects.toThrow(
+      "Audio context refused to pause",
+    );
+    expect(controller.getSnapshot()).toMatchObject({
+      status: "error",
+      deadlineMs: null,
+      error: "Playback could not pause: Audio context refused to pause",
+    });
+    expect(runtime.callback).toBeNull();
+  });
+
+  it("fails closed when stopping the audio graph fails", async () => {
+    const program = createAdaptiveSessionProgram({
+      outcome: "relax",
+      durationMinutes: 10,
+      mode: "sound-only",
+      soundKind: "nature",
+      seed: "stop-failure",
+      allowProvisionalMetadata: true,
+    });
+    const driver = new FakeAudioDriver();
+    const runtime = new Runtime();
+    const controller = new AudioSessionController(driver, store, runtime);
+    await controller.loadAdaptiveSession(program);
+    await controller.play();
+    driver.stopError = new Error("Audio context refused to stop");
+
+    await expect(controller.stop()).rejects.toThrow(
+      "Audio context refused to stop",
+    );
+    expect(controller.getSnapshot()).toMatchObject({
+      status: "error",
+      deadlineMs: null,
+      error: "Playback could not stop: Audio context refused to stop",
+    });
+    expect(runtime.callback).toBeNull();
+  });
+
+  it("initializes and changes the coordinated natural ambience as one control", async () => {
+    const program = createQaPairProgram({
+      outgoingWorkId: "distant-garden",
+      incomingWorkId: "luminous-grain",
+      outcome: "relax",
+      durationMinutes: 20,
+      crossfadeSeconds: 180,
+      curve: "equal-power",
+      natureFamily: "rain",
+    });
+    const driver = new FakeAudioDriver();
+    const controller = new AudioSessionController(driver, store, new Runtime());
+
+    await controller.loadAdaptiveSession(program);
+    expect(controller.getSnapshot().natureMixLevel).toBe(0.5);
+    await controller.setNatureMixLevel(0.7, 1800);
+    expect(driver.adaptiveNatureCalls).toEqual([{ level: 0.7, fadeMs: 1800 }]);
+    expect(controller.getSnapshot().natureMixLevel).toBe(0.7);
+  });
+
+  it("fails closed when the browser cannot confirm an adaptive seek", async () => {
+    const program = createAdaptiveSessionProgram({
+      outcome: "meditation",
+      durationMinutes: 20,
+      mode: "sound-only",
+      soundKind: "nature",
+      seed: "adaptive-seek-error",
+      allowProvisionalMetadata: true,
+    });
+    const driver = new FakeAudioDriver();
+    const runtime = new Runtime();
+    const controller = new AudioSessionController(driver, store, runtime);
+    await controller.loadAdaptiveSession(program);
+    await controller.play();
+    const stopsBeforeSeek = driver.stopCalls;
+    driver.adaptiveSeekError = new Error("Browser seek was not confirmed");
+
+    await expect(controller.seekAdaptiveSession(600)).rejects.toThrow(
+      "Browser seek was not confirmed",
+    );
+    expect(controller.getSnapshot()).toMatchObject({
+      status: "error",
+      error: "Browser seek was not confirmed",
+      deadlineMs: null,
+    });
+    expect(driver.stopCalls).toBe(stopsBeforeSeek + 1);
+    expect(runtime.callback).toBeNull();
   });
 });

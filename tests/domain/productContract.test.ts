@@ -146,12 +146,12 @@ describe("product and asset request contracts", () => {
     expect(`${shell}\n${home}\n${yoga}\n${soundscapes}`).not.toMatch(
       /deep-sleep-432/,
     );
-    expect(soundscapes).toContain("CONSUMER_AUDIO_WORKS");
+    expect(soundscapes).toContain("getVisibleConsumerWorks");
     const catalog = readFileSync(
       join(projectRoot, "src", "content", "consumerCatalog.ts"),
       "utf8",
     );
-    expect(catalog).toMatch(/work\(\s*"eclipse-veil"/);
+    expect(catalog).not.toMatch(/eclipse|eclypsis|stillwater|nirvana/i);
     expect(catalog).not.toContain("defaultMix");
   });
 

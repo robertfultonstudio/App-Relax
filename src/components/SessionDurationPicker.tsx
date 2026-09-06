@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { SessionDurationMinutes } from "@/domain/sessions/types";
 import { editorial } from "@/design/editorialTheme";
 import { fonts, spacing } from "@/design/theme";
+import { radioKeyboard } from "./radioKeyboard";
 
 export function SessionDurationPicker({
   options,
@@ -20,9 +21,11 @@ export function SessionDurationPicker({
     >
       {options.map((minutes) => (
         <Pressable
+          {...radioKeyboard(options, minutes, onChange)}
           accessibilityLabel={`${minutes} minutes`}
           accessibilityRole="radio"
-          accessibilityState={{ selected: minutes === selected }}
+          aria-checked={minutes === selected}
+          accessibilityState={{ checked: minutes === selected }}
           key={minutes}
           onPress={() => onChange(minutes)}
           style={[styles.option, minutes === selected && styles.optionSelected]}
@@ -47,7 +50,7 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: spacing.sm,
+    gap: 6,
     marginTop: spacing.md,
   },
   option: {
@@ -57,7 +60,7 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     justifyContent: "center",
     minHeight: 56,
-    minWidth: 58,
+    minWidth: 48,
     paddingHorizontal: spacing.sm,
   },
   optionSelected: {
@@ -75,7 +78,7 @@ const styles = StyleSheet.create({
   unit: {
     color: editorial.inkFaint,
     fontFamily: fonts.sansSemiBold,
-    fontSize: 10,
+    fontSize: 12,
     letterSpacing: 0.8,
   },
 });

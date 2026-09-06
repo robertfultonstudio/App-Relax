@@ -12,6 +12,15 @@ const packageJson = JSON.parse(
 );
 const easJson = JSON.parse(readFileSync(join(projectRoot, "eas.json"), "utf8"));
 const easIgnore = readFileSync(join(projectRoot, ".easignore"), "utf8");
+const iphonePreviewLauncher = readFileSync(
+  join(projectRoot, "scripts", "start-iphone-web-preview.mjs"),
+  "utf8",
+);
+const pwaPreviewLauncher = readFileSync(
+  join(projectRoot, "scripts", "start-pwa-web-preview.mjs"),
+  "utf8",
+);
+const metroConfig = readFileSync(join(projectRoot, "metro.config.js"), "utf8");
 
 function assert(condition, message) {
   if (!condition) {
@@ -20,7 +29,7 @@ function assert(condition, message) {
 }
 
 assert(
-  packageJson.dependencies.expo === "~57.0.19",
+  packageJson.dependencies.expo === "~57.0.20",
   "Expo SDK 57 must remain pinned",
 );
 assert(
@@ -50,7 +59,9 @@ for (const requiredIgnore of [
   "/STATO.md",
   "/scripts/",
   "/public/audio-catalog/",
+  "/public-pwa/",
   "/src/app-qa/",
+  "/src/app-pwa/",
   "/src/qa/",
   "/eslint.config.js",
   "/jest.config.js",
@@ -76,16 +87,125 @@ assert(
     "node scripts/validate-workbench-exports.mjs",
   "QA export boundary validator script is missing",
 );
+for (const scriptName of ["web", "web:qa"]) {
+  assert(
+    packageJson.scripts[scriptName]?.includes("--localhost"),
+    `${scriptName} must bind the local audio preview to loopback`,
+  );
+}
+assert(
+  packageJson.scripts["web:iphone"] ===
+    "node scripts/start-iphone-web-preview.mjs",
+  "iPhone LAN preview must use the guarded local launcher",
+);
+assert(
+  packageJson.scripts["web:iphone:review"] ===
+    "node scripts/start-iphone-web-preview.mjs --review",
+  "iPhone LAN Review must use the guarded local launcher",
+);
+assert(
+  packageJson.scripts["web:pwa"] === "node scripts/start-pwa-web-preview.mjs",
+  "PWA localhost preview must use the guarded launcher",
+);
+assert(
+  pwaPreviewLauncher.includes("createServer(preview.handler)") &&
+    pwaPreviewLauncher.includes('server.listen(port, "127.0.0.1"') &&
+    pwaPreviewLauncher.includes('join(projectRoot, "dist", "m5-pwa")') &&
+    pwaPreviewLauncher.includes(
+      'join(projectRoot, "public", "audio-catalog")',
+    ) &&
+    pwaPreviewLauncher.includes('"M4_LOCAL_LISTENING_MANIFEST.json"') &&
+    !pwaPreviewLauncher.includes("spawn("),
+  "PWA preview must serve the static export and approved local audio on loopback without Metro",
+);
+assert(
+  !pwaPreviewLauncher.includes("--lan") &&
+    !pwaPreviewLauncher.includes("--tunnel"),
+  "PWA preview must not expose the audio catalog beyond loopback",
+);
+assert(
+  iphonePreviewLauncher.includes("EXPO_PUBLIC_APP_RELAX_LAN_PREVIEW_HOST") &&
+    iphonePreviewLauncher.includes('BROWSER: "none"') &&
+    iphonePreviewLauncher.includes('EXPO_PUBLIC_FOLDER: "public"') &&
+    iphonePreviewLauncher.includes('argumentsSet.delete("--review")') &&
+    iphonePreviewLauncher.includes('reviewMode ? "qa" : "consumer"') &&
+    iphonePreviewLauncher.includes('"--lan"'),
+  "iPhone launcher must explicitly select consumer or Review and opt in to the exact LAN host",
+);
+assert(
+  packageJson.scripts["export:web:pwa"]?.includes("APP_RELAX_SURFACE=pwa") &&
+    packageJson.scripts["export:web:pwa"]?.includes(
+      "EXPO_PUBLIC_FOLDER=public-pwa",
+    ) &&
+    packageJson.scripts["export:web:pwa"]?.includes("dist/m5-pwa") &&
+    packageJson.scripts["export:web:pwa"]?.includes(
+      "EXPO_PUBLIC_APP_RELAX_PWA_AUDIO=same-origin",
+    ),
+  "PWA export must use its dedicated route and public roots",
+);
+assert(
+  !iphonePreviewLauncher.includes("--tunnel"),
+  "iPhone preview launcher must never expose a tunnel",
+);
+assert(
+  metroConfig.includes('"audio/flac"') &&
+    metroConfig.includes("isFlacRequest") &&
+    metroConfig.includes("enhanceMiddleware"),
+  "Metro must serve FLAC with the registered audio/flac media type",
+);
 assert(
   packageJson.scripts["export:web:consumer"]?.includes(
     "dist/m5-web-consumer",
   ) && packageJson.scripts["export:web:qa"]?.includes("dist/m5-web-qa"),
   "consumer and QA web exports must use separate output directories",
 );
+for (const scriptName of [
+  "export:web:consumer",
+  "export:web:qa",
+  "export:ios:consumer",
+  "export:android:consumer",
+]) {
+  assert(
+    packageJson.scripts[scriptName]?.includes(
+      "EXPO_PUBLIC_FOLDER=public-mobile",
+    ),
+    `${scriptName} must exclude the localhost audio catalog via public-mobile`,
+  );
+  assert(
+    packageJson.scripts[scriptName]?.includes("--clear"),
+    `${scriptName} must clear transforms when switching consumer/QA/PWA environments`,
+  );
+}
+assert(
+  packageJson.scripts["export:web:pwa"]?.includes("--clear"),
+  "PWA export must clear transforms from other surfaces before packaging",
+);
+assert(
+  packageJson.scripts["export:validate-native"] ===
+    "node scripts/validate-native-export-audio-scope.mjs",
+  "native export audio-scope validator script is missing",
+);
 for (const [profileName, profile] of Object.entries(easJson.build ?? {})) {
   assert(
     profile.env?.APP_RELAX_SURFACE !== "qa",
     `EAS profile ${profileName} must not select the QA router surface`,
+  );
+  assert(
+    profile.env?.APP_RELAX_SURFACE !== "pwa",
+    `EAS profile ${profileName} must not select the PWA router surface`,
+  );
+  assert(
+    profile.env?.EXPO_PUBLIC_FOLDER === "public-mobile",
+    `EAS profile ${profileName} must exclude the localhost catalog via public-mobile`,
+  );
+  assert(
+    profile.env?.EXPO_PUBLIC_APP_RELAX_LAN_PREVIEW_HOST === undefined,
+    `EAS profile ${profileName} must not enable the LAN preview`,
+  );
+  assert(
+    profile.env?.EXPO_PUBLIC_APP_RELAX_PWA === undefined &&
+      profile.env?.EXPO_PUBLIC_APP_RELAX_PWA_AUDIO === undefined,
+    `EAS profile ${profileName} must not enable the PWA delivery contract`,
   );
 }
 
@@ -204,7 +324,7 @@ assert(
 );
 assert(appConfig.slug === "app-relax", "unexpected EAS project slug");
 console.log(
-  `Project config: PASS (SDK 57, ${appleIdentifier}, RNAA plugin, dev-client and standalone preview profiles).`,
+  `Project config: PASS (SDK 57, ${appleIdentifier}, RNAA plugin, safe public-mobile exports, dev-client and standalone preview profiles).`,
 );
 console.log(
   `EAS project: @${appConfig.owner}/${appConfig.slug} (${projectId}).`,

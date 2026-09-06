@@ -19,7 +19,7 @@ const OUTCOMES: readonly ConsumerOutcomeId[] = [
 const DURATIONS: readonly SessionDurationMinutes[] = [10, 20, 30, 45, 60, 90];
 
 export interface QaWorkbenchDraft {
-  schemaVersion: 1;
+  schemaVersion: 3;
   outcome: ConsumerOutcomeId;
   durationMinutes: SessionDurationMinutes;
   seed: string;
@@ -33,21 +33,21 @@ export interface QaWorkbenchDraft {
 }
 
 export const DEFAULT_QA_WORKBENCH_DRAFT: QaWorkbenchDraft = {
-  schemaVersion: 1,
+  schemaVersion: 3,
   outcome: "meditation",
   durationMinutes: 20,
   seed: "meditation-review-001",
   transitionIndex: 0,
   loopWindowSeconds: 30,
   auditionMode: "both",
-  aDurationSeconds: 12,
+  aDurationSeconds: 180,
   aCurve: "equal-power",
-  bDurationSeconds: 20,
+  bDurationSeconds: 120,
   bCurve: "linear",
 };
 
 function validDuration(value: unknown): value is number {
-  return typeof value === "number" && value >= 4 && value <= 30;
+  return typeof value === "number" && value >= 4 && value <= 300;
 }
 
 function validCurve(value: unknown): value is TransitionCurve {
@@ -58,7 +58,7 @@ export function parseQaWorkbenchDraft(value: string): QaWorkbenchDraft | null {
   try {
     const item = JSON.parse(value) as Partial<QaWorkbenchDraft>;
     if (
-      item.schemaVersion !== 1 ||
+      item.schemaVersion !== 3 ||
       !OUTCOMES.includes(item.outcome as ConsumerOutcomeId) ||
       !DURATIONS.includes(item.durationMinutes as SessionDurationMinutes) ||
       typeof item.seed !== "string" ||

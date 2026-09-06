@@ -49,7 +49,8 @@ function createStore(initial: PlayerPreferences | null = null) {
 }
 
 async function drainCommands(): Promise<void> {
-  for (let index = 0; index < 8; index += 1) {
+  // The bounded play-confirmation race introduces additional promise jobs.
+  for (let index = 0; index < 30; index += 1) {
     await Promise.resolve();
   }
 }

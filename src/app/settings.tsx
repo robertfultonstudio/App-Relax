@@ -23,21 +23,19 @@ export default function SettingsScreen() {
       <View style={styles.card}>
         <SettingRow label="Autoplay" value="Off" />
         <SettingRow label="Reduce motion" value="Follows your device" />
-        <SettingRow label="Background mode" value="Device test pending" />
+        <SettingRow label="Guided sessions" value="In production" />
+        <SettingRow
+          label="Offline downloads"
+          value="In production on this device"
+        />
         <SettingRow label="Saved locally" value="Last session choices" />
         <SettingRow label="Version" value={version} last />
       </View>
 
       <SettingLink
-        body="Moon Current and the three WAV files, outside the consumer tabs"
-        hint="Opens the separate dark technical Audio Test area"
-        onPress={() => router.push("/audio-test" as Href)}
-        title="Audio Test — Test only"
-      />
-      <SettingLink
-        body="Claims, current validation and safe listening"
+        body="Sound availability and listening safely"
         onPress={() => router.push("/legal" as Href)}
-        title="Legal & sound details"
+        title="About listening"
       />
     </EditorialScreen>
   );

@@ -1,4 +1,3 @@
-import { Asset } from "expo-asset";
 import type {
   AdaptiveSessionEventHandlers,
   AudioGraphDriver,
@@ -18,11 +17,19 @@ import type {
   AudioSourceId,
   StemSourceId,
 } from "@/domain/audio/types";
-import { CONSUMER_ASSETS } from "@/audio/reactNativeAudioApi/consumerAssets";
-import { STEM_ASSETS } from "@/audio/reactNativeAudioApi/stemAssets";
-import type { AdaptiveSessionProgram } from "@/domain/sessions/types";
+import type {
+  AdaptiveSessionProgram,
+  NatureMixLevel,
+} from "@/domain/sessions/types";
 import type { TransitionAudition } from "@/domain/sessions/workbench";
 import { AdaptiveWebPlayback } from "./AdaptiveWebPlayback";
+import { positionMediaElement } from "./positionMediaElement";
+import {
+  acquireWebAudioWork,
+  cancelledWebAudioLoad,
+  type WebAudioSourceLease,
+  type WebAudioSourceResolver,
+} from "./WebAudioSourceResolver";
 
 const SILENT_GAIN = 0.0001;
 const NOISE_SECONDS = 8;
@@ -31,6 +38,11 @@ interface MediaRuntime {
   element: HTMLAudioElement;
   source: MediaElementAudioSourceNode;
   gain: GainNode;
+}
+
+interface PendingWebLoad {
+  controller: AbortController;
+  cleanup(): Promise<void>;
 }
 
 interface BufferRuntime {
@@ -78,6 +90,8 @@ function resetMedia(runtime: MediaRuntime): void {
   } catch {
     // Metadata may not be available yet; pausing is sufficient cleanup.
   }
+  runtime.element.removeAttribute("src");
+  runtime.element.load();
   runtime.source.disconnect();
   runtime.gain.disconnect();
 }
@@ -99,6 +113,10 @@ export class WebAudioDriver implements AudioGraphDriver {
   private loadedAdaptiveProgramId: string | null = null;
   private stemUrls = new Map<StemSourceId, string>();
   private programUrl: string | null = null;
+  private programLease: WebAudioSourceLease | null = null;
+  private pendingLoad: PendingWebLoad | null = null;
+  private loadCommitQueue: Promise<unknown> = Promise.resolve();
+  private disposed = false;
   private programNoiseBuffer: AudioBuffer | null = null;
   private brownNoiseBuffer: AudioBuffer | null = null;
   private mediaRuntime = new Map<StemSourceId | "program", MediaRuntime>();
@@ -111,9 +129,81 @@ export class WebAudioDriver implements AudioGraphDriver {
   private programGain: GainNode | null = null;
   private programPlaybackGain = 1;
   private programVolume = 1;
+  private singleTrackPositionSeconds = 0;
   private graphStarted = false;
   private scheduledStop: ReturnType<typeof setTimeout> | null = null;
   private adaptivePlayback: AdaptiveWebPlayback | null = null;
+  private userGesturePromise: Promise<void> | null = null;
+  private gestureAbort: AbortController | null = null;
+  private playbackGeneration = 0;
+
+  constructor(private readonly sourceResolver: WebAudioSourceResolver) {}
+
+  activateUserGesture(): void {
+    const context = this.ensureContext();
+    if (this.loadedAdaptiveProgramId && this.adaptivePlayback) {
+      this.adaptivePlayback.activateUserGesture();
+      this.userGesturePromise = null;
+      return;
+    }
+    const attempts: Promise<unknown>[] = [context.resume()];
+    if (this.loadedProgramId && this.programUrl) {
+      let runtime = this.mediaRuntime.get("program");
+      if (!runtime) {
+        runtime = this.createMediaRuntime(
+          context,
+          this.programUrl,
+          SILENT_GAIN,
+          this.requireMaster(),
+        );
+        this.mediaRuntime.set("program", runtime);
+      }
+      attempts.push(runtime.element.play());
+    } else if (this.loadedPresetId) {
+      for (const [stemId, url] of this.stemUrls) {
+        let runtime = this.mediaRuntime.get(stemId);
+        if (!runtime) {
+          runtime = this.createMediaRuntime(
+            context,
+            url,
+            SILENT_GAIN,
+            this.requireMaster(),
+          );
+          this.mediaRuntime.set(stemId, runtime);
+        }
+        attempts.push(runtime.element.play());
+      }
+    }
+    this.gestureAbort?.abort();
+    const abortController = new AbortController();
+    this.gestureAbort = abortController;
+    let timeout: ReturnType<typeof setTimeout>;
+    const interrupted = new Promise<never>((_resolve, reject) => {
+      abortController.signal.addEventListener(
+        "abort",
+        () => reject(cancelledWebAudioLoad()),
+        { once: true },
+      );
+      timeout = setTimeout(
+        () =>
+          reject(
+            new Error("The browser did not confirm audio within 10 seconds."),
+          ),
+        10_000,
+      );
+    });
+    const activation = Promise.race([
+      Promise.all(attempts).then(() => undefined),
+      interrupted,
+    ]).finally(() => {
+      clearTimeout(timeout);
+      if (this.gestureAbort === abortController) this.gestureAbort = null;
+    });
+    // Attach a handler immediately so a browser rejection cannot become an
+    // unhandled promise before the controller consumes the same result.
+    void activation.catch(() => undefined);
+    this.userGesturePromise = activation;
+  }
 
   setRemoteCommandHandlers(handlers: RemoteCommandHandlers): void {
     this.handlers = handlers;
@@ -126,88 +216,191 @@ export class WebAudioDriver implements AudioGraphDriver {
   }
 
   async loadPreset(preset: AudioPreset): Promise<void> {
-    if (this.loadedPresetId === preset.id && this.stemUrls.size === 3) return;
-    await this.stop();
-    const context = this.ensureContext();
-    this.stemUrls.clear();
-    for (const stem of preset.stems) {
-      const descriptor = STEM_ASSETS[stem.assetKey];
-      const url = Asset.fromModule(descriptor.moduleId).uri;
-      if (!url) {
-        throw new SourceLoadError(stem.id, `Missing ${stem.label} web asset.`);
-      }
-      this.stemUrls.set(stem.id, url);
+    if (this.loadedPresetId === preset.id && this.stemUrls.size === 3) {
+      await this.cancelPendingLoad();
+      return;
     }
-    this.brownNoiseBuffer = this.createBrownNoiseBuffer(context);
-    this.loadedPresetId = preset.id;
-    this.loadedProgramId = null;
-    this.loadedAdaptiveProgramId = null;
-    this.adaptivePlayback = null;
-    this.programUrl = null;
-    this.programNoiseBuffer = null;
+    const pending = this.beginLoad();
+    try {
+      const context = this.ensureContext();
+      const nextStemUrls = new Map<StemSourceId, string>();
+      for (const stem of preset.stems) {
+        const url = this.sourceResolver.resolveStem(stem.assetKey);
+        if (!url) {
+          throw new SourceLoadError(
+            stem.id,
+            `Missing ${stem.label} web asset.`,
+          );
+        }
+        nextStemUrls.set(stem.id, url);
+      }
+      const nextBrownNoiseBuffer = this.createBrownNoiseBuffer(context);
+      await this.commitLoad(pending, async () => {
+        await this.stopInternal(false);
+        this.assertLoad(pending);
+        this.stemUrls = nextStemUrls;
+        this.brownNoiseBuffer = nextBrownNoiseBuffer;
+        this.loadedPresetId = preset.id;
+        this.loadedProgramId = null;
+        this.loadedAdaptiveProgramId = null;
+        this.adaptivePlayback = null;
+        this.programUrl = null;
+        this.programNoiseBuffer = null;
+      });
+    } finally {
+      this.finishLoad(pending);
+    }
   }
 
   async loadSingleTrack(program: SingleTrackProgram): Promise<void> {
-    if (this.loadedProgramId === program.work.id) return;
-    await this.stop();
+    if (this.loadedProgramId === program.work.id) {
+      await this.cancelPendingLoad();
+      return;
+    }
+    const pending = this.beginLoad();
     const context = this.ensureContext();
-    this.programUrl = null;
-    this.programNoiseBuffer = null;
-    this.programPlaybackGain = dbToLinear(program.work.playbackGainDb);
-
-    if (program.work.sourceKind === "generated-noise") {
-      if (!program.work.noiseColor) {
-        throw new Error(`${program.work.title} has no noise colour defined.`);
+    let nextProgramUrl: string | null = null;
+    let nextProgramNoiseBuffer: AudioBuffer | null = null;
+    let nextRuntime: MediaRuntime | null = null;
+    let nextLease: WebAudioSourceLease | null = null;
+    pending.cleanup = async () => {
+      if (nextRuntime) {
+        const runtime = nextRuntime;
+        nextRuntime = null;
+        resetMedia(runtime);
       }
-      const length = Math.floor(context.sampleRate * NOISE_SECONDS);
-      const buffer = context.createBuffer(2, length, context.sampleRate);
-      const seed = [...program.work.noiseColor].reduce(
-        (value, character) => (value * 31 + character.charCodeAt(0)) >>> 0,
-        0x51a7c0de,
-      );
-      const samples = createColoredNoiseSamples({
-        color: program.work.noiseColor,
-        length,
-        sampleRate: context.sampleRate,
-        random: createSeededRandom(seed),
-      });
-      buffer.copyToChannel(samples, 0);
-      buffer.copyToChannel(samples, 1);
-      this.programNoiseBuffer = buffer;
-    } else {
-      const descriptor = CONSUMER_ASSETS[program.work.assetKey];
-      this.programUrl = descriptor
-        ? Asset.fromModule(descriptor.moduleId).uri
-        : program.work.availability === "local-preview-file" &&
-            program.work.localPreviewFilename
-          ? `/audio-catalog/${encodeURIComponent(program.work.localPreviewFilename)}`
-          : null;
-      if (!this.programUrl) {
-        throw new Error(
-          `${program.work.title} is not available in this listening surface.`,
+      if (nextLease) {
+        const lease = nextLease;
+        nextLease = null;
+        await lease.release();
+      }
+    };
+    const nextPlaybackGain = dbToLinear(program.work.playbackGainDb);
+
+    try {
+      if (program.work.sourceKind === "generated-noise") {
+        if (!program.work.noiseColor) {
+          throw new Error(`${program.work.title} has no noise colour defined.`);
+        }
+        const length = Math.floor(context.sampleRate * NOISE_SECONDS);
+        const buffer = context.createBuffer(2, length, context.sampleRate);
+        const seed = [...program.work.noiseColor].reduce(
+          (value, character) => (value * 31 + character.charCodeAt(0)) >>> 0,
+          0x51a7c0de,
+        );
+        const samples = createColoredNoiseSamples({
+          color: program.work.noiseColor,
+          length,
+          sampleRate: context.sampleRate,
+          random: createSeededRandom(seed),
+        });
+        buffer.copyToChannel(samples, 0);
+        buffer.copyToChannel(samples, 1);
+        nextProgramNoiseBuffer = buffer;
+      } else {
+        nextLease = await acquireWebAudioWork(
+          this.sourceResolver,
+          program.work,
+          pending.controller.signal,
+        );
+        this.assertLoad(pending);
+        nextProgramUrl = nextLease?.uri ?? null;
+        if (!nextProgramUrl) {
+          throw new Error(
+            `${program.work.title} is not available in this listening surface.`,
+          );
+        }
+        nextRuntime = this.createMediaRuntime(
+          context,
+          nextProgramUrl,
+          SILENT_GAIN,
+          this.requireMaster(),
+        );
+        await positionMediaElement(
+          nextRuntime.element,
+          0,
+          pending.controller.signal,
         );
       }
+      this.assertLoad(pending);
+      await this.commitLoad(pending, async () => {
+        await this.stopInternal(false);
+        this.assertLoad(pending);
+        this.programUrl = nextProgramUrl;
+        this.programLease = nextLease;
+        nextLease = null;
+        this.programNoiseBuffer = nextProgramNoiseBuffer;
+        this.singleTrackPositionSeconds = 0;
+        this.programPlaybackGain = nextPlaybackGain;
+        if (nextRuntime) {
+          this.mediaRuntime.set("program", nextRuntime);
+          nextRuntime = null;
+        }
+        this.loadedProgramId = program.work.id;
+        this.loadedPresetId = null;
+        this.loadedAdaptiveProgramId = null;
+        this.adaptivePlayback = null;
+      });
+    } catch (error) {
+      await pending.cleanup().catch(() => undefined);
+      throw error;
+    } finally {
+      this.finishLoad(pending);
     }
-
-    this.loadedProgramId = program.work.id;
-    this.loadedPresetId = null;
-    this.loadedAdaptiveProgramId = null;
-    this.adaptivePlayback = null;
   }
 
   async loadAdaptiveSession(program: AdaptiveSessionProgram): Promise<void> {
-    if (this.loadedAdaptiveProgramId === program.plan.id) return;
-    await this.stop();
+    if (this.loadedAdaptiveProgramId === program.plan.id) {
+      await this.cancelPendingLoad();
+      return;
+    }
+    const pending = this.beginLoad();
     const context = this.ensureContext();
     const master = this.requireMaster();
-    this.adaptivePlayback = new AdaptiveWebPlayback(context, master, {
-      ended: () => this.adaptiveHandlers?.ended(program.plan.id),
-      error: (error) => this.adaptiveHandlers?.error(program.plan.id, error),
-    });
-    await this.adaptivePlayback.load(program);
-    this.loadedAdaptiveProgramId = program.plan.id;
-    this.loadedPresetId = null;
-    this.loadedProgramId = null;
+    let candidate: AdaptiveWebPlayback;
+    candidate = new AdaptiveWebPlayback(
+      context,
+      master,
+      {
+        ended: () => {
+          if (
+            this.adaptivePlayback === candidate &&
+            this.loadedAdaptiveProgramId === program.plan.id &&
+            this.graphStarted
+          ) {
+            this.adaptiveHandlers?.ended(program.plan.id);
+          }
+        },
+        error: (error) => {
+          if (
+            this.adaptivePlayback === candidate &&
+            this.loadedAdaptiveProgramId === program.plan.id &&
+            this.graphStarted
+          ) {
+            this.adaptiveHandlers?.error(program.plan.id, error);
+          }
+        },
+      },
+      (work, signal) => acquireWebAudioWork(this.sourceResolver, work, signal),
+    );
+    pending.cleanup = () => candidate.dispose();
+    try {
+      await candidate.load(program);
+      this.assertLoad(pending);
+      await this.commitLoad(pending, async () => {
+        await this.stopInternal(false);
+        this.assertLoad(pending);
+        this.adaptivePlayback = candidate;
+        this.loadedAdaptiveProgramId = program.plan.id;
+        this.loadedPresetId = null;
+        this.loadedProgramId = null;
+      });
+    } catch (error) {
+      await candidate.dispose().catch(() => undefined);
+      throw error;
+    } finally {
+      this.finishLoad(pending);
+    }
   }
 
   async start(
@@ -219,6 +412,7 @@ export class WebAudioDriver implements AudioGraphDriver {
     const context = this.ensureContext();
     const master = this.requireMaster();
     this.sourceGains.clear();
+    const generation = this.playbackGeneration;
 
     try {
       for (const stem of preset.stems) {
@@ -229,31 +423,35 @@ export class WebAudioDriver implements AudioGraphDriver {
             `Missing ${stem.label} web asset.`,
           );
         }
-        const runtime = this.createMediaRuntime(
-          context,
-          url,
-          this.effectiveGain(stem.id, mix[stem.id]),
-          master,
-        );
+        const runtime =
+          this.mediaRuntime.get(stem.id) ??
+          this.createMediaRuntime(context, url, SILENT_GAIN, master);
         this.mediaRuntime.set(stem.id, runtime);
+        runtime.gain.gain.value = this.effectiveGain(stem.id, mix[stem.id]);
         this.sourceGains.set(stem.id, runtime.gain);
       }
       this.createBinauralRuntime(preset, mix.binaural, master);
       this.createBrownNoiseRuntime(mix.brownNoise, master);
       await context.resume();
       this.prepareMasterFade(preset.fadeInSeconds);
-      await Promise.all(
-        [...this.mediaRuntime.values()].map((runtime) =>
-          runtime.element.play(),
-        ),
-      );
+      const gestureActivation = this.takeUserGesturePromise();
+      if (gestureActivation) await gestureActivation;
+      else {
+        await Promise.all(
+          [...this.mediaRuntime.values()].map((runtime) =>
+            runtime.element.play(),
+          ),
+        );
+      }
       const startAt = context.currentTime + 0.02;
+      this.assertPlayback(generation);
       this.binauralRuntime?.left.start(startAt);
       this.binauralRuntime?.right.start(startAt);
       this.brownNoiseRuntime?.source.start(startAt);
       this.graphStarted = true;
     } catch (error) {
-      await this.stop();
+      if (generation === this.playbackGeneration)
+        await this.stopInternal(false);
       throw error;
     }
   }
@@ -268,14 +466,12 @@ export class WebAudioDriver implements AudioGraphDriver {
     }
     const context = this.ensureContext();
     const master = this.requireMaster();
+    const generation = this.playbackGeneration;
     this.programVolume = Math.min(1, Math.max(0, volume));
-    const gain = context.createGain();
-    gain.gain.value = Math.max(
-      SILENT_GAIN,
+    const gainValue = Math.max(
+      0,
       this.programPlaybackGain * this.programVolume,
     );
-    gain.connect(master);
-    this.programGain = gain;
 
     try {
       if (program.work.sourceKind === "generated-noise") {
@@ -283,34 +479,54 @@ export class WebAudioDriver implements AudioGraphDriver {
           throw new Error(`No generated buffer for ${program.work.title}.`);
         }
         const source = context.createBufferSource();
+        const gain = context.createGain();
         source.buffer = this.programNoiseBuffer;
         source.loop = true;
+        gain.gain.value = gainValue;
         source.connect(gain);
+        gain.connect(master);
+        this.programGain = gain;
         this.noiseRuntime = { source, gain };
       } else {
         if (!this.programUrl) {
           throw new Error(`No web asset for ${program.work.title}.`);
         }
-        const runtime = this.createMediaRuntime(
-          context,
-          this.programUrl,
-          gain.gain.value,
-          master,
-          gain,
-        );
+        const runtime =
+          this.mediaRuntime.get("program") ??
+          this.createMediaRuntime(
+            context,
+            this.programUrl,
+            SILENT_GAIN,
+            master,
+          );
         this.mediaRuntime.set("program", runtime);
+        runtime.gain.gain.value = gainValue;
+        this.programGain = runtime.gain;
+        // A gesture-primed, already prepared element must not be reloaded or
+        // rewound after play(): Safari rejects that pending Play as interrupted.
+        if (!this.userGesturePromise) {
+          await positionMediaElement(
+            runtime.element,
+            this.singleTrackPositionSeconds,
+          );
+        }
       }
 
       await context.resume();
       this.prepareMasterFade(program.fadeInSeconds);
+      const gestureActivation = this.takeUserGesturePromise();
       if (this.noiseRuntime) {
         this.noiseRuntime.source.start(context.currentTime + 0.02);
+      } else if (gestureActivation) {
+        await gestureActivation;
       } else {
         await this.mediaRuntime.get("program")?.element.play();
       }
+      this.assertPlayback(generation);
       this.graphStarted = true;
     } catch (error) {
-      await this.stop();
+      if (generation === this.playbackGeneration)
+        await this.stopInternal(false);
       throw error;
     }
   }
@@ -325,14 +541,34 @@ export class WebAudioDriver implements AudioGraphDriver {
       await this.loadAdaptiveSession(program);
     }
     const context = this.ensureContext();
+    const generation = this.playbackGeneration;
     try {
       await context.resume();
+      if (!this.adaptivePlayback) {
+        throw new Error("Adaptive session playback is unavailable.");
+      }
+      await this.adaptivePlayback.start(program, volume, positionSeconds);
+      this.assertPlayback(generation);
       this.prepareMasterFade(program.fadeInSeconds);
-      await this.adaptivePlayback?.start(program, volume, positionSeconds);
       this.graphStarted = true;
     } catch (error) {
-      await this.stop();
+      if (generation === this.playbackGeneration)
+        await this.stopInternal(false);
       throw error;
+    }
+  }
+
+  async seekSingleTrack(positionSeconds: number): Promise<void> {
+    if (!this.loadedProgramId) {
+      throw new Error("No single-track program is loaded.");
+    }
+    if (this.programNoiseBuffer) {
+      throw new Error("Continuous generators do not have a file position.");
+    }
+    this.singleTrackPositionSeconds = positionSeconds;
+    const runtime = this.mediaRuntime.get("program");
+    if (runtime) {
+      await positionMediaElement(runtime.element, positionSeconds);
     }
   }
 
@@ -352,6 +588,16 @@ export class WebAudioDriver implements AudioGraphDriver {
     await this.adaptivePlayback.configureAudition(audition);
   }
 
+  async setAdaptiveNatureLevel(
+    level: NatureMixLevel,
+    fadeMs: number,
+  ): Promise<void> {
+    if (!this.adaptivePlayback) {
+      throw new Error("No adaptive session is loaded.");
+    }
+    this.adaptivePlayback.setNatureLevel(level, fadeMs);
+  }
+
   async resume(): Promise<void> {
     if (!this.context || !this.graphStarted) return;
     await this.context.resume();
@@ -359,9 +605,15 @@ export class WebAudioDriver implements AudioGraphDriver {
       await this.adaptivePlayback.resume();
       return;
     }
-    await Promise.all(
-      [...this.mediaRuntime.values()].map((runtime) => runtime.element.play()),
-    );
+    const gestureActivation = this.takeUserGesturePromise();
+    if (gestureActivation) await gestureActivation;
+    else {
+      await Promise.all(
+        [...this.mediaRuntime.values()].map((runtime) =>
+          runtime.element.play(),
+        ),
+      );
+    }
   }
 
   async pause(_releaseAudioFocus: boolean): Promise<void> {
@@ -374,14 +626,35 @@ export class WebAudioDriver implements AudioGraphDriver {
   }
 
   async stop(): Promise<void> {
+    await this.cancelPendingLoad();
+    await this.stopInternal(true);
+  }
+
+  private async stopInternal(prepareForReplay: boolean): Promise<void> {
+    this.playbackGeneration += 1;
+    this.gestureAbort?.abort();
+    this.gestureAbort = null;
+    this.userGesturePromise = null;
     this.clearScheduledStop();
     if (this.masterGain && this.context) {
       const now = this.context.currentTime;
       this.masterGain.gain.cancelScheduledValues(now);
-      this.masterGain.gain.setValueAtTime(SILENT_GAIN, now);
+      this.masterGain.gain.setValueAtTime(0, now);
     }
     for (const runtime of this.mediaRuntime.values()) resetMedia(runtime);
     this.mediaRuntime.clear();
+    if (!prepareForReplay && this.programLease) {
+      const lease = this.programLease;
+      this.programLease = null;
+      await lease.release();
+    }
+    if (!prepareForReplay) {
+      this.loadedProgramId = null;
+      this.loadedPresetId = null;
+      this.loadedAdaptiveProgramId = null;
+      this.programUrl = null;
+      this.programNoiseBuffer = null;
+    }
     if (this.noiseRuntime) {
       safelyStop(this.noiseRuntime.source);
       this.noiseRuntime.gain.disconnect();
@@ -399,14 +672,29 @@ export class WebAudioDriver implements AudioGraphDriver {
     this.brownNoiseRuntime = null;
     this.binauralRuntime = null;
     this.programGain = null;
-    await this.adaptivePlayback?.stop();
+    this.singleTrackPositionSeconds = 0;
+    const adaptivePlayback = this.adaptivePlayback;
+    if (adaptivePlayback) {
+      if (prepareForReplay) {
+        await adaptivePlayback.stop(true);
+      } else {
+        await adaptivePlayback.dispose();
+        if (this.adaptivePlayback === adaptivePlayback) {
+          this.adaptivePlayback = null;
+        }
+      }
+    }
     this.sourceGains.clear();
     this.graphStarted = false;
+    this.userGesturePromise = null;
     if (this.context?.state === "running") await this.context.suspend();
   }
 
   async dispose(): Promise<void> {
-    await this.stop();
+    this.disposed = true;
+    await this.cancelPendingLoad();
+    await this.loadCommitQueue.catch(() => undefined);
+    await this.stopInternal(false);
     if (this.context && this.context.state !== "closed") {
       await this.context.close();
     }
@@ -433,7 +721,7 @@ export class WebAudioDriver implements AudioGraphDriver {
     this.sourceGainValues.set(sourceId, gain);
     this.sourceMuted.set(sourceId, muted);
     const node = this.sourceGains.get(sourceId);
-    if (node) this.rampGain(node, muted ? SILENT_GAIN : gain, fadeMs);
+    if (node) this.rampGain(node, muted ? 0 : gain, fadeMs);
   }
 
   async setMasterVolume(volume: number, fadeMs: number): Promise<void> {
@@ -457,7 +745,7 @@ export class WebAudioDriver implements AudioGraphDriver {
     const endAt = now + remainingMs / 1000;
     const fadeAt = Math.max(now, endAt - Math.min(remainingMs, fadeMs) / 1000);
     this.masterGain.gain.setValueAtTime(1, fadeAt);
-    this.masterGain.gain.linearRampToValueAtTime(SILENT_GAIN, endAt);
+    this.masterGain.gain.linearRampToValueAtTime(0, endAt);
     this.scheduledStop = setTimeout(() => void this.stop(), remainingMs);
   }
 
@@ -470,11 +758,13 @@ export class WebAudioDriver implements AudioGraphDriver {
   }
 
   private ensureContext(): AudioContext {
+    if (this.disposed)
+      throw new Error("This Web Audio driver has been disposed.");
     if (!this.context) {
       const Constructor = browserAudioContextConstructor();
       this.context = new Constructor();
       this.masterGain = this.context.createGain();
-      this.masterGain.gain.value = SILENT_GAIN;
+      this.masterGain.gain.value = 0;
       this.masterGain.connect(this.context.destination);
     }
     return this.context;
@@ -497,7 +787,7 @@ export class WebAudioDriver implements AudioGraphDriver {
     element.preload = "auto";
     const source = context.createMediaElementSource(element);
     const gain = existingGain ?? context.createGain();
-    gain.gain.value = Math.max(SILENT_GAIN, gainValue);
+    gain.gain.value = Math.max(0, gainValue);
     source.connect(gain);
     if (!existingGain) gain.connect(master);
     return { element, source, gain };
@@ -551,25 +841,23 @@ export class WebAudioDriver implements AudioGraphDriver {
 
   private effectiveGain(sourceId: AudioSourceId, fallback: number): number {
     const value = this.sourceGainValues.get(sourceId) ?? fallback;
-    return this.sourceMuted.get(sourceId)
-      ? SILENT_GAIN
-      : Math.max(SILENT_GAIN, value);
+    return this.sourceMuted.get(sourceId) ? 0 : Math.max(0, value);
   }
 
   private prepareMasterFade(seconds: number): void {
     if (!this.context || !this.masterGain) return;
     const now = this.context.currentTime;
     this.masterGain.gain.cancelScheduledValues(now);
-    this.masterGain.gain.setValueAtTime(SILENT_GAIN, now);
+    this.masterGain.gain.setValueAtTime(0, now);
     this.masterGain.gain.linearRampToValueAtTime(1, now + seconds);
   }
 
   private rampGain(node: GainNode, value: number, fadeMs: number): void {
     if (!this.context) return;
     const now = this.context.currentTime;
-    const target = Math.max(SILENT_GAIN, value);
+    const target = Math.max(0, value);
     node.gain.cancelScheduledValues(now);
-    node.gain.setValueAtTime(Math.max(SILENT_GAIN, node.gain.value), now);
+    node.gain.setValueAtTime(Math.max(0, node.gain.value), now);
     if (fadeMs > 0) {
       node.gain.linearRampToValueAtTime(target, now + fadeMs / 1000);
     } else {
@@ -580,5 +868,57 @@ export class WebAudioDriver implements AudioGraphDriver {
   private clearScheduledStop(): void {
     if (this.scheduledStop !== null) clearTimeout(this.scheduledStop);
     this.scheduledStop = null;
+  }
+
+  private takeUserGesturePromise(): Promise<void> | null {
+    const activation = this.userGesturePromise;
+    this.userGesturePromise = null;
+    return activation;
+  }
+
+  private beginLoad(): PendingWebLoad {
+    if (this.disposed) throw cancelledWebAudioLoad();
+    void this.cancelPendingLoad();
+    const pending: PendingWebLoad = {
+      controller: new AbortController(),
+      cleanup: async () => {},
+    };
+    this.pendingLoad = pending;
+    return pending;
+  }
+
+  private async cancelPendingLoad(): Promise<void> {
+    const pending = this.pendingLoad;
+    if (!pending) return;
+    this.pendingLoad = null;
+    pending.controller.abort();
+    await pending.cleanup().catch(() => undefined);
+  }
+
+  private assertLoad(pending: PendingWebLoad) {
+    if (
+      this.disposed ||
+      pending.controller.signal.aborted ||
+      this.pendingLoad !== pending
+    )
+      throw cancelledWebAudioLoad();
+  }
+
+  private assertPlayback(generation: number) {
+    if (this.disposed || generation !== this.playbackGeneration)
+      throw cancelledWebAudioLoad();
+  }
+
+  private finishLoad(pending: PendingWebLoad) {
+    if (this.pendingLoad === pending) this.pendingLoad = null;
+  }
+
+  private commitLoad(pending: PendingWebLoad, commit: () => Promise<void>) {
+    const operation = this.loadCommitQueue.then(async () => {
+      this.assertLoad(pending);
+      await commit();
+    });
+    this.loadCommitQueue = operation.catch(() => undefined);
+    return operation;
   }
 }

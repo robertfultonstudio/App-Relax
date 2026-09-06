@@ -1,5 +1,8 @@
 import type { SingleTrackProgram } from "./consumerTypes";
-import type { AdaptiveSessionProgram } from "@/domain/sessions/types";
+import type {
+  AdaptiveSessionProgram,
+  NatureMixLevel,
+} from "@/domain/sessions/types";
 import type { TransitionAudition } from "@/domain/sessions/workbench";
 
 export const AUDIO_SOURCE_IDS = [
@@ -19,7 +22,15 @@ export type SourceKind = "stem" | "binaural" | "noise";
 export type SourceLoadState = "idle" | "loading" | "ready" | "error";
 export type FadeState = "idle" | "fadingIn" | "fadingOut";
 export type PlaybackStatus =
-  "idle" | "loading" | "ready" | "playing" | "paused" | "fadingOut" | "error";
+  | "idle"
+  | "loading"
+  | "preparing"
+  | "ready"
+  | "playing"
+  | "paused"
+  | "fadingOut"
+  | "completed"
+  | "error";
 
 export type Goal = "sleep" | "calm" | "focus" | "meditate";
 export type StemAssetKey =
@@ -85,6 +96,7 @@ export interface SessionSnapshot {
   sessionPlanId: string | null;
   title: string | null;
   volume: number;
+  natureMixLevel: NatureMixLevel | null;
   selectedDurationMinutes: number;
   remainingMs: number;
   deadlineMs: number | null;
@@ -100,8 +112,10 @@ export interface AudioEngine {
   loadPreset(preset: AudioPreset): Promise<void>;
   loadProgram(program: SingleTrackProgram): Promise<void>;
   loadAdaptiveSession(program: AdaptiveSessionProgram): Promise<void>;
+  seekSingleTrack(positionSeconds: number): Promise<void>;
   seekAdaptiveSession(positionSeconds: number): Promise<void>;
   configureAdaptiveAudition(audition: TransitionAudition | null): Promise<void>;
+  setNatureMixLevel(level: NatureMixLevel, fadeMs?: number): Promise<void>;
   play(): Promise<void>;
   pause(): Promise<void>;
   stop(): Promise<void>;

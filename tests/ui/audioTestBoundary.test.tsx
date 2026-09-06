@@ -13,13 +13,22 @@ jest.mock("expo-linear-gradient", () => ({
   LinearGradient: "LinearGradient",
 }));
 
-describe("M3 Audio Test boundary", () => {
+describe("consumer and technical Audio Test boundary", () => {
   beforeEach(() => mockPush.mockClear());
 
-  it("links to Audio Test from Settings rather than consumer tabs", async () => {
+  it("keeps technical entry points out of consumer Settings while preserving useful listening information", async () => {
     const screen = await render(<SettingsScreen />);
-    fireEvent.press(screen.getByText("Audio Test — Test only"));
-    expect(mockPush).toHaveBeenCalledWith("/audio-test");
+    expect(
+      screen.queryByText(/Audio Test|Moon Current|ATP01|Workbench/i),
+    ).toBeNull();
+    expect(screen.getByText("Autoplay")).toBeTruthy();
+    expect(screen.getByText("Off")).toBeTruthy();
+    expect(screen.getAllByRole("link")).toHaveLength(1);
+    await fireEvent.press(screen.getByText("About listening"));
+    expect(mockPush).toHaveBeenCalledTimes(1);
+    expect(mockPush).toHaveBeenCalledWith("/legal");
+    expect(mockPush).not.toHaveBeenCalledWith("/audio-test");
+    expect(mockPush).not.toHaveBeenCalledWith("/qa-workbench");
   });
 
   it("labels the engine material as test-only before opening playback", async () => {
@@ -29,7 +38,7 @@ describe("M3 Audio Test boundary", () => {
     expect(
       screen.getByText(/not part of the consumer catalogue/i),
     ).toBeTruthy();
-    fireEvent.press(screen.getByTestId("open-audio-test-player"));
+    await fireEvent.press(screen.getByTestId("open-audio-test-player"));
     expect(mockPush).toHaveBeenCalledWith("/session/deep-sleep-432");
   });
 });

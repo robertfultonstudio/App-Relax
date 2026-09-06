@@ -1,5 +1,11 @@
 import { createHash } from "node:crypto";
-import { createReadStream, readFileSync, readdirSync, statSync } from "node:fs";
+import {
+  createReadStream,
+  existsSync,
+  readFileSync,
+  readdirSync,
+  statSync,
+} from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -15,7 +21,7 @@ const localManifest = JSON.parse(
 );
 const localPreviewDir = join(root, "public", "audio-catalog");
 const starterDir = join(root, "assets", "audio", "consumer-starter");
-const starter = readdirSync(starterDir).sort();
+const starter = existsSync(starterDir) ? readdirSync(starterDir).sort() : [];
 const catalog = readFileSync(
   join(root, "src", "content", "consumerCatalog.ts"),
   "utf8",
@@ -47,32 +53,16 @@ assert(
   "every derivative needs a decoded PCM hash",
 );
 assert(
-  starter.length === 1,
-  "starter pack must remain deliberately limited to one FLAC",
-);
-assert(
-  starter[0].endsWith(".flac"),
-  "starter pack may not duplicate a WAV master",
-);
-const starterPath = join(starterDir, starter[0]);
-assert(
-  statSync(starterPath).size < 100_000_000,
-  "starter asset exceeds GitHub's normal file limit",
-);
-const sha = createHash("sha256")
-  .update(readFileSync(starterPath))
-  .digest("hex");
-assert(
-  sha === "644a9c4037fd1262c770bd195d2ae8533cb3ee3795ce2341bd595e0f0f8522a5",
-  "starter FLAC hash mismatch",
+  starter.length === 0,
+  "consumer starter pack must be empty after the listening rejection",
 );
 assert(
   metro.includes('["wav", "flac"]'),
   "Metro must declare FLAC as an asset extension",
 );
 assert(
-  (catalog.match(/work\(\s*"/g) ?? []).length === 18,
-  "base catalog must retain exactly 18 file-backed works",
+  (catalog.match(/work\(\s*"/g) ?? []).length === 16,
+  "base catalog must contain exactly 16 file-backed works after the listening exclusions",
 );
 assert(
   (elementalCatalog.match(/pack02Work\(\{/g) ?? []).length === 24,
@@ -105,6 +95,30 @@ assert(
   "rejected Soft Air must not remain addressable as a consumer asset",
 );
 assert(
+  !/eclipse|eclypsis/i.test(catalog) &&
+    !/eclipse|eclypsis/i.test(consumerAssets),
+  "rejected Eclipse Veil must not remain in the consumer catalog or asset map",
+);
+assert(
+  !/stillwater|nirvana/i.test(catalog) &&
+    !/stillwater|nirvana/i.test(consumerAssets),
+  "removed Nirvana Waves must not remain in the consumer catalog or asset map",
+);
+assert(
+  report.files.some(
+    (file) =>
+      file.filename === "SOUNDSCAPE_ECLYPSIS_001_EMINOR_48K24_LOOP.flac",
+  ),
+  "historical lossless processing report must retain the excluded derivative evidence",
+);
+assert(
+  report.files.some(
+    (file) =>
+      file.filename === "SOUNDSCAPE_NIRVANA_WAVES_001_EMINOR_48K24_LOOP.flac",
+  ),
+  "historical lossless processing report must retain the removed Nirvana derivative evidence",
+);
+assert(
   !localManifest.files.some(
     (file) => file.filename === "SLEEP_TEXTURE_001.wav",
   ),
@@ -117,7 +131,11 @@ const localAudioFiles = readdirSync(localPreviewDir)
 const expectedAudioFiles = localManifest.files
   .map((file) => file.filename)
   .sort();
-assert(localManifest.fileCount === 38, "local manifest must declare 38 files");
+assert(localManifest.fileCount === 37, "local manifest must declare 37 files");
+assert(
+  !localManifest.files.some((file) => /nirvana/i.test(file.filename)),
+  "removed Nirvana Waves bytes must not enter the local consumer preview",
+);
 assert(
   JSON.stringify(localAudioFiles) === JSON.stringify(expectedAudioFiles),
   "local preview filenames do not match the tracked manifest",
@@ -142,5 +160,5 @@ assert(
 );
 
 console.log(
-  `Consumer audio: PASS (42 file works + 8 runtime noise colours; 38 local preview files verified, ${localBytes} B; starter ${statSync(starterPath).size} B).`,
+  `Consumer audio: PASS (40 file works + 8 runtime noise colours; 37 approved local preview files verified, ${localBytes} B; no consumer starter FLAC).`,
 );

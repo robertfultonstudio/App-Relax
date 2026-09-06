@@ -1,6 +1,7 @@
 import { CONSUMER_AUDIO_WORKS } from "./consumerCatalog";
 import type { ConsumerOutcomeId } from "./productShell";
 import type {
+  SessionSoundKind,
   SessionPhaseId,
   SessionWorkProfile,
 } from "@/domain/sessions/types";
@@ -12,6 +13,27 @@ const ALL_PHASES: readonly SessionPhaseId[] = [
   "return",
 ];
 
+const ALL_OUTCOMES: readonly ConsumerOutcomeId[] = [
+  "meditation",
+  "yoga",
+  "massage",
+  "relax",
+  "sleep",
+  "focus",
+];
+
+export const PROVISIONAL_MUSIC_SESSION_WORK_IDS = new Set([
+  "astral-thread",
+  "celestial-current",
+  "quiet-field",
+  "cedar-current",
+]);
+
+export const PROVISIONAL_MUSIC_SESSION_PAIRINGS: readonly (readonly [
+  string,
+  string,
+])[] = [];
+
 const EXTRA_INTENTS: Readonly<Record<string, readonly ConsumerOutcomeId[]>> = {
   "field-rain-002-soft-weather": ["massage", "yoga"],
   "field-rain-005-misted-garden": ["massage", "yoga"],
@@ -21,8 +43,8 @@ const EXTRA_INTENTS: Readonly<Record<string, readonly ConsumerOutcomeId[]>> = {
   "field-stream-004-clear-stream": ["yoga"],
   "field-stream-005-cedar-stream": ["yoga"],
   "field-sea-001-tidal-breath": ["massage", "yoga"],
-  "field-sea-003-open-tide": ["yoga"],
-  "field-sea-005-pearl-tide": ["massage"],
+  "field-sea-003-open-tide": ["yoga", "massage"],
+  "field-sea-005-pearl-tide": ["massage", "yoga"],
   "field-sea-007-blue-interval": ["yoga", "massage"],
 };
 
@@ -46,6 +68,7 @@ function createNaturalWaterProfile(
   const energy = energyFor(work.id);
   return {
     work,
+    materialKind: "nature",
     intents: distinct([
       work.primaryOutcome,
       ...work.secondaryOutcomes,
@@ -85,9 +108,16 @@ function createTonalProfile(
   )
     ? "present"
     : "light";
+  const materialKind: SessionSoundKind | "unclassified" =
+    work.id === "esoteric-air-001-second-element" ? "unclassified" : "music";
   return {
     work,
-    intents: distinct([work.primaryOutcome, ...work.secondaryOutcomes]),
+    materialKind,
+    intents: distinct([
+      work.primaryOutcome,
+      ...work.secondaryOutcomes,
+      ...(PROVISIONAL_MUSIC_SESSION_WORK_IDS.has(work.id) ? ALL_OUTCOMES : []),
+    ]),
     aestheticFamily: melodicPresence === "present" ? "soft-tonal" : "cosmic",
     compatibilityGroup: `tonal-${harmonicFamily}`,
     harmonicFamily,

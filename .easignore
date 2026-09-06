@@ -42,6 +42,7 @@ yarn-error.*
 /AGENTS.md
 /README.md
 /STATO.md
+/Avvia PWA.command
 /docs/
 /scripts/
 /tests/
@@ -51,5 +52,7 @@ yarn-error.*
 /public/audio-catalog/
 /src/app-qa/
 /src/qa/
+/public-pwa/
+/src/app-pwa/
 /output/
 /tmp/

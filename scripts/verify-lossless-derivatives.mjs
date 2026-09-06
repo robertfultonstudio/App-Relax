@@ -76,7 +76,7 @@ function decodedPcm(flacPath) {
   return child;
 }
 
-async function verifyPinnedStarter() {
+async function verifyCatalogExclusion() {
   const reportPath = join(
     repositoryRoot,
     "docs",
@@ -89,45 +89,64 @@ async function verifyPinnedStarter() {
     "consumer-starter",
   );
   const report = JSON.parse(readFileSync(reportPath, "utf8"));
-  const starterFiles = readdirSync(starterDir)
-    .filter((name) => extname(name).toLowerCase() === ".flac")
-    .sort();
+  const catalog = readFileSync(
+    join(repositoryRoot, "src", "content", "consumerCatalog.ts"),
+    "utf8",
+  );
+  const consumerAssets = readFileSync(
+    join(
+      repositoryRoot,
+      "src",
+      "audio",
+      "reactNativeAudioApi",
+      "consumerAssets.ts",
+    ),
+    "utf8",
+  );
+  const starterFiles = existsSync(starterDir)
+    ? readdirSync(starterDir)
+        .filter((name) => extname(name).toLowerCase() === ".flac")
+        .sort()
+    : [];
 
-  if (starterFiles.length === 0) {
-    throw new Error("No embedded FLAC starter derivative found.");
+  if (starterFiles.length !== 0) {
+    throw new Error(
+      `Consumer starter must contain no FLAC after the listening rejection; found ${starterFiles.join(", ")}.`,
+    );
   }
-
-  const verified = [];
-  for (const filename of starterFiles) {
-    const recorded = report.files.find((entry) => entry.filename === filename);
-    if (!recorded) {
-      throw new Error(`${filename} is not pinned in the lossless report.`);
-    }
-    const path = join(starterDir, filename);
-    const actualBytes = statSync(path).size;
-    const actualSha256 = (await hashStream(createReadStream(path))).hash;
-    if (
-      actualBytes !== recorded.flacBytes ||
-      actualSha256 !== recorded.flacSha256
-    ) {
-      throw new Error(`${filename} differs from the PCM-verified derivative.`);
-    }
-    verified.push({
-      filename,
-      bytes: actualBytes,
-      flacSha256: actualSha256,
-      decodedPcmSha256: recorded.decodedPcmSha256,
-    });
+  const excludedFilenames = [
+    "SOUNDSCAPE_ECLYPSIS_001_EMINOR_48K24_LOOP.flac",
+    "SOUNDSCAPE_NIRVANA_WAVES_001_EMINOR_48K24_LOOP.flac",
+  ];
+  const historicalDerivatives = excludedFilenames.map((filename) =>
+    report.files.find((entry) => entry.filename === filename),
+  );
+  if (historicalDerivatives.some((entry) => !entry)) {
+    throw new Error(
+      "Historical lossless derivative evidence is missing for an excluded work.",
+    );
+  }
+  if (
+    /eclipse|eclypsis|stillwater|nirvana/i.test(`${catalog}\n${consumerAssets}`)
+  ) {
+    throw new Error(
+      "An excluded work remains referenced by the consumer catalog or asset map.",
+    );
   }
 
   console.log(
     JSON.stringify(
       {
-        status: "REPORT_PINNED_HASH_MATCH",
+        status: "CATALOG_EXCLUSIONS_CONFIRMED",
         evidence:
-          "Each embedded FLAC is byte-identical to its previously decoded PCM-verified derivative.",
-        fileCount: verified.length,
-        files: verified,
+          "Eclipse Veil and Nirvana Waves are absent from the app package and consumer registry while their historical PCM-verified derivatives remain documented.",
+        embeddedFlacCount: starterFiles.length,
+        excludedDerivatives: historicalDerivatives.map((entry) => ({
+          filename: entry.filename,
+          flacBytes: entry.flacBytes,
+          flacSha256: entry.flacSha256,
+          decodedPcmSha256: entry.decodedPcmSha256,
+        })),
       },
       null,
       2,
@@ -139,7 +158,7 @@ const requestedArgs = process.argv
   .slice(2)
   .filter((argument) => argument !== "--");
 if (requestedArgs.length === 0) {
-  await verifyPinnedStarter();
+  await verifyCatalogExclusion();
   process.exit(0);
 }
 

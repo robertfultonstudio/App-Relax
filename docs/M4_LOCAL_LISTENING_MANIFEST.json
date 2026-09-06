@@ -1,14 +1,8 @@
 {
   "schemaVersion": 1,
-  "fileCount": 38,
-  "totalBytes": 2706406941,
+  "fileCount": 37,
+  "totalBytes": 2657446897,
   "files": [
-    {
-      "filename": "SOUNDSCAPE_NIRVANA_WAVES_001_EMINOR_48K24_LOOP.wav",
-      "bytes": 48960044,
-      "sha256": "647fe5ec84fe0e4fa4ca8fa116de365685cd807b485d7fac813cf2a7566bd74c",
-      "packId": "APP_READY_AUDIO_01"
-    },
     {
       "filename": "SOUNDSCAPE_PIANO_MASSAGE_001_48K24_LOOP.wav",
       "bytes": 339840044,

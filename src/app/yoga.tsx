@@ -15,7 +15,7 @@ export default function YogaScreen() {
   );
   if (!yogaOutcome) return null;
   return (
-    <EditorialScreen footer={<ProductTabBar activeTab="yoga" />}>
+    <EditorialScreen footer={<ProductTabBar activeTab="rituals" />}>
       <EditorialHeader
         actionLabel="Settings"
         label="YOGA"

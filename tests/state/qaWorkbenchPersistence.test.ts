@@ -25,7 +25,7 @@ describe("QA workbench persistence", () => {
       parseQaWorkbenchDraft(
         JSON.stringify({
           ...DEFAULT_QA_WORKBENCH_DRAFT,
-          aDurationSeconds: 99,
+          aDurationSeconds: 301,
         }),
       ),
     ).toBeNull();

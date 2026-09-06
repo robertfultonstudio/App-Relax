@@ -62,11 +62,17 @@ pnpm assets:validate-rituals
 pnpm security:audit
 pnpm config:validate
 CI=1 pnpm expo:doctor
-CI=1 pnpm exec expo export --platform ios --output-dir dist/ios-bundle
-CI=1 pnpm exec expo export --platform android --output-dir dist/android-bundle
+CI=1 pnpm run export:ios:consumer --output-dir dist/ios-bundle
+CI=1 pnpm run export:android:consumer --output-dir dist/android-bundle
+CI=1 pnpm export:validate-native dist/ios-bundle dist/android-bundle
 ```
 
 Criterio: tutti exit 0. La policy security puo stampare `PASS WITH ACCEPTED RESIDUALS` soltanto per i due advisory `image-size` documentati in D-015; il raw audit resta registrato separatamente. `dist/` e ignorata da Git.
+
+Non usare il comando `expo export` grezzo: Expo copia ricorsivamente `public/`
+anche nelle piattaforme native. Gli script consumer selezionano
+`public-mobile`, mentre i profili EAS impostano la stessa variabile e
+`.easignore` mantiene una seconda esclusione del catalogo localhost.
 
 ## Gate 2 - Preparazione EAS offline
 

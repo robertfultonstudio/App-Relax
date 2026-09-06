@@ -1,337 +1,382 @@
 import { type Href, useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { OfflinePackageStatus } from "./OfflinePackageStatus";
 import { SessionDurationPicker } from "./SessionDurationPicker";
+import { DownloadControl } from "./DownloadControl";
+import { useAudioSession } from "@/audio/AudioProvider";
+import { PlaybackCancelledError } from "@/audio/AudioSessionController";
+import { usePreparedSelection } from "@/audio/usePreparedSelection";
 import { getSessionPolicy } from "@/content/sessionPolicies";
+import { getPlayableWorksForOutcome } from "@/content/consumerCatalog";
 import type { ConsumerOutcomeId } from "@/content/productShell";
 import { createAdaptiveSessionProgram } from "@/domain/sessions/continuumPlanner";
+import { getNatureSessionFeasibility } from "@/domain/sessions/natureSessionFeasibility";
+import { createSingleTrackProgram } from "@/domain/audio/consumerTypes";
+import {
+  consumerSelectionUrl,
+  type ConsumerSelection,
+} from "@/domain/audio/consumerSelection";
 import type {
+  NatureAmbienceFamily,
   SessionDurationMinutes,
-  SessionMode,
 } from "@/domain/sessions/types";
 import {
   createAdaptiveSessionHistoryStore,
-  recentWorkIdsForOutcome,
+  createConsumerSessionSeed,
+  recentWorkIdsForSession,
 } from "@/state/adaptiveSessionPersistence";
-import { isAdaptivePlaybackAvailable } from "@/domain/sessions/playbackAvailability";
+import {
+  isAdaptivePlaybackAvailable,
+  isPwaWebSurface,
+} from "@/domain/sessions/playbackAvailability";
 import { editorial } from "@/design/editorialTheme";
-import { fonts, spacing } from "@/design/theme";
+import { fonts } from "@/design/theme";
 
 const historyStore = createAdaptiveSessionHistoryStore();
-
 export function AdaptiveSessionSetup({
   outcome,
   qaAvailable = isAdaptivePlaybackAvailable(),
+  duration: suppliedDuration,
+  onDurationChange,
 }: {
   outcome: ConsumerOutcomeId;
   qaAvailable?: boolean;
+  duration?: SessionDurationMinutes;
+  onDurationChange?: (value: SessionDurationMinutes) => void;
 }) {
   const router = useRouter();
+  const { controller, snapshot } = useAudioSession();
   const policy = getSessionPolicy(outcome);
-  const [duration, setDuration] = useState<SessionDurationMinutes>(
-    policy.defaultDuration,
+  const [localDuration, setLocalDuration] = useState(policy.defaultDuration);
+  const duration = suppliedDuration ?? localDuration;
+  const [family, setFamily] = useState<NatureAmbienceFamily>(
+    outcome === "sleep" || outcome === "focus" ? "rain" : "sea",
   );
-  const [mode, setMode] = useState<SessionMode>("sound-only");
-  const [customizeOpen, setCustomizeOpen] = useState(false);
-  const [historyState, setHistoryState] = useState<{
-    outcome: ConsumerOutcomeId;
-    recentWorkIds: string[];
-    error: string | null;
-  } | null>(null);
+  const [customize, setCustomize] = useState(false);
+  const [recent, setRecent] = useState<string[] | null>(null);
+  const [nonce] = useState(() => Date.now());
+  const [starting, setStarting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   useEffect(() => {
-    if (!qaAvailable) return;
-    let mounted = true;
+    let live = true;
     void historyStore
       .load()
       .then((history) => {
-        if (mounted) {
-          setHistoryState({
-            outcome,
-            recentWorkIds: recentWorkIdsForOutcome(history, outcome),
-            error: null,
-          });
-        }
+        if (live)
+          setRecent(recentWorkIdsForSession(history, outcome, "nature"));
       })
       .catch(() => {
-        if (mounted) {
-          setHistoryState({
-            outcome,
-            recentWorkIds: [],
-            error: "Saved session history could not be read.",
-          });
-        }
+        if (live) setRecent([]);
       });
     return () => {
-      mounted = false;
+      live = false;
     };
-  }, [outcome, qaAvailable]);
-  const currentHistory =
-    historyState?.outcome === outcome ? historyState : null;
-  const recentWorkIds = useMemo(
+  }, [outcome]);
+  const feasibility = useMemo(
     () =>
-      qaAvailable ? (currentHistory?.recentWorkIds ?? null) : ([] as string[]),
-    [currentHistory, qaAvailable],
+      qaAvailable
+        ? getNatureSessionFeasibility({
+            outcome,
+            durationMinutes: duration,
+            allowProvisionalMetadata: true,
+          })
+        : [],
+    [outcome, duration, qaAvailable],
   );
-  const historyError = qaAvailable ? (currentHistory?.error ?? null) : null;
-  const planningError = useMemo(() => {
-    if (!qaAvailable || recentWorkIds === null) return null;
-    if (historyError) return historyError;
-    try {
-      createAdaptiveSessionProgram({
+  const availableFamily =
+    feasibility.find(
+      (entry) => entry.natureFamily === family && entry.available,
+    )?.natureFamily ??
+    feasibility.find((entry) => entry.available)?.natureFamily;
+  const selection = useMemo<ConsumerSelection | null>(() => {
+    if (recent === null) return null;
+    if (availableFamily) {
+      const request = {
         outcome,
         durationMinutes: duration,
-        mode: "sound-only",
-        seed: `setup-${outcome}-${duration}`,
-        recentWorkIds,
-        allowProvisionalMetadata: true,
-      });
-      return null;
-    } catch (error) {
-      return error instanceof Error ? error.message : "Session unavailable.";
+        mode: "sound-only" as const,
+        soundKind: "nature" as const,
+        natureFamily: availableFamily,
+      };
+      try {
+        return {
+          kind: "adaptive",
+          request,
+          program: createAdaptiveSessionProgram({
+            ...request,
+            seed: createConsumerSessionSeed(request, nonce),
+            recentWorkIds: recent,
+            allowProvisionalMetadata: true,
+          }),
+        };
+      } catch {
+        /* Offer a real autonomous work; never invent a transition. */
+      }
     }
-  }, [duration, historyError, outcome, qaAvailable, recentWorkIds]);
-  const guidedUnavailable = mode === "guided";
-  const canStart =
-    qaAvailable &&
-    recentWorkIds !== null &&
-    !guidedUnavailable &&
-    !planningError;
-
-  function start(): void {
-    if (!canStart) return;
-    router.push(
-      `/adaptive-session/${outcome}?duration=${duration}&start=1` as Href,
-    );
+    const work = getPlayableWorksForOutcome(outcome)[0];
+    return work
+      ? {
+          kind: "single",
+          program: createSingleTrackProgram(work, outcome),
+          outcome,
+          durationMinutes: duration,
+        }
+      : null;
+  }, [outcome, duration, availableFamily, recent, nonce]);
+  const prepared = usePreparedSelection(selection);
+  const title =
+    selection?.kind === "adaptive"
+      ? selection.request.natureFamily === "sea"
+        ? "Ocean waves"
+        : "Rain"
+      : selection?.program.work.title;
+  function changeDuration(value: SessionDurationMinutes) {
+    setError(null);
+    setLocalDuration(value);
+    onDurationChange?.(value);
   }
-
+  function start() {
+    if (!selection || !prepared.ready || starting) return;
+    setStarting(true);
+    setError(null);
+    const operation = controller.startSelectionFromUserGesture(selection);
+    void operation
+      .then(() => router.push(consumerSelectionUrl(selection) as Href))
+      .catch((reason: unknown) => {
+        if (!(reason instanceof PlaybackCancelledError))
+          setError(
+            reason instanceof Error
+              ? reason.message
+              : "The sound did not start. Please retry.",
+          );
+        prepared.retry();
+      })
+      .finally(() => setStarting(false));
+  }
+  const busy = starting || snapshot.status === "preparing";
   return (
-    <View style={styles.root} testID="adaptive-session-setup">
-      <Text style={styles.step}>01 / CHOOSE A DURATION</Text>
+    <View testID="adaptive-session-setup">
+      <Text style={styles.label}>HOW LONG DO YOU HAVE?</Text>
       <SessionDurationPicker
-        onChange={setDuration}
         options={policy.durations}
         selected={duration}
+        onChange={changeDuration}
       />
-      <Text style={styles.preparation}>{policy.preparationLabel}</Text>
-
+      <Text style={styles.proposal}>{title ?? "Sound unavailable"}</Text>
+      <Text style={styles.body}>
+        {selection?.kind === "single"
+          ? "One complete sound, for your chosen time."
+          : "An evolving nature session. Sounds change gently as you listen."}
+      </Text>
       <Pressable
-        accessibilityLabel={customizeOpen ? "Close customize" : "Customize"}
         accessibilityRole="button"
-        accessibilityState={{ expanded: customizeOpen }}
-        onPress={() => setCustomizeOpen((value) => !value)}
-        style={styles.customizeButton}
+        accessibilityState={{ expanded: customize }}
+        onPress={() => setCustomize(!customize)}
+        style={styles.disclosure}
       >
-        <Text style={styles.customizeText}>
-          {customizeOpen ? "CLOSE CUSTOMIZE" : "CUSTOMIZE"}
+        <Text style={styles.disclosureTitle}>
+          {customize ? "Close session options −" : "Personalize your session +"}
         </Text>
-        <Text style={styles.customizeMark}>{customizeOpen ? "−" : "+"}</Text>
+        <Text style={styles.body}>
+          Choose your sounds and see your session.
+        </Text>
       </Pressable>
-
-      {customizeOpen ? (
-        <View style={styles.customizePanel} testID="session-customize-panel">
-          <Text style={styles.step}>MODE</Text>
+      {customize ? (
+        <View style={styles.customize}>
+          <Text style={styles.label}>YOUR SOUNDS</Text>
           <View
-            accessibilityLabel="Session mode"
             accessibilityRole="radiogroup"
-            style={styles.modeRow}
+            accessibilityLabel="Natural sound"
+            style={styles.row}
           >
-            <ModeButton
-              label="Sound only"
-              onPress={() => setMode("sound-only")}
-              selected={mode === "sound-only"}
-            />
-            <ModeButton
-              label="Guided"
-              onPress={() => setMode("guided")}
-              selected={mode === "guided"}
-            />
+            {feasibility.map((entry) => (
+              <Pressable
+                key={entry.natureFamily}
+                accessibilityRole="radio"
+                aria-checked={availableFamily === entry.natureFamily}
+                accessibilityLabel={
+                  entry.natureFamily === "sea" ? "Ocean waves" : "Rain"
+                }
+                accessibilityState={{
+                  checked: availableFamily === entry.natureFamily,
+                  disabled: !entry.available,
+                }}
+                disabled={!entry.available}
+                onPress={() => {
+                  setError(null);
+                  setFamily(entry.natureFamily);
+                }}
+                style={[
+                  styles.option,
+                  availableFamily === entry.natureFamily && styles.selected,
+                  !entry.available && styles.disabled,
+                ]}
+              >
+                <Text style={styles.body}>
+                  {entry.natureFamily === "sea" ? "Ocean waves" : "Rain"}
+                  {!entry.available ? " · Unavailable at this duration" : ""}
+                </Text>
+              </Pressable>
+            ))}
           </View>
-          {guidedUnavailable ? (
-            <View accessibilityRole="alert" style={styles.guidedPanel}>
-              <Text style={styles.voiceLabel}>VOICE</Text>
-              <Text style={styles.guidedTitle}>
-                RECORDED VOICES · IN PRODUCTION
-              </Text>
-              <Text style={styles.guidedBody}>
-                Voice choice will appear here when real recordings are ready. No
-                synthetic or placeholder voice is offered.
+          {selection?.kind === "adaptive" ? (
+            <View testID="session-journey-preview" style={styles.journey}>
+              <Text style={styles.label}>YOUR SESSION · {duration} MIN</Text>
+              {selection.program.plan.segments
+                .filter((segment) => (segment.lane ?? "primary") === "primary")
+                .map((segment, index) => (
+                  <Text key={`${segment.workId}:${index}`} style={styles.body}>
+                    {index + 1}.{" "}
+                    {
+                      selection.program.works.find(
+                        ({ id }) => id === segment.workId,
+                      )?.title
+                    }
+                  </Text>
+                ))}
+              <Text style={styles.body}>
+                One sound flows gently into the next.
               </Text>
             </View>
           ) : null}
-          <OfflinePackageStatus />
+          <Text style={styles.body}>Guided · IN PRODUCTION</Text>
+          <Text style={styles.body}>
+            Voice choices will appear when real guided recordings are available.
+          </Text>
+          <Text style={styles.body}>
+            Musical sessions · IN PRODUCTION. Complete musical works are
+            available below.
+          </Text>
+          {isPwaWebSurface() ? (
+            <DownloadControl />
+          ) : (
+            <Text style={styles.body}>
+              Offline downloads · IN PRODUCTION on this device.
+            </Text>
+          )}
         </View>
       ) : null}
-
-      {planningError ? (
-        <Text accessibilityRole="alert" style={styles.error}>
-          {planningError}
-        </Text>
-      ) : null}
-      {!qaAvailable ? (
-        <Text style={styles.notice}>
-          PHONE SESSION PLAYBACK · IN PRODUCTION
-        </Text>
-      ) : (
-        <Text style={styles.notice}>
-          PREVIEW MODE · LISTENING REVIEW PENDING
-        </Text>
-      )}
       <Pressable
-        accessibilityHint={
-          guidedUnavailable
-            ? "Recorded voices are in production"
-            : !qaAvailable
-              ? "Phone session playback is in production"
-              : (planningError ?? "Starts the prepared sound-only session")
-        }
-        accessibilityLabel={policy.startLabel}
         accessibilityRole="button"
-        accessibilityState={{ disabled: !canStart }}
-        disabled={!canStart}
+        accessibilityLabel={policy.startLabel}
+        accessibilityState={{ disabled: !prepared.ready || busy, busy }}
+        disabled={!prepared.ready || busy}
         onPress={start}
-        style={[styles.startButton, !canStart && styles.disabled]}
+        style={[styles.primary, (!prepared.ready || busy) && styles.disabled]}
         testID="start-adaptive-session"
       >
-        <Text style={styles.startText}>{policy.startLabel}</Text>
-        <Text style={styles.startArrow}>→</Text>
+        <Text style={styles.primaryText}>
+          {starting ? "Starting…" : policy.startLabel}
+        </Text>
       </Pressable>
+      <Text accessibilityLiveRegion="polite" style={styles.status}>
+        {error || prepared.error
+          ? "Could not load this sound."
+          : starting
+            ? "Preparing sound…"
+            : prepared.ready
+              ? `${duration} min · Ready`
+              : "Loading sound…"}
+      </Text>
+      {error || prepared.error ? (
+        <View>
+          <Text accessibilityRole="alert" style={styles.error}>
+            {error ?? prepared.error}
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => {
+              setError(null);
+              prepared.retry();
+            }}
+            style={styles.option}
+          >
+            <Text style={styles.body}>Retry loading</Text>
+          </Pressable>
+          <Text style={styles.body}>
+            You can also choose another sound below.
+          </Text>
+        </View>
+      ) : null}
     </View>
   );
 }
-
-function ModeButton({
-  label,
-  onPress,
-  selected,
-}: {
-  label: string;
-  onPress: () => void;
-  selected: boolean;
-}) {
-  return (
-    <Pressable
-      accessibilityLabel={label}
-      accessibilityRole="radio"
-      accessibilityState={{ selected }}
-      onPress={onPress}
-      style={[styles.modeButton, selected && styles.modeButtonSelected]}
-    >
-      <Text style={styles.modeText}>{label}</Text>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
-  root: {
-    backgroundColor: "rgba(248, 242, 232, 0.88)",
-    borderColor: editorial.lineStrong,
-    borderWidth: StyleSheet.hairlineWidth,
-    marginTop: spacing.xl,
-    padding: spacing.lg,
-  },
-  step: {
-    color: editorial.mineralBlue,
-    fontFamily: fonts.sansSemiBold,
-    fontSize: 11,
-    letterSpacing: 1.1,
-  },
-  preparation: {
+  label: {
     color: editorial.inkMuted,
-    fontFamily: fonts.serifItalic,
-    fontSize: 16,
-    lineHeight: 22,
-    marginTop: spacing.md,
-  },
-  customizeButton: {
-    alignItems: "center",
-    borderTopColor: editorial.line,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: spacing.lg,
-    minHeight: 48,
-  },
-  customizeText: {
-    color: editorial.ink,
     fontFamily: fonts.sansSemiBold,
-    fontSize: 11,
-    letterSpacing: 1,
-  },
-  customizeMark: { color: editorial.gold, fontSize: 22 },
-  customizePanel: { paddingBottom: spacing.md, paddingTop: spacing.md },
-  modeRow: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.sm },
-  modeButton: {
-    alignItems: "center",
-    borderColor: editorial.line,
-    borderWidth: StyleSheet.hairlineWidth,
-    flex: 1,
-    justifyContent: "center",
-    minHeight: 48,
-  },
-  modeButtonSelected: {
-    backgroundColor: "#E2E6DF",
-    borderColor: editorial.jade,
-  },
-  modeText: {
-    color: editorial.ink,
-    fontFamily: fonts.sansMedium,
     fontSize: 13,
+    marginTop: 16,
   },
-  guidedPanel: {
-    borderLeftColor: editorial.gold,
-    borderLeftWidth: 2,
-    marginTop: spacing.md,
-    paddingLeft: spacing.md,
+  proposal: {
+    color: editorial.ink,
+    fontFamily: fonts.serifItalic,
+    fontSize: 27,
+    marginTop: 18,
   },
-  guidedTitle: {
-    color: editorial.gold,
-    fontFamily: fonts.sansSemiBold,
-    fontSize: 11,
-    letterSpacing: 0.65,
-  },
-  voiceLabel: {
-    color: editorial.inkFaint,
-    fontFamily: fonts.sansSemiBold,
-    fontSize: 10,
-    letterSpacing: 0.9,
-    marginBottom: spacing.xs,
-  },
-  guidedBody: {
+  body: {
     color: editorial.inkMuted,
     fontFamily: fonts.sans,
-    fontSize: 12,
-    lineHeight: 19,
-    marginTop: spacing.xs,
+    fontSize: 14,
+    lineHeight: 21,
   },
-  notice: {
-    color: editorial.inkFaint,
-    fontFamily: fonts.sansSemiBold,
-    fontSize: 10,
-    letterSpacing: 0.55,
-    marginTop: spacing.lg,
-  },
-  startButton: {
-    alignItems: "center",
+  primary: {
     backgroundColor: editorial.ink,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: spacing.sm,
-    minHeight: 60,
-    paddingHorizontal: spacing.lg,
+    minHeight: 56,
+    padding: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 18,
   },
-  startText: {
+  primaryText: {
     color: editorial.paperLight,
     fontFamily: fonts.sansSemiBold,
-    fontSize: 15,
+    fontSize: 16,
+    textAlign: "center",
   },
-  startArrow: { color: editorial.paperLight, fontSize: 22 },
-  disabled: { opacity: 0.42 },
+  status: {
+    color: editorial.inkMuted,
+    fontFamily: fonts.sans,
+    fontSize: 14,
+    marginTop: 8,
+  },
+  disclosure: {
+    minHeight: 64,
+    justifyContent: "center",
+    marginTop: 18,
+    borderWidth: 1,
+    borderColor: editorial.lineStrong,
+    backgroundColor: "#E3EAE2",
+    padding: 12,
+    gap: 4,
+  },
+  disclosureTitle: {
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 17,
+    color: editorial.ink,
+  },
+  journey: {
+    gap: 8,
+    borderLeftWidth: 2,
+    borderColor: editorial.jade,
+    paddingLeft: 12,
+  },
+  customize: { gap: 12, borderTopWidth: 1, borderColor: editorial.line },
+  row: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  option: {
+    borderWidth: 1,
+    borderColor: editorial.lineStrong,
+    padding: 12,
+    minHeight: 48,
+    justifyContent: "center",
+    flexShrink: 1,
+  },
+  selected: { backgroundColor: "#DCE5DD", borderColor: editorial.jade },
+  disabled: { opacity: 0.55 },
   error: {
     color: editorial.rose,
-    fontFamily: fonts.sansMedium,
-    fontSize: 12,
-    lineHeight: 18,
-    marginTop: spacing.md,
+    fontFamily: fonts.sans,
+    fontSize: 14,
+    lineHeight: 21,
   },
 });

@@ -4,7 +4,10 @@ import type {
   AudioSourceId,
 } from "@/domain/audio/types";
 import type { SingleTrackProgram } from "@/domain/audio/consumerTypes";
-import type { AdaptiveSessionProgram } from "@/domain/sessions/types";
+import type {
+  AdaptiveSessionProgram,
+  NatureMixLevel,
+} from "@/domain/sessions/types";
 import type { TransitionAudition } from "@/domain/sessions/workbench";
 
 export interface RemoteCommandHandlers {
@@ -21,6 +24,7 @@ export interface AdaptiveSessionEventHandlers {
 
 export interface AudioGraphDriver {
   readonly capabilities: AudioCapabilities;
+  activateUserGesture(): void;
   setRemoteCommandHandlers(handlers: RemoteCommandHandlers): void;
   setAdaptiveSessionEventHandlers(handlers: AdaptiveSessionEventHandlers): void;
   loadPreset(preset: AudioPreset): Promise<void>;
@@ -36,8 +40,10 @@ export interface AudioGraphDriver {
     volume: number,
     positionSeconds?: number,
   ): Promise<void>;
+  seekSingleTrack(positionSeconds: number): Promise<void>;
   seekAdaptiveSession(positionSeconds: number): Promise<void>;
   configureAdaptiveAudition(audition: TransitionAudition | null): Promise<void>;
+  setAdaptiveNatureLevel(level: NatureMixLevel, fadeMs: number): Promise<void>;
   resume(): Promise<void>;
   pause(releaseAudioFocus: boolean): Promise<void>;
   stop(): Promise<void>;

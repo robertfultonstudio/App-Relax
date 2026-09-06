@@ -12,6 +12,8 @@ export type OfflineFailureCode =
   | "integrity-mismatch"
   | "source-unavailable"
   | "storage-error"
+  | "cancelled"
+  | "network-error"
   | "interrupted";
 
 export interface OfflineAssetManifestEntry {
@@ -63,6 +65,7 @@ export interface PackageSource {
     asset: OfflineAssetManifestEntry,
     sink: AudioStagingSink,
     onProgress: (bytesDelta: number) => Promise<void>,
+    signal?: AbortSignal,
   ): Promise<void>;
 }
 

@@ -17,7 +17,7 @@ describe("LastSessionAction", () => {
     expect(onPress).not.toHaveBeenCalled();
   });
 
-  it("summarises and reopens a saved sound-only request", async () => {
+  it("keeps a legacy music request visible but disabled while music sessions are in production", async () => {
     const onPress = jest.fn();
     const screen = await render(
       <LastSessionAction
@@ -27,14 +27,18 @@ describe("LastSessionAction", () => {
           outcome: "meditation",
           durationMinutes: 20,
           mode: "sound-only",
+          soundKind: "music",
+          natureFamily: "rain",
         }}
       />,
     );
     expect(
-      screen.getByText("Begin meditation · 20 min · Sound only"),
+      screen.getByText(
+        "Begin meditation · 20 min · Music · In production · Sound only",
+      ),
     ).toBeTruthy();
     fireEvent.press(screen.getByTestId("play-last-session"));
-    expect(onPress).toHaveBeenCalledTimes(1);
+    expect(onPress).not.toHaveBeenCalled();
   });
 
   it("does not reopen a saved request outside the local preview gate", async () => {
@@ -47,6 +51,8 @@ describe("LastSessionAction", () => {
           outcome: "meditation",
           durationMinutes: 20,
           mode: "sound-only",
+          soundKind: "nature",
+          natureFamily: "sea",
         }}
       />,
     );

@@ -1,12 +1,12 @@
 {
   "expo": {
-    "name": "Ritual Audio",
+    "name": "App Relax",
     "slug": "app-relax",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "apprelax",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "light",
     "ios": {
       "icon": "./assets/expo.icon",
       "bundleIdentifier": "com.robertfultonstudio.apprelax",

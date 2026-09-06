@@ -12,7 +12,14 @@ import type {
 import { AUDIO_SOURCE_IDS } from "@/domain/audio/types";
 import { assertValidPreset } from "@/domain/audio/presetValidation";
 import type { SingleTrackProgram } from "@/domain/audio/consumerTypes";
-import type { AdaptiveSessionProgram } from "@/domain/sessions/types";
+import {
+  consumerSelectionKey,
+  type ConsumerSelection,
+} from "@/domain/audio/consumerSelection";
+import type {
+  AdaptiveSessionProgram,
+  NatureMixLevel,
+} from "@/domain/sessions/types";
 import type { TransitionAudition } from "@/domain/sessions/workbench";
 import type {
   PlayerPreferences,
@@ -93,6 +100,14 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Unknown audio error.";
 }
 
+/** An explicit Stop/dispose is not a decoder failure or a successful Start. */
+export class PlaybackCancelledError extends Error {
+  constructor() {
+    super("Playback cancelled.");
+    this.name = "PlaybackCancelledError";
+  }
+}
+
 export class AudioSessionController implements AudioEngine {
   private snapshot: SessionSnapshot;
   private readonly listeners = new Set<SessionListener>();
@@ -108,12 +123,24 @@ export class AudioSessionController implements AudioEngine {
   private terminalStopQueued = false;
   private pausedByInterruption = false;
   private active = false;
+  private selection: ConsumerSelection | null = null;
+  private selectionGeneration = 0;
+  private startPending = false;
+  private pendingStart: Promise<void> | null = null;
+  private listeningRun = 0;
+  private preparedSelection: {
+    selection: ConsumerSelection;
+    driver: AudioGraphDriver;
+    ready: boolean;
+  } | null = null;
+  private cancelOperation: (() => void) | null = null;
 
   constructor(
-    private readonly driver: AudioGraphDriver,
+    private driver: AudioGraphDriver,
     private readonly preferencesStore: PlayerPreferencesStore,
     private readonly runtime: ControllerRuntime = defaultRuntime,
     private readonly consumerPreferencesStore: ConsumerPlayerPreferencesStore = nullConsumerStore,
+    private readonly createConsumerDriver?: () => AudioGraphDriver,
   ) {
     this.snapshot = {
       mode: null,
@@ -123,6 +150,7 @@ export class AudioSessionController implements AudioEngine {
       sessionPlanId: null,
       title: null,
       volume: 0.8,
+      natureMixLevel: null,
       selectedDurationMinutes: 30,
       remainingMs: 30 * 60_000,
       deadlineMs: null,
@@ -145,6 +173,7 @@ export class AudioSessionController implements AudioEngine {
   private attachAdaptiveSessionEventHandlers(): void {
     this.driver.setAdaptiveSessionEventHandlers({
       ended: (planId) => {
+        const generation = this.deadlineGeneration;
         void this.enqueue(async () => {
           if (
             this.currentAdaptiveProgram?.plan.id !== planId ||
@@ -153,21 +182,20 @@ export class AudioSessionController implements AudioEngine {
           ) {
             return;
           }
-          this.deadlineGeneration += 1;
-          this.terminalStopQueued = false;
-          this.clearTicker();
-          await this.driver.stop();
-          this.patch({
-            status: "ready",
-            deadlineMs: null,
-            remainingMs:
-              this.currentAdaptiveProgram.plan.totalDurationSeconds * 1000,
-          });
+          await this.completeNaturally(generation);
         });
       },
       error: (planId, error) => {
+        const generation = this.deadlineGeneration;
         void this.enqueue(async () => {
-          if (this.currentAdaptiveProgram?.plan.id !== planId) return;
+          if (
+            generation !== this.deadlineGeneration ||
+            this.currentAdaptiveProgram?.plan.id !== planId ||
+            (this.snapshot.status !== "playing" &&
+              this.snapshot.status !== "fadingOut")
+          ) {
+            return;
+          }
           this.deadlineGeneration += 1;
           this.terminalStopQueued = false;
           this.clearTicker();
@@ -212,6 +240,179 @@ export class AudioSessionController implements AudioEngine {
 
   getSnapshot = (): SessionSnapshot => this.snapshot;
 
+  getConsumerSelection = (): ConsumerSelection | null => this.selection;
+  getListeningRun = (): number => this.listeningRun;
+
+  /** Prepare a silent, separate candidate. Browsing never replaces the current sound. */
+  async prepareSelection(selection: ConsumerSelection): Promise<void> {
+    if (
+      this.preparedSelection &&
+      consumerSelectionKey(this.preparedSelection.selection) ===
+        consumerSelectionKey(selection) &&
+      this.preparedSelection.ready
+    )
+      return;
+    if (!this.createConsumerDriver)
+      throw new Error("This playback surface cannot prepare a session.");
+    const generation = ++this.selectionGeneration;
+    const old = this.preparedSelection;
+    const candidate = {
+      selection,
+      driver: this.createConsumerDriver(),
+      ready: false,
+    };
+    this.preparedSelection = candidate;
+    if (old) void old.driver.dispose().catch(() => undefined);
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    try {
+      await Promise.race([
+        selection.kind === "single"
+          ? candidate.driver.loadSingleTrack(selection.program)
+          : candidate.driver.loadAdaptiveSession(selection.program),
+        new Promise<never>((_, reject) => {
+          timeout = setTimeout(
+            () =>
+              reject(
+                new Error(
+                  "Loading took too long. Check your connection and retry.",
+                ),
+              ),
+            15000,
+          );
+        }),
+      ]);
+      if (
+        generation !== this.selectionGeneration ||
+        this.preparedSelection !== candidate
+      )
+        throw new Error("Selection changed.");
+      candidate.ready = true;
+    } catch (error) {
+      if (this.preparedSelection === candidate) this.preparedSelection = null;
+      await candidate.driver.dispose().catch(() => undefined);
+      throw error;
+    } finally {
+      if (timeout) clearTimeout(timeout);
+    }
+  }
+
+  cancelPreparedSelection(selection: ConsumerSelection): void {
+    const candidate = this.preparedSelection;
+    if (
+      !candidate ||
+      consumerSelectionKey(candidate.selection) !==
+        consumerSelectionKey(selection) ||
+      this.startPending
+    )
+      return;
+    ++this.selectionGeneration;
+    this.preparedSelection = null;
+    void candidate.driver.dispose().catch(() => undefined);
+  }
+
+  startSelectionFromUserGesture(selection: ConsumerSelection): Promise<void> {
+    const candidate = this.preparedSelection;
+    if (this.startPending) return this.pendingStart ?? Promise.resolve();
+    if (
+      !candidate?.ready ||
+      consumerSelectionKey(candidate.selection) !==
+        consumerSelectionKey(selection)
+    )
+      return Promise.reject(
+        new Error("Wait for the sound to be ready, or retry."),
+      );
+    this.startPending = true;
+    // Crucially, this uses the already prepared elements inside the original tap.
+    try {
+      candidate.driver.activateUserGesture();
+    } catch (error) {
+      this.startPending = false;
+      this.preparedSelection = null;
+      void candidate.driver.dispose().catch(() => undefined);
+      return Promise.reject(error);
+    }
+    this.preparedSelection = null;
+    const operation = this.enqueue(async () => {
+      try {
+        this.clearTicker();
+        ++this.deadlineGeneration;
+        await this.driver.dispose();
+        this.driver = candidate.driver;
+        this.attachRemoteCommandHandlers();
+        this.attachAdaptiveSessionEventHandlers();
+        this.selection = selection;
+        this.currentPreset = null;
+        this.currentProgram =
+          selection.kind === "single" ? selection.program : null;
+        this.currentAdaptiveProgram =
+          selection.kind === "adaptive" ? selection.program : null;
+        const duration =
+          selection.kind === "single"
+            ? selection.durationMinutes
+            : selection.request.durationMinutes;
+        this.patch({
+          mode: "consumer",
+          status: "ready",
+          presetId: null,
+          workId: this.currentProgram?.work.id ?? null,
+          sessionPlanId: this.currentAdaptiveProgram?.plan.id ?? null,
+          title:
+            this.currentProgram?.work.title ??
+            `${selection.kind === "adaptive" ? selection.request.outcome : selection.outcome} session`,
+          selectedDurationMinutes: duration,
+          remainingMs: duration * 60000,
+          deadlineMs: null,
+          natureMixLevel:
+            this.currentAdaptiveProgram?.plan.natureMix?.initialLevel ?? null,
+          error: null,
+          sources: createSourceRecord(),
+        });
+        await this.playInternal(true);
+        if (this.snapshot.status === "error")
+          throw new Error(this.snapshot.error ?? "Could not start.");
+      } catch (error) {
+        if (this.driver !== candidate.driver)
+          await candidate.driver.dispose().catch(() => undefined);
+        if (error instanceof PlaybackCancelledError) throw error;
+        this.patch({
+          status: "error",
+          error: errorMessage(error),
+          deadlineMs: null,
+        });
+        throw error;
+      } finally {
+        this.startPending = false;
+        this.pendingStart = null;
+      }
+    });
+    this.pendingStart = operation;
+    return operation;
+  }
+
+  private async confirmPlayback(operation: Promise<void>): Promise<void> {
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    try {
+      await Promise.race([
+        operation,
+        new Promise<never>((_, reject) => {
+          this.cancelOperation = () => reject(new PlaybackCancelledError());
+          timeout = setTimeout(
+            () =>
+              reject(
+                new Error(
+                  "The sound did not start. Check your connection and retry.",
+                ),
+              ),
+            15000,
+          );
+        }),
+      ]);
+    } finally {
+      if (timeout) clearTimeout(timeout);
+      this.cancelOperation = null;
+    }
+  }
+
   subscribe = (listener: SessionListener): (() => void) => {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
@@ -254,6 +455,7 @@ export class AudioSessionController implements AudioEngine {
 
       await this.stopInternal(false);
       this.currentPreset = preset;
+      this.selection = null;
       this.currentProgram = null;
       this.currentAdaptiveProgram = null;
       const restored =
@@ -288,6 +490,7 @@ export class AudioSessionController implements AudioEngine {
         workId: null,
         sessionPlanId: null,
         title: preset.title,
+        natureMixLevel: null,
         selectedDurationMinutes: duration,
         remainingMs: duration * 60_000,
         deadlineMs: null,
@@ -339,6 +542,7 @@ export class AudioSessionController implements AudioEngine {
       await this.stopInternal(false);
       this.currentPreset = null;
       this.currentProgram = program;
+      this.selection = null;
       this.currentAdaptiveProgram = null;
       const restored =
         this.restoredConsumerPreferences?.workId === program.work.id
@@ -357,6 +561,7 @@ export class AudioSessionController implements AudioEngine {
         workId: program.work.id,
         sessionPlanId: null,
         title: program.work.title,
+        natureMixLevel: null,
         volume: restored?.volume ?? 0.8,
         selectedDurationMinutes: duration,
         remainingMs: duration * 60_000,
@@ -393,6 +598,7 @@ export class AudioSessionController implements AudioEngine {
       this.currentPreset = null;
       this.currentProgram = null;
       this.currentAdaptiveProgram = program;
+      this.selection = null;
       const duration = program.plan.requestedDurationMinutes;
       this.patch({
         mode: "consumer",
@@ -401,6 +607,7 @@ export class AudioSessionController implements AudioEngine {
         workId: null,
         sessionPlanId: program.plan.id,
         title: `${program.plan.outcome} session`,
+        natureMixLevel: program.plan.natureMix?.initialLevel ?? null,
         selectedDurationMinutes: duration,
         remainingMs: program.plan.totalDurationSeconds * 1000,
         deadlineMs: null,
@@ -416,6 +623,29 @@ export class AudioSessionController implements AudioEngine {
     });
   }
 
+  seekSingleTrack(positionSeconds: number): Promise<void> {
+    return this.enqueue(async () => {
+      const program = this.currentProgram;
+      if (!program) throw new Error("No single-track program is loaded.");
+      if (program.work.sourceKind !== "file") {
+        throw new Error("Continuous generators do not have a file position.");
+      }
+      if (
+        !Number.isFinite(positionSeconds) ||
+        positionSeconds < 0 ||
+        positionSeconds >= program.work.durationSeconds
+      ) {
+        throw new Error("File position is outside the source.");
+      }
+      try {
+        await this.driver.seekSingleTrack(positionSeconds);
+      } catch (error) {
+        await this.failClosedSeek(error);
+        throw error;
+      }
+    });
+  }
+
   seekAdaptiveSession(positionSeconds: number): Promise<void> {
     return this.enqueue(async () => {
       const program = this.currentAdaptiveProgram;
@@ -427,7 +657,12 @@ export class AudioSessionController implements AudioEngine {
       ) {
         throw new Error("Session position is outside the plan.");
       }
-      await this.driver.seekAdaptiveSession(positionSeconds);
+      try {
+        await this.driver.seekAdaptiveSession(positionSeconds);
+      } catch (error) {
+        await this.failClosedSeek(error);
+        throw error;
+      }
       const remainingMs =
         (program.plan.totalDurationSeconds - positionSeconds) * 1000;
       this.patch({
@@ -446,12 +681,58 @@ export class AudioSessionController implements AudioEngine {
     return this.enqueue(() => this.driver.configureAdaptiveAudition(audition));
   }
 
+  setNatureMixLevel(level: NatureMixLevel, fadeMs = 1200): Promise<void> {
+    return this.enqueue(async () => {
+      const program = this.currentAdaptiveProgram;
+      const natureMix = program?.plan.natureMix;
+      if (!program || !natureMix) {
+        throw new Error("This session has no natural ambience control.");
+      }
+      if (
+        !Number.isFinite(level) ||
+        level < natureMix.minimumLevel ||
+        level > natureMix.maximumLevel
+      ) {
+        throw new Error("Natural ambience volume must be between 0 and 100%.");
+      }
+      await this.driver.setAdaptiveNatureLevel(level, fadeMs);
+      this.patch({ natureMixLevel: level, error: null });
+    });
+  }
+
+  private async failClosedSeek(error: unknown): Promise<void> {
+    this.deadlineGeneration += 1;
+    this.terminalStopQueued = false;
+    this.pausedByInterruption = false;
+    this.clearTicker();
+    await this.driver.stop().catch(() => undefined);
+    this.patch({
+      status: "error",
+      error: errorMessage(error),
+      deadlineMs: null,
+    });
+  }
+
   play(): Promise<void> {
     this.activate();
     return this.enqueue(() => this.playInternal());
   }
 
-  private async playInternal(): Promise<void> {
+  playFromUserGesture(): Promise<void> {
+    this.activate();
+    // WebKit requires the audio unlock to run in the event handler itself.
+    // The ordered state transition can still follow on commandChain.
+    if (
+      this.snapshot.status === "ready" ||
+      this.snapshot.status === "paused" ||
+      this.snapshot.status === "completed"
+    ) {
+      this.driver.activateUserGesture();
+    }
+    return this.enqueue(() => this.playInternal());
+  }
+
+  private async playInternal(rejectCancellation = false): Promise<void> {
     if (
       (!this.currentPreset &&
         !this.currentProgram &&
@@ -463,38 +744,48 @@ export class AudioSessionController implements AudioEngine {
     }
     if (
       this.snapshot.status === "playing" ||
-      this.snapshot.status === "fadingOut"
+      this.snapshot.status === "fadingOut" ||
+      this.snapshot.status === "preparing"
     ) {
       return;
     }
 
     try {
       const isResume = this.snapshot.status === "paused";
-      if (isResume) {
-        await this.driver.resume();
-      } else if (this.currentAdaptiveProgram) {
-        await this.driver.startAdaptiveSession(
-          this.currentAdaptiveProgram,
-          this.snapshot.volume,
-          this.currentAdaptiveProgram.plan.totalDurationSeconds -
-            this.snapshot.remainingMs / 1000,
-        );
-      } else if (this.currentProgram) {
-        await this.driver.startSingleTrack(
-          this.currentProgram,
-          this.snapshot.volume,
-        );
-      } else {
-        const preset = this.currentPreset;
-        if (!preset) return;
-        const mix = Object.fromEntries(
-          AUDIO_SOURCE_IDS.map((sourceId) => [
-            sourceId,
-            this.snapshot.sources[sourceId].gain,
-          ]),
-        ) as Record<AudioSourceId, number>;
-        await this.driver.start(preset, mix);
-      }
+      if (this.snapshot.status === "completed")
+        this.patch({
+          remainingMs: this.snapshot.selectedDurationMinutes * 60000,
+        });
+      this.patch({ status: "preparing", error: null });
+      await this.confirmPlayback(
+        (async () => {
+          if (isResume) {
+            await this.driver.resume();
+          } else if (this.currentAdaptiveProgram) {
+            await this.driver.startAdaptiveSession(
+              this.currentAdaptiveProgram,
+              this.snapshot.volume,
+              this.currentAdaptiveProgram.plan.totalDurationSeconds -
+                this.snapshot.remainingMs / 1000,
+            );
+          } else if (this.currentProgram) {
+            await this.driver.startSingleTrack(
+              this.currentProgram,
+              this.snapshot.volume,
+            );
+          } else {
+            const preset = this.currentPreset;
+            if (!preset) return;
+            const mix = Object.fromEntries(
+              AUDIO_SOURCE_IDS.map((sourceId) => [
+                sourceId,
+                this.snapshot.sources[sourceId].gain,
+              ]),
+            ) as Record<AudioSourceId, number>;
+            await this.driver.start(preset, mix);
+          }
+        })(),
+      );
 
       const remainingMs =
         this.snapshot.remainingMs > 0
@@ -510,9 +801,16 @@ export class AudioSessionController implements AudioEngine {
           this.activeFadeOutSeconds() * 1000,
         );
       }
+      if (!isResume) ++this.listeningRun;
       this.patch({ status: "playing", remainingMs, deadlineMs, error: null });
       this.startTicker();
     } catch (error) {
+      if (error instanceof PlaybackCancelledError) {
+        // The queued Stop/dispose owns teardown. Do not repeat it or briefly
+        // publish an error/ready state before the driver confirms silence.
+        if (rejectCancellation) throw error;
+        return;
+      }
       this.deadlineGeneration += 1;
       this.clearTicker();
       try {
@@ -542,10 +840,16 @@ export class AudioSessionController implements AudioEngine {
   }
 
   stop(): Promise<void> {
+    this.cancelOperation?.();
     return this.enqueue(() => this.stopInternal(true));
   }
 
   dispose(): Promise<void> {
+    this.cancelOperation?.();
+    ++this.selectionGeneration;
+    if (this.preparedSelection)
+      void this.preparedSelection.driver.dispose().catch(() => undefined);
+    this.preparedSelection = null;
     this.active = false;
     return this.enqueue(async () => {
       this.deadlineGeneration += 1;
@@ -561,6 +865,7 @@ export class AudioSessionController implements AudioEngine {
         workId: null,
         sessionPlanId: null,
         title: null,
+        natureMixLevel: null,
         deadlineMs: null,
         sources: createSourceRecord(),
       });
@@ -659,12 +964,53 @@ export class AudioSessionController implements AudioEngine {
     return next;
   }
 
+  private async completeNaturally(generation: number): Promise<void> {
+    if (
+      generation !== this.deadlineGeneration ||
+      (this.snapshot.status !== "playing" &&
+        this.snapshot.status !== "fadingOut")
+    )
+      return;
+    ++this.deadlineGeneration;
+    this.terminalStopQueued = false;
+    this.pausedByInterruption = false;
+    this.clearTicker();
+    try {
+      await this.driver.stop();
+    } catch (error) {
+      this.patch({
+        status: "error",
+        deadlineMs: null,
+        remainingMs: 0,
+        error: `Playback could not stop: ${errorMessage(error)}`,
+      });
+      return;
+    }
+    this.mapSources((source) => ({ ...source, fadeState: "idle" }));
+    this.patch({
+      status: this.currentPreset ? "ready" : "completed",
+      deadlineMs: null,
+      remainingMs: this.currentPreset
+        ? this.snapshot.selectedDurationMinutes * 60000
+        : 0,
+    });
+  }
+
   private async stopInternal(resetTimer: boolean): Promise<void> {
     this.deadlineGeneration += 1;
     this.terminalStopQueued = false;
     this.pausedByInterruption = false;
     this.clearTicker();
-    await this.driver.stop();
+    try {
+      await this.driver.stop();
+    } catch (error) {
+      this.patch({
+        status: "error",
+        deadlineMs: null,
+        error: `Playback could not stop: ${errorMessage(error)}`,
+      });
+      throw error;
+    }
     const remainingMs = resetTimer
       ? this.snapshot.selectedDurationMinutes * 60_000
       : this.snapshot.remainingMs;
@@ -694,8 +1040,19 @@ export class AudioSessionController implements AudioEngine {
     const remainingMs = this.remainingFromDeadline();
     this.deadlineGeneration += 1;
     this.clearTicker();
-    await this.driver.pause(releaseAudioFocus);
-    await this.driver.cancelScheduledFade();
+    try {
+      await this.driver.pause(releaseAudioFocus);
+      await this.driver.cancelScheduledFade();
+    } catch (error) {
+      await this.driver.stop().catch(() => undefined);
+      this.patch({
+        status: "error",
+        remainingMs,
+        deadlineMs: null,
+        error: `Playback could not pause: ${errorMessage(error)}`,
+      });
+      throw error;
+    }
     this.patch({
       status: "paused",
       remainingMs,
@@ -755,21 +1112,8 @@ export class AudioSessionController implements AudioEngine {
 
     if (remainingMs === 0 && !this.terminalStopQueued) {
       this.terminalStopQueued = true;
-      void this.enqueue(async () => {
-        await this.driver.stop();
-        this.clearTicker();
-        this.patch({
-          status: "ready",
-          deadlineMs: null,
-          remainingMs: this.snapshot.selectedDurationMinutes * 60_000,
-          sources: Object.fromEntries(
-            AUDIO_SOURCE_IDS.map((sourceId) => [
-              sourceId,
-              { ...this.snapshot.sources[sourceId], fadeState: "idle" },
-            ]),
-          ) as Record<AudioSourceId, SourceSnapshot>,
-        });
-      });
+      const generation = this.deadlineGeneration;
+      void this.enqueue(() => this.completeNaturally(generation));
     }
   }
 

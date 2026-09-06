@@ -1,10 +1,10 @@
 # M4 Consumer Audio Catalog
 
-Stato: `LOCALHOST_CATALOG_READY — LISTENING PASSED`
+Stato: `LOCALHOST_CATALOG_READY — ECLYPSIS AND NIRVANA WAVES REMOVED`
 
 ## Confine di prodotto
 
-[F] Il catalogo contiene 50 entità autonome: 42 opere file-backed (15 derivati
+[F] Il catalogo contiene 48 entità autonome: 40 opere file-backed (13 derivati
 analogici, 24 opere Water/Air e i tre file canonici ATP01) e otto generatori
 noise runtime. Ogni programma consumer contiene una sola sorgente:
 un file in loop oppure un buffer noise generato sul device. Pad e piano della
@@ -39,18 +39,19 @@ background su telefono reale sono `NON DETERMINATO — EVIDENZA INSUFFICIENTE`.
 ## Catalogo analogico e ATP01
 
 L'utente ha confermato il 3 settembre 2026 l'esito positivo dell'ascolto dei 15
-lavori analogici. Lo stato sonoro è `APPROVED — LISTENING PASSED`; i working
-title restano metadata editoriali modificabili. Soft Air non appartiene a
-questo gruppo approvato: resta respinto e soltanto tecnico.
+lavori analogici, quindi il 4 settembre ha respinto Eclypsis / Eclipse Veil e
+ha ordinato di eliminare Nirvana Waves / Stillwater Halo. Restano 13 lavori
+analogici con stato
+`APPROVED — LISTENING PASSED`; i working title restano metadata editoriali
+modificabili. Soft Air non appartiene a questo gruppo: resta respinto e
+soltanto tecnico.
 
-[F] Nella vista Soundscapes, `Stillwater Halo` è mostrato per ultimo nella
-raccolta `Cosmic / Zen Ambient`. Si tratta soltanto di ordine editoriale: file,
-mapping e comportamento di playback non cambiano.
+[F] `Eclipse Veil` e `Stillwater Halo` non appartengono più al catalogo
+consumer, alle route, alle relazioni Continuum o ai pacchetti QA. I master
+canonici esterni restano intatti come archivio.
 
 | Titolo            | Outcome primario | Famiglia                | Gain dB | TP post-gain dBTP | Stato byte                 |
 | ----------------- | ---------------- | ----------------------- | ------: | ----------------: | -------------------------- |
-| Eclipse Veil      | Meditation       | Cosmic / Zen ambient    |  -0.001 |            -5.931 | FLAC starter incorporato   |
-| Stillwater Halo   | Relax            | Cosmic / Zen ambient    |  +0.002 |            -5.068 | WAV localhost verificato   |
 | Mineral Drift     | Massage          | Standalone works        |  +0.019 |            -2.641 | WAV localhost verificato   |
 | Astral Thread     | Focus            | Cosmic / Zen ambient    |  -0.001 |            -6.481 | WAV localhost verificato   |
 | Celestial Current | Meditation       | Cosmic / Zen ambient    |   0.000 |            -6.400 | WAV localhost verificato   |
@@ -92,9 +93,8 @@ restano intenzionali e non vengono spinti contro il ceiling.
 
 [F] L'ordine editoriale di Meditation privilegia i suoni marini approvati:
 `Open Tide` è il lavoro featured, seguito da `Tidal Breath`, `Pearl Tide`,
-`Blue Interval`, `Moon Shore` e `Night Shore`. `Eclipse Veil` resta nel
-catalogo Meditation, ma viene mostrato dopo questo gruppo e non è più il primo
-avvio nella preview localhost.
+`Blue Interval`, `Moon Shore` e `Night Shore`. Eclypsis / Eclipse Veil è stato
+eliminato dal catalogo Meditation e da ogni altra superficie consumer.
 
 [F] Soft Air è stato respinto all'ascolto il 2 settembre 2026: l'utente lo
 descrive come una ventola potente, simile all'interno di un aereo. La route
@@ -111,10 +111,14 @@ SHA-256 del data chunk WAV: sample rate, canali, frame count, durata, LUFS e sea
 restano quindi invariati. Il report per-file è
 `docs/M4_LOSSLESS_DERIVATIVE_REPORT.json`.
 
-[F] La preview localhost contiene 38 file per **2.706.406.941 byte**: 14 WAV
-analogici invariati per **2.357.981.776 byte** e 24 FLAC Water/Air invariati per
-**348.425.165 byte**. Con Eclipse Veil già incorporato, tutte le 39 opere
-approvate sono riproducibili. I byte sono richiesti uno alla volta e sono
+[F] Questi totali restano prova storica del batch di conversione e includono
+anche Eclypsis e Nirvana Waves. Non sono il manifest del catalogo attivo e non
+ne autorizzano la reintroduzione.
+
+[F] La preview localhost contiene 37 file per **2.657.446.897 byte**: i 13 WAV
+analogici ancora approvati, invariati, per **2.309.021.732 byte** e 24 FLAC
+Water/Air invariati per **348.425.165 byte**. Tutte le 37 opere approvate
+attive sono riproducibili. I byte sono richiesti uno alla volta e sono
 ignorati da Git; manifest e hash sono in
 `docs/M4_LOCAL_LISTENING_MANIFEST.json`.
 
@@ -124,10 +128,11 @@ localhost in asset nativi: `.easignore` esclude ora l'intera
 `public/audio-catalog/` dall'archivio EAS e il validatore fallisce se anche un
 solo file della cartella entra nel pacchetto sorgente.
 
-[F] Starter incorporato: un FLAC da **28.167.925 byte** più i tre WAV ATP01 già
-presenti. Audio referenziato previsto nell'archivio base: **183.688.057 byte**.
-Il contributo incrementale certo di M4 è 28.167.925 byte; il peso finale APK/AAB
-è `NON DETERMINATO — EVIDENZA INSUFFICIENTE` senza una build autorizzata.
+[F] Starter FLAC consumer: vuoto dopo l'esclusione di Eclipse Veil. Restano
+referenziati nell'archivio base soltanto i tre WAV ATP01 per **155.520.132
+byte**. Il pacchetto app perde 28.167.925 byte rispetto allo stato precedente;
+il peso finale APK/AAB è `NON DETERMINATO — EVIDENZA INSUFFICIENTE` senza una
+build autorizzata.
 I generatori noise aggiungono solo codice e memoria temporanea: **0 byte audio**
 all'archivio.
 
@@ -147,7 +152,7 @@ approvato sono rimasti in sola lettura.
 aggiuntivo. Il validatore riproducibile è
 `scripts/verify-lossless-derivatives.mjs`.
 
-[F] Nel localhost tutte le 39 opere approvate hanno completato il percorso
+[F] Nel localhost tutte le 38 opere ancora approvate hanno completato il percorso
 Play → Pause senza alert o errori console. Il server espone byte range per WAV e
 FLAC e il driver Web Audio applica loop e volume principale.
 

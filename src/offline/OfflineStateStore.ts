@@ -20,6 +20,8 @@ const FAILURES = [
   "integrity-mismatch",
   "source-unavailable",
   "storage-error",
+  "cancelled",
+  "network-error",
   "interrupted",
 ] as const;
 

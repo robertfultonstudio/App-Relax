@@ -6,23 +6,28 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
+import type { AudioGraphDriver } from "./AudioGraphDriver";
 import { AudioSessionController } from "./AudioSessionController";
-import { createAudioGraphDriver } from "./createAudioDriver";
 import { createPlayerPreferencesStore } from "@/state/playerPersistence";
 import { createConsumerPlayerPreferencesStore } from "@/state/consumerPlayerPersistence";
+import { ConsumerListeningObserver } from "./ConsumerListeningObserver";
 
 const AudioControllerContext = createContext<AudioSessionController | null>(
   null,
 );
 
-export function AudioProvider({ children }: PropsWithChildren) {
+export function AudioProvider({
+  children,
+  createDriver,
+}: PropsWithChildren<{ createDriver: () => AudioGraphDriver }>) {
   const [controller] = useState(
     () =>
       new AudioSessionController(
-        createAudioGraphDriver(),
+        createDriver(),
         createPlayerPreferencesStore(),
         undefined,
         createConsumerPlayerPreferencesStore(),
+        createDriver,
       ),
   );
 
@@ -36,6 +41,7 @@ export function AudioProvider({ children }: PropsWithChildren) {
 
   return (
     <AudioControllerContext.Provider value={controller}>
+      <ConsumerListeningObserver />
       {children}
     </AudioControllerContext.Provider>
   );

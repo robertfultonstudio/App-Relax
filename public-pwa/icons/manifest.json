@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "path": "assets/images/outcomes/meditation.jpg",
+    "sha256": "08810383fdc5676c4be17374801f7cc0874f01809d7d9376e3f055b475b94d08",
+    "provenance": "docs/M3_OUTCOME_ARTWORK_PROVENANCE.md"
+  },
+  "reviewStatus": "PROVISIONAL — PWA ICON REVIEW REQUIRED",
+  "files": [
+    {
+      "filename": "apple-touch-icon.png",
+      "width": 180,
+      "height": 180,
+      "bytes": 51976,
+      "sha256": "9d0ee9d830bcd2867cc2160d1aad570206d2c972cbbd72794ac1133598016f58",
+      "purpose": "apple-touch"
+    },
+    {
+      "filename": "favicon.png",
+      "width": 48,
+      "height": 48,
+      "bytes": 4416,
+      "sha256": "a5082b30c6eb6ad29a0163d7f495ab3f2f6a3b635a5a290421b36ab6f21be5c0",
+      "purpose": "favicon"
+    },
+    {
+      "filename": "icon-192.png",
+      "width": 192,
+      "height": 192,
+      "bytes": 57243,
+      "sha256": "cdc082815175d015a93e75b6fc8cd63adef0cd72cb6bea9d6bfb78c34770dccd",
+      "purpose": "any"
+    },
+    {
+      "filename": "icon-512.png",
+      "width": 512,
+      "height": 512,
+      "bytes": 378316,
+      "sha256": "bcf1b269b63d449431d30f9f1eb9a757064d633e42c6aa4d9bda76332c19f27a",
+      "purpose": "any"
+    },
+    {
+      "filename": "icon-maskable-512.png",
+      "width": 512,
+      "height": 512,
+      "bytes": 378316,
+      "sha256": "bcf1b269b63d449431d30f9f1eb9a757064d633e42c6aa4d9bda76332c19f27a",
+      "purpose": "maskable"
+    }
+  ]
+}

@@ -1,5 +1,802 @@
 # Decision log
 
+## D-068 - Checkpoint locale e ulteriore riduzione minima del transport
+
+Data: 6 settembre 2026
+Stato: commit locale esplicitamente autorizzato; nessuna nuova pubblicazione
+
+[F] Robert richiede «Commit» e, durante il preflight, comandi Play/Pausa
+leggermente più piccoli. Altezza minima condivisa 56 → 52 (circa -7%),
+senza ridurre icone/testo né perdere allineamento con Stop; target ancora
+superiori a 44. La PWA pubblicata D-067 resta a 56: questa nuova variazione
+è inclusa nel checkpoint locale, non pubblicata automaticamente.
+
+[F] Perimetro: 193 percorsi di codice, test, configurazione, icone PWA e
+documentazione accumulati dopo `72346a0`. Nessun nuovo byte audio; è inclusa
+la rimozione già autorizzata dell'Eclypsis FLAC dal repository, recuperabile
+dal commit precedente. I master esterni restano intatti. Esclusi audio
+localhost da 2.657.446.897 byte, output/tmp Strategia, build, cache, report
+generati e checkout isolato Sites. Nessuno staging globale.
+
+[F] Gate: 62 suite / 400 test, typecheck, lint, formato, test HTTP 12/12,
+placeholder/ATP01/consumer, safety/artwork, configurazione e confini QA/PWA
+PASS. Doctor 20/20, Expo install-check PASS. Security PASS WITH ACCEPTED
+RESIDUALS soltanto per i due advisory image-size già documentati. Scansione
+segreti sui percorsi del commit PASS. Simulazione con `.easignore`: 149 file /
+159.973.441 byte, esattamente i tre WAV ATP01, nessun catalogo pesante,
+segreto o path sorgente privato. Non è un'operazione EAS.
+
+[F] Dopo la riduzione a 52, nuova suite completa 400/400 (145 test audio
+inclusi) e nuovo export PWA locale PASS: 111 file / 7.400.563 byte, zero audio
+o Workbench. Prove locali in `dist/commit-app-review-jest.json`,
+`dist/commit-app-review-doctor.log`, `dist/commit-app-scope.json` e
+`dist/commit-app-pwa`. L'export locale non aggiorna il Site pubblicato.
+
+[F] Audit parallelo su snapshot isolati: nessun materiale estraneo; riallineati
+i riferimenti storici di pubblicazione/commit nei documenti. Rilevata una
+divergenza di gain nel motore nativo composito ancora inattivo, registrata
+come blocco prima dell'attivazione in `docs/A01_NATIVE_GATE.md`. UI e factory
+nativa mantengono il doppio gate Web-only/resolver assente. Salvare il
+checkpoint non promuove quella preparazione a funzionalità disponibile.
+
+[U] Gate di ascolto/resa aggiornata, offline privato, background e long-run
+restano aperti. Il commit locale non autorizza push, PR, build native/cloud,
+nuova pubblicazione, acquisti o attivazione di funzioni future.
+
+## D-067 - Pubblicazione privata della barra compatta
+
+Data: 6 settembre 2026
+Stato: A01-A14.5 pubblicata, versione Sites 6; attesa del giudizio iPhone
+
+[F] Robert autorizza «Mettila nella PWA». Pubblicata soltanto la correzione
+D-066 e il nuovo identificativo di revisione; nessuna modifica ad audio,
+catalogo, disponibilità, Worker, accesso o funzionalità. I controlli sono
+compatti ma mantengono posizione, azioni e target accessibili.
+
+[F] 7 suite / 42 test player/PWA e 12 test Worker PASS; export e validatore
+PWA PASS, formato e scansione segreti/path privati PASS. Shell 111 file /
+7.399.811 byte, zero audio/Workbench/sourcemap; archivio 113 file /
+7.417.043 byte non compressi, 3.517.647 byte gzip. Precache 109 file /
+7.388.955 byte. Lo storage AUDIO con i 37 file esistenti non è modificato.
+
+[F] Source isolata `7f9ef6c15103614a26ed83d9be15822dcbc6dec6`;
+versione `appgprj_6a9bed84f78c81919575b1cbe1876cd1~appgver_1f916abcd0dc81919dd2e17dd3b15072`.
+Deployment `appgdep_6a9cb60dc580819195a0a051ae883c9d` succeeded, env 2.
+Live: https://app-relax-private-review.robfulton.chatgpt.site.
+Accesso verificato owner-only: un account, nessun gruppo/ospite, revision 1;
+anonimo HTTP 401. Handoff accodato nella scheda Codex esistente.
+
+[F] Verifica remota completata: 68 HTML con riferimento al bundle aggiornato
+e 43 asset non-HTML byte-identici. Prove e hash in
+`dist/compact-transport-publication.json`. Non è un test d'ascolto iPhone.
+
+[F] Fonte costi ricontrollata: Sites incluso nei piani idonei durante beta
+(https://learn.chatgpt.com/docs/pricing#how-much-does-sites-cost). Nessuna
+quota numerica residua esposta, nessun gate a pagamento o acquisto, nessun
+nuovo servizio o upload audio. Non è stato modificato l'accesso al Site.
+
+[F] Il solo checkout isolato Sites segue commit/push richiesti dalla
+pubblicazione. HEAD canonico resta `72346a089fca9d9235b1788acceab6eb0dcd455c`,
+index vuoto; niente commit dell'app, push GitHub, EAS o build nativa.
+[U] Il test visivo/ascolto aggiornato su iPhone resta umano. Offline privato,
+background e long-run non vengono dichiarati risolti da questo aggiornamento.
+
+## D-066 - Barra di ascolto compatta, senza alterare la disponibilità
+
+Data: 6 settembre 2026
+Stato: correzione locale; non pubblicata e non committata
+
+[F] Robert giudica eccessivo l'ingombro della barra introdotta in D-063:
+la visibilità non deve compromettere l'estetica consumer-paper. Stop resta
+a sinistra e Play/Pausa a destra, nella stessa posizione fissa. Altezza minima
+da 80 a 56, simbolo e testo affiancati, carattere 16, bordi sottili e fondo
+carta per Stop; Play/Pausa mantiene il contrasto inchiostro/carta. Nessuna
+altezza massima impedisce alla riga di crescere con il testo ingrandito.
+Motore, callback, navigazione e catalogo non cambiano.
+
+[F] Test mirati player/barra corrente/adattivo: 4 suite, 24 test PASS.
+Prettier sui due file, lint e typecheck PASS. Il test verifica ordine,
+target 56 (oltre il minimo 44), riga compatta, colori e azioni anche durante
+Starting. Queste prove non sostituiscono il giudizio visivo su telefono.
+
+[F] Export Web locale e validatore PWA PASS: 111 file / 7.399.811 byte,
+45 route player, nessun byte audio o Workbench. Artefatto separato
+`dist/compact-transport-pwa`, log `dist/compact-transport-export.log`;
+nessun server/Metro o emulatore lasciato attivo.
+
+[F] Gli stati futuri non vengono nascosti o promossi a disponibili: Guided
+richiede registrazioni vocali reali; le coppie musicali approvate sono vuote
+dopo D-055/D-056 e richiedono revisione, non necessariamente nuove opere.
+Ascolti singoli e sessioni naturali restano utilizzabili. Il QA tecnico dei
+crossfade D-064 resta indipendente dalla produzione di nuovo materiale.
+
+[U] Nessuno screenshot runtime ottenuto: il primo accesso locale precedeva
+l'avvio del server e ha restituito connessione rifiutata; la selezione della
+pagina d'errore è stata poi bloccata dalla policy del browser. Non sono stati
+usati browser o percorsi alternativi per aggirarla. Resa visiva aggiornata:
+`NON DETERMINATO — EVIDENZA INSUFFICIENTE`.
+
+[F] La PWA privata resta A01-A14.4 / Sites 5 con la barra precedente.
+Nessuna pubblicazione, commit, push, nuovo audio o modifica ai master.
+
+## D-065 - Aggiornamento privato crossfade, poi test umano prima del commit
+
+Data: 6 settembre 2026
+Stato: A01-A14.4 pubblicata, versione Sites 5; attesa dell'esito iPhone
+
+[F] Robert richiede la PWA aggiornata da lasciare disponibile per un test
+successivo; il commit canonico viene rimandato all'esito positivo del test.
+Si riusa il Site privato, senza nuovi servizi, audio, acquisti o condivisione.
+Fonte costi ricontrollata: Sites incluso nei piani idonei durante la beta
+(https://learn.chatgpt.com/docs/pricing#how-much-does-sites-cost). Quota
+numerica residua non esposta dal connettore; nessun gate di acquisto/upgrade
+ha richiesto o ricevuto approvazione.
+
+[F] Export PWA 111 file / 7.420.963 byte, zero audio/Workbench; pacchetto
+locale 113 file regolari / 7.438.195 byte non compressi. Source isolata
+`b9e714a47884870b086c889cdba502146970aef9`; versione
+`appgprj_6a9bed84f78c81919575b1cbe1876cd1~appgver_fcfcb1380eb08191b8fc96638cd7b3bd`.
+Deployment `appgdep_6a9ca8dca3388191981de52c1c293575` succeeded, env revision 2.
+Live: https://app-relax-private-review.robfulton.chatgpt.site.
+
+[F] Verifica remota: 68 HTML con riferimento al bundle nuovo e 43 asset
+byte-identici. Accesso custom, un solo proprietario, nessun gruppo/ospite;
+anonimo HTTP 401. Worker, catalogo e binding AUDIO invariati. Test Worker
+12/12 e suite crossfade rieseguita 92/92; regressione completa precedente
+400/400. Handoff accodato nella scheda Codex già esistente.
+
+[U] La richiesta API identity-less al catalogo riceve 401 dal controllo
+identità: non è un nuovo test audio autenticato su iPhone. Non vengono
+falsificati header di identità né allentata l'autenticazione. Qualità,
+crossfade reali, latenza, offline remoto e long-run restano gate umani o
+di piattaforma. Prove e metadata del pacchetto in
+`dist/crossfade-publication.json`.
+
+[F] HEAD canonico invariato `72346a089fca9d9235b1788acceab6eb0dcd455c`, index
+vuoto. Commit/push eseguiti soltanto nel repository isolato richiesto da
+Sites per la pubblicazione; nessun commit dell'app, push GitHub, EAS o build
+nativa. Nessun server, emulatore o ascolto lasciato acceso. La PWA rimane
+pubblicata e non viene modificata in attesa del riscontro di Robert.
+
+## D-064 - Verifica crossfade indipendente dai brani
+
+Data: 6 settembre 2026
+Stato: correzioni e test locali; nessun aggiornamento della PWA pubblicata
+
+[F] Robert precisa che i crossfade devono essere testati anche senza
+approvare specifici abbinamenti, per verificare la solidità del codice.
+Il Workbench e i test accelerati precedenti restano il riferimento; non si
+vincola il QA tecnico alle coppie editoriali mancanti dopo D-055/D-056.
+
+[F] Fixture senza asset: due corsie, transizioni lente e sfalsate, sessioni
+virtuali fino a 90 minuti. Corrette curva frazionaria dopo seek, automazioni
+vecchie su Resume, composizione ingresso/finale e gain iniziale nel finale,
+ritardo di posizionamento della sorgente entrante (retry limitato e
+cancellabile). L'audit respinge anche un piano vuoto. Nessuna modifica ai
+brani, al catalogo, alle durate editoriali o all'architettura nativa.
+
+[F] `pnpm test:crossfade`: 10 suite / 92 test; regressione completa:
+62 suite / 400 test. Nuovi 18 casi, TypeScript e lint verdi.
+Dettagli e prove ripetibili: `docs/CROSSFADE_QA.md`.
+
+[U] API simulate e clock virtuale non certificano decoder, PCM renderizzato,
+qualità sonora, long-run, background o latenza su iPhone/Android.
+NON DETERMINATO — EVIDENZA INSUFFICIENTE per questi gate. D-063 descrive la
+PWA pubblicata; D-064 resta locale, senza commit, push, EAS o pubblicazione.
+
+## D-063 - Comandi immediati e personalizzazione visibile dopo il test iPhone
+
+Data: 6 settembre 2026
+Stato: A01-A14.3 verificata e pubblicata sul Site privato, versione 4
+
+[F] Robert riferisce test iPhone positivo e suono pulito sulla versione già
+pubblicata; apprezza i collegamenti Home, che restano invariati. Chiede comandi
+Stop/Play/Pausa riconoscibili senza cercare il testo, minore attesa e recupero
+della personalizzazione delle sessioni. Questo riscontro non prova offline,
+background, tutti i decoder o long-run.
+
+[F] Transport consumer condiviso: Stop quadrato a sinistra su terracotta,
+Play/Pausa a destra su inchiostro, simboli 25–30 px, target minimo 80 px e
+testo 18 px. Il player lo fissa sotto lo scroll con safe area; nella
+navigazione la barra della sessione usa lo stesso ordine. Sfogliando un altro
+suono compare un solo transport fisso per l'ascolto corrente, non due barre.
+Il nuovo candidato mantiene un pulsante contestuale Play this sound.
+
+[F] Stop durante un Play pendente aveva fino a tre richieste di arresto:
+fire-and-forget, cleanup del Play e stop serializzato. Ora la cancellazione
+esplicita è benigna: un solo arresto, nessun falso errore, Ready soltanto dopo
+la conferma del driver. Uno Start cancellato non naviga come se fosse riuscito.
+Non sono stati accorciati fade editoriali o rimossi i vincoli WebKit di avvio.
+
+[F] Personalize your session è un'azione distinta prima di Start; espone
+famiglia naturale, durata già scelta e ordine effettivo delle opere del piano.
+Le sessioni naturali evolventi erano presenti ma nascoste in Customize.
+Le sessioni musica più natura NON vengono dichiarate ripristinate: dopo D-055
+e D-056 il registro delle coppie musicali autorizzate è vuoto. Serve una
+nuova scelta/revisione di abbinamenti, non il recupero delle tracce respinte.
+Guided resta IN PRODUCTION; nessun mixer libero o nuovo audio.
+
+[U] Millisecondi risparmiati e percepibilità della nuova UI sull'iPhone:
+NON DETERMINATO — EVIDENZA INSUFFICIENTE fino al confronto dell'utente.
+L'audit read-only conferma guardie di invalidazione Web/PWA; rileva una race
+preesistente nel driver nativo dopo await Start/Resume/Dispose, non risolta
+dalla vecchia tripla richiesta Stop. Non viene promossa questa patch a
+garanzia nativa: vedi docs/A01_NATIVE_GATE.md. Il gate offline D-062 resta
+aperto; le correzioni .2 e .3 sono consegnate in un unico aggiornamento.
+
+[F] Run finale: 61 suite / 382 test, regressione audio 128/128, TypeScript,
+lint e format mirato verdi; Doctor 20/20, install-check e validatori verdi.
+Un export iOS interrotto è stato respinto per metadata assente e rieseguito
+da zero: ultimo export iOS/Android e confini Web/EAS tutti PASS. Shell PWA
+111 file / 7.419.834 byte, senza audio. Versione privata 4, deployment
+appgdep_6a9ca0c09b20819196171ae372b78a60 succeeded, environment revision 2.
+Sorgente Sites isolata e3b3bae45dbcdf4673c90911df6db1aa090efdd1.
+Accesso ricontrollato: un solo proprietario, zero gruppi/ospiti; AUDIO
+invariato, nessun nuovo upload, servizio o acquisto. Canonical HEAD invariato
+e staging vuoto. Prove in dist/a01-a14-gates/phone-controls-final-state.json.
+
+## D-062 - Download verificato non equivale a riapertura offline pronta
+
+Data: 5 settembre 2026
+Stato: correzione software verificata; inclusa nell'aggiornamento privato A01-A14.3 pubblicato
+
+[F] Dopo il fallimento remoto D-061, revisione mirata ha dimostrato che la
+registrazione service worker era fire-and-forget; i test chiamavano install
+e fetch senza verificare ready/controller. Il file OPFS verificato non
+garantiva l'app shell. Il problema non viene attribuito a Sites senza prova.
+
+[F] Introdotto gate separato e limitato nel tempo: register, ready, worker
+esatto, controller e handshake di cache completa. La UI distingue download
+audio da app pronta e propone controllo/ripristino online manuale, senza
+interrompere l'ascolto o usare takeover. Nessun audio cancellato o ricaricato,
+nessuna modifica di accesso o dipendenza. Test completi 60 suite / 377 verdi;
+TypeScript, lint e formattazione verdi.
+
+[U] Riapertura privata offline e iPhone restano NON DETERMINATO — EVIDENZA
+INSUFFICIENTE fino alla nuova prova autorizzata; il blocco della pagina errore
+del browser non viene aggirato. Nessun commit canonico, EAS o spesa.
+
+## D-061 - Consolidamento A01–A14, offline PWA selettivo e limiti nativi
+
+Data: 5 settembre 2026
+Stato: software locale verificato; PWA privata versione 3 pubblicata; riapertura offline remota non superata
+
+[F] UI consumer compatta con Home/Sounds, durata pertinente prima dello Start,
+preparazione silenziosa isolata e avvio confermato nello stesso gesto. Barra
+sessione persistente e ultimo ascolto single/adaptive; cronologia heard-only.
+La matrice planner ammette 35 combinazioni naturali reali; Meditation 10 min
+offre un'opera autonoma, non un piano incompatibile. Nessuna nuova coppia
+musicale, voce o revisione editoriale è stata inventata.
+
+[F] Download selettivo OPFS con hash del trasferimento e rilettura, spazio,
+cancel/retry, rimozione reversibile e lease. Starter pioggia di 16.622.588 byte.
+Prova localhost nel browser Codex senza rete, chiusura pagina e riapertura: Quiet Weather
+in Play con timer 10:00 → 09:18. Non è una prova di iPhone installato né del
+catalogo completo offline. La shell viene precacheata integralmente; audio e
+Range restano fuori da Cache Storage. Gli aggiornamenti attendono la chiusura
+dei vecchi client e non interrompono una sessione attiva.
+
+[F] Doctor ha richiesto Expo 57.0.20 e Router 57.0.19. Metadata ufficiali npm
+verificati; aggiornamento locale con pnpm 11.16.0 e store esistente, senza
+installazioni globali. SDK 57/RN 0.86.3/RNAA 0.13.2 invariati. Un export PWA
+ha rilevato nomi ATP nella cache di trasformazioni condivisa dopo export QA:
+artefatto respinto dal validatore, non pubblicato. Gli script export ora
+richiedono `--clear`; il gate non è stato allentato.
+
+[F] Lo scheduler nativo e il resolver verificato sono implementati e testati,
+ma la factory NON inietta storage nativo concreto: playback adattivo/offline
+nativo resta fail-closed. Seek con tolleranza software fino a 100 ms e preload
+progressivo JavaScript non attestano sample accuracy o background.
+
+[F] Accesso Site ricontrollato: proprietario, una sola persona, zero ospiti o
+gruppi. Si aggiorna soltanto il medesimo Site e binding AUDIO; nessun nuovo
+upload audio. Sites risulta incluso nella beta dei piani idonei dalla fonte
+ufficiale corrente; nessun upgrade, acquisto o nuovo servizio ammesso.
+Fonte: https://learn.chatgpt.com/docs/pricing#how-much-does-sites-cost.
+
+[F] Versione 3 A01-A14.1 pubblicata: deployment
+`appgdep_6a9c2e5f3f8081918d569ed24f7e2f57` succeeded, environment revision 2;
+sorgente Sites isolata `c0e50acd6157c83548443591e240b1358aa62e3e`.
+Shell 111 file / 7.286.699 byte senza audio; 68 HTML e 43 asset remoti
+verificati. Tutti i 37 file AUDIO esistenti sono coerenti; Start remoto
+Meditation e Stop verificati. Jest finale 59 suite / 369 test verdi,
+Doctor 20/20. Nessun commit/push canonico, EAS o nuovo servizio.
+
+[F] Il Rain starter si scarica e verifica anche sul sito privato. La prova
+di riapertura remota senza rete invece FALLISCE nel browser integrato.
+[U] Causa e riapertura PWA privata offline: `NON DETERMINATO — EVIDENZA
+INSUFFICIENTE`. Non promuovere la prova localhost a certificazione remota.
+La pagina d'errore blocca anche la pulizia automatica della scheda: nessun
+aggiramento; chiusura manuale della sola scheda di test. Server 8095 spento.
+
+[U] Gate telefono/installazione, VoiceOver/TalkBack, tutti i decoder,
+background, lock screen, Bluetooth, batteria, qualità e long-run:
+`NON DETERMINATO — EVIDENZA INSUFFICIENTE`. Il dettaglio verificabile e il
+protocollo sono in `docs/AUDIT_A01_A14.md`; nessun commit/push canonico o EAS.
+
+## D-060 - Milestone A01–A14 e varietà subordinata alla disponibilità
+
+Data: 5 settembre 2026
+Stato: autorizzata, obiettivo aperto e implementazione in corso
+
+[F] L'utente, dopo il test iPhone, richiede la risoluzione software di tutti i
+rilievi A01–A14 e una nuova PWA privata soltanto a costo aggiuntivo zero
+verificato. Nessun nuovo catalogo, commit/push canonico, EAS, acquisto o
+diffusione pubblica. Si riusa il Site e la delivery D-059; il gate nativo e
+l'ascolto umano restano distinti dal Web.
+
+[F] Viene approvata PRIMA dell'implementazione la revisione della sola
+esclusione rigida FRA sessioni di D-047: la storia recente guida una
+preferenza deterministica, non rende indisponibili opere altrimenti sicure.
+Nella stessa sessione restano vietate ripetizioni di opera e famiglia; tutti
+i vincoli editoriali, armonici, di fase, integrità e transizione restano duri.
+La cronologia registra esclusivamente opere il cui ascolto è realmente
+iniziato, non tutte le sorgenti pianificate al primo Play. Non viene
+introdotto un replay identico consumer del seed QA.
+
+[F] Stato iniziale protetto in `tmp/audit-a01-a14-baseline`: 251 file sorgente
+non audio, hash, HEAD e stato Git. Baseline M4/M5 e modifiche preesistenti
+preservate. Lavori indipendenti nativo/offline usano worktree separati;
+integrazione selettiva, nessun agente scrive contemporaneamente nel canonico.
+
+[I] Direzione: medesimi sei bisogni e artwork, Home compatta, proposta pronta
+e durata prima dello Start, sessione persistente, errori recuperabili e
+download locali espliciti. Hatha dolce/slow flow è un contratto di ruoli e
+finestre future: Do maggiore e scansione proposta non sono musica approvata.
+Crossfade musicale 180 secondi conservato; nessuna nuova coppia abilitata.
+
+[U] Matrice delle evidenze A01–A14 in `docs/AUDIT_A01_A14.md`. Nessun rilievo
+si considera risolto per la sola assenza di un test; telefono, offline reale,
+persone e release rimangono gate espliciti fino a prova.
+
+## D-059 - PWA privata online con 37 audio integri, import chiuso
+
+Data: 5 settembre 2026
+Stato: pubblicata privatamente; ascolto e installazione iPhone da confermare
+
+[F] Ripresa autorizzata dopo lo sblocco della rete. Riutilizzato il Site
+`appgprj_6a9bed84f78c81919575b1cbe1876cd1`, senza ampliare l'accesso:
+una sola persona proprietaria, zero gruppi/ospiti. URL HTTPS live:
+https://app-relax-private-review.robfulton.chatgpt.site.
+
+[F] Versione pubblicata:
+`appgprj_6a9bed84f78c81919575b1cbe1876cd1~appgver_d2aa3d602af48191b60e97b310c31263`.
+Deployment `appgdep_6a9bf8cd69b481919471b35af980a511`: `succeeded`,
+environment revision 2. Sorgente isolata Sites:
+`e519d75889430b033b1bb4f16f27bb5dcabd1013`; nessun commit/push del
+repository canonico App-Relax. La correzione locale del solo checker hosted
+riconosce anche il fallback offline, che non contiene il bundle Expo.
+
+[F] Import completato: 37/37 file, 2.657.446.897 byte. Originali read-only;
+SHA-256 locale e checksum completo R2 verificati, HEAD/dimensioni/hash e primi
+e ultimi 16 byte remoti coerenti per ogni file. I grandi file usano multipart
+64 MiB e promozione streaming con checksum verso chiave immutabile. Catalogo
+fuori da shell/Git/EAS; nessuna ricodifica, compressione lossy o duplicazione
+dei master. Restano escluse le opere respinte.
+
+[F] La chiave temporanea di importazione e la scadenza sono state rimosse e
+la revisione applicata tramite nuovo deployment. Dopo la chiusura, richieste
+anonime a Home/catalogo e richieste import con vecchia chiave ricevono 401.
+L'accesso audio normale usa l'identità ChatGPT verificata dalla piattaforma.
+Il token operativo Sites non è inserito nel codice o nell'artefatto.
+
+[F] Verifiche: Worker 12/12; audit dipendenze Site zero vulnerabilità; shell
+remota 109/109 file (68 HTML inclusa la pagina offline, 41 asset non HTML
+byte-identici). Sites può aggiungere il proprio bridge HTML; i 67 percorsi
+dell'app mantengono il bundle esportato. Gli asset statici sono serviti dalla
+piattaforma prima del Worker: il controllo `review-ready` del fallback Worker
+non è una barriera globale alla Home. La consegna avviene solo dopo la verifica
+di tutti i 37 audio; gli oggetti audio mancanti o incoerenti falliscono chiusi.
+
+[F] Browser Codex autenticato: Home e catalogo visibili; Low Rain in Play con
+timer in avanzamento. Dopo la chiusura import, Misted Garden ha raggiunto Pause
+e 29:34 da 30:00; Stop eseguito. Un primo tentativo ha riportato una richiesta
+Play interrotta da nuovo caricamento; dopo ricarica completa il test è passato.
+Non si deduce da questo una correzione generale della compatibilità mobile.
+
+[F] Nessun costo aggiuntivo, acquisto, abbonamento esterno, EAS o store
+attivato. Sites resta soggetto ai limiti inclusi del piano; fermarsi prima di
+qualunque richiesta di pagamento. Il telefono non necessita del Mac acceso.
+
+[U] Ascolto di tutti i file e installazione su iPhone, offline audio,
+background/lock screen e robustezza lunga: `NON DETERMINATO — EVIDENZA
+INSUFFICIENTE`. Guided, pacchetti offline e abbinamenti musicali privi di
+approvazione restano onestamente `IN PRODUCTION`.
+
+## D-058 - Pubblicazione privata PWA autorizzata, arresto prima di costi
+
+Data: 5 settembre 2026
+Stato storico: blocco superato dalla ripresa e dalla pubblicazione D-059
+
+[F] L'utente, collegato da iPhone, autorizza esplicitamente la predisposizione
+di una pubblicazione privata con tutti i 37 audio approvati, fermandosi prima
+di qualsiasi costo. Questa decisione supera il precedente divieto di upload
+e pubblicazione soltanto per questa prova privata; non autorizza gli store,
+EAS, GitHub push, acquisti, servizi a pagamento o la modifica dei master.
+
+[F] Verificate le pagine ufficiali Sites e Pricing: Sites è incluso nei piani
+ChatGPT idonei durante la beta, con limiti di utilizzo. Non viene attivato un
+abbonamento Cloudflare separato. In caso di quota insufficiente o richiesta
+di pagamento, arrestarsi senza upgrade o acquisti.
+
+[F] Creato una sola volta `App Relax — Private iPhone Review`, id
+`appgprj_6a9bed84f78c81919575b1cbe1876cd1`. Il controllo successivo conferma
+owner, accesso custom, una sola persona ammessa, zero ospiti e zero gruppi;
+versione 0 e nessun URL live. Non dichiarare la PWA pubblicata.
+
+[F] Snapshot della shell in `tmp/pwa-private-site/public`: 109 file,
+7.282.973 byte, identici all'export verificato. La registrazione è conservata
+in `tmp/pwa-private-site/.openai/hosting.json`; nessuna credenziale viene
+salvata. Directory ignorata da Git/EAS, separata dalle aree Strategia.
+Il binding R2 `AUDIO` è soltanto predisposto: storage, import e adapter di
+delivery non sono ancora implementati/provisionati/verificati.
+
+[F] Il catalogo rimane read-only sul Mac: 37 file, 2.657.446.897 byte;
+17 file superano 25 MiB e il maggiore misura 345.312.044 byte. Non inserirlo
+negli asset statici o nel repository del sito. Nessun audio è stato caricato.
+
+[F] Il preflight e i 12 test HTTP locali passano nuovamente. Sono prove con
+richieste simulate, non ascolti nel browser o test di hosting.
+
+[U] I comandi locali non risolvono `git.chatgpt-team.site` né
+`learn.chatgpt.com` (`curl` exit 6). Le chiamate del connettore funzionano,
+ma non sostituiscono il trasferimento sorgente obbligatorio del workflow
+Sites. Nessun commit, push, versione, upload audio o deployment eseguito.
+Riprendere solo con accesso rete consentito per il server sorgente e per
+l'origin privato; non aggirare il sandbox. Il runbook è in `docs/PWA.md`.
+
+[U] Runtime, delivery, accesso da iPhone, installazione e ascolto restano
+`NON DETERMINATO — EVIDENZA INSUFFICIENTE`.
+
+Fonti: [Sites](https://learn.chatgpt.com/docs/sites),
+[Pricing](https://learn.chatgpt.com/docs/pricing#how-much-does-sites-cost),
+[Sandboxing](https://learn.chatgpt.com/docs/sandboxing).
+
+## D-057 - PWA consumer complementare, shell leggera e audio on-demand
+
+Data: 5 settembre 2026
+Stato: implementata localmente; gate runtime iPhone e pubblicazione aperti
+
+[F] Su richiesta esplicita dell'utente viene introdotta una PWA come superficie
+consumer complementare. Non sostituisce l'app nativa e non modifica i gate
+nativi per background, lock screen, Bluetooth, batteria o qualità sonora su
+telefono reale.
+
+[F] La PWA usa la radice Router separata `src/app-pwa` e lo stesso linguaggio
+consumer-paper. Include Home, Yoga, Soundscapes, i sei outcome, sessioni
+adattive, player, Settings e Legal; esclude Workbench QA, Audio Test, preset
+tecnico e route legacy. Il confine `AudioProvider` riceve una factory driver e
+il driver Web riceve un resolver sorgenti: l'export PWA non trascina più i tre
+WAV ATP01 attraverso il grafo degli import.
+
+[F] L'artefatto non incorpora WAV, FLAC o `public/audio-catalog/`. Predispone
+45 route player: 37 opere approvate che richiedono una delivery same-origin
+non ancora pubblicata e otto generatori runtime. La PWA rifiuta stem e opere
+ATP01 incorporate; `Soft Air`, `Moon Drone`, `Deep River`, Eclipse Veil e
+Stillwater Halo restano fuori dalla sua superficie.
+
+[F] L'audio di produzione è consentito soltanto dal contratto esplicito
+same-origin `/audio-catalog/` in secure context. Il service worker precachea un
+fallback minimo, usa network-first per risorse non audio visitate e bypassa
+audio, WAV, FLAC e richieste Range. La PWA è predisposta all'installazione;
+riapertura offline completa e disponibilità offline dei suoni non vengono
+dichiarate.
+
+[F] `web:pwa` serve direttamente l'export con un singolo processo Node su
+loopback, senza Metro, symlink o compilazioni. Le URL pulite puntano alle
+pagine esportate; i 37 audio autorizzati dal manifest sono letti dalla
+posizione originale con GET/HEAD/Range 206 e MIME espliciti. Il comando
+`Avvia PWA.command` usa il runtime già installato e rende l'avvio eseguibile
+dal Finder. Un link `file://` a `index.html` non è un avvio valido della PWA.
+`export:web:pwa` produce la shell statica e
+`pwa:validate` controlla confini, manifest, icone, hash, route, assenza audio e
+dimensioni.
+
+[F] Su Web il primo Play resta un gesto esplicito. I deck futuri confermano
+Play prima di essere messi in pausa e l'attesa complessiva è limitata a 10
+secondi: un browser che non conferma fallisce chiuso, ferma i deck e libera la
+coda dei comandi invece di lasciare l'interfaccia bloccata.
+
+[F] L'export consolidato contiene 109 file per 7.282.973 byte, 67 route
+statiche totali e 45 player predisposti. Il validatore conferma zero WAV/FLAC,
+catalogo, Audio Test o Workbench nell'artefatto.
+
+[U] Il server locale non può essere avviato dentro la sandbox corrente perché
+il bind TCP è negato con `EPERM`; il comportamento runtime resta `NON
+DETERMINATO — EVIDENZA INSUFFICIENTE`. Il preflight locale e 12 prove del
+gestore HTTP sono verdi, inclusi HEAD e intervalli iniziali/finali dei 37
+file; non viene dichiarato un ascolto reale da richieste simulate. HTTPS,
+clean-URL rewrite sul futuro host pubblico, delivery dei
+2,6 GiB, installazione, riapertura offline completa e ascolto su iPhone
+richiedono un gate separato.
+
+[F] Nessun deploy, account, upload, EAS, commit, push o pubblicazione è
+autorizzato da questa decisione.
+
+## D-056 - Nirvana Waves eliminato dal catalogo dell'app
+
+Data: 4 settembre 2026
+Stato: decisione umana applicata e verificata localmente; non committata
+
+[F] L'utente ha ordinato di eliminare anche `Nirvana Waves`, pubblicato
+nell'app come `Stillwater Halo`. Questa decisione supera D-044 e ogni
+successiva disponibilità dell'opera; non viene inferita una motivazione diversa
+dall'ordine esplicito ricevuto.
+
+[F] Sono rimossi il record `stillwater-halo`, l'assetKey `nirvanaWaves001`, la
+route generata, la copia WAV della Review localhost da 48.960.044 byte e la
+copia FLAC del sidecar QA Android da 26.858.497 byte. La preview locale contiene
+ora 37 file per 2.657.446.897 byte; il catalogo contiene 48 entità, 40
+file-backed, 37 approvate, 47 riproducibili nella Review, 33 transition-ready,
+14 single-only e una respinta.
+
+[F] Il master canonico esterno, i derivati di archivio e
+`docs/M4_LOSSLESS_DERIVATIVE_REPORT.json` restano intatti come prova storica;
+non descrivono disponibilità nell'app e non autorizzano la reintroduzione.
+
+[F] `Stillwater Halo → Quiet Field` era l'unica coppia musicale autorizzata.
+Dopo la rimozione non resta alcuna coppia musicale consumer: `Music + nature`
+è visibile ma disabilitato come `IN PRODUCTION`, le richieste musicali falliscono
+chiuse e le vecchie sessioni salvate non vengono convertite silenziosamente.
+Le sessioni naturali restano operative; nessun nuovo abbinamento è inventato.
+
+[F] Con Node 22.23.1 sono verdi formattazione, lint, TypeScript, 39 suite / 185
+test, regressione audio 55/55, validatori audio/asset/config/sicurezza/QA ed
+export Web. Gli export iOS e Android correnti non contengono stringhe
+Nirvana/Stillwater e includono esattamente i tre WAV ATP01 per 155.520.132
+byte; misurano rispettivamente 162.490.591 e 163.646.202 byte. Il sidecar QA
+Android locale contiene ora 37 FLAC per 1.635.181.380 byte.
+
+[U] Build native/cloud e prova su telefono restano `NON DETERMINATO — EVIDENZA
+INSUFFICIENTE`; non sono state autorizzate né eseguite. Expo Doctor passa 18/20
+controlli: i due controlli remoti non sono determinabili perché la sandbox non
+può raggiungere `exp.host`.
+
+## D-055 - Eclypsis escluso dal catalogo dopo il test d'ascolto
+
+Data: 4 settembre 2026
+Stato: decisione umana applicata e verificata localmente; non committata
+
+[F] L'utente ha respinto `Eclypsis` / `Eclipse Veil` perché il risultato è
+percepito come troppo dissonante e ne ha ordinato l'eliminazione dal catalogo
+dell'app. D-055 supera le precedenti decisioni che lo indicavano disponibile o
+approvato.
+
+[F] Sono rimossi il record `eclipse-veil`, l'assetKey `eclypsis001`, il mapping
+nativo, le relazioni Continuum, la route generata dal catalogo e il FLAC starter
+incorporato da 28.167.925 byte. Il pacchetto consumer non contiene più FLAC
+starter; gli export mobili devono contenere soltanto i tre WAV ATP01 per
+155.520.132 byte.
+
+[F] Il master canonico esterno e i derivati di archivio non vengono cancellati,
+rinominati o modificati. `docs/M4_LOSSLESS_DERIVATIVE_REPORT.json` resta prova
+storica della conversione lossless e non descrive la disponibilità corrente.
+
+[F] Al momento di D-055 la sola relazione musicale ancora autorizzata era
+Stillwater Halo → Quiet Field. D-056 ha poi eliminato Nirvana Waves / Stillwater
+Halo e azzerato le coppie musicali consumer; nessun sostituto è stato inventato.
+
+[F] Con Node 22.23.1 sono verdi formattazione, lint, TypeScript, 39 suite / 184
+test, regressione audio 55/55, validatori audio/asset/config/sicurezza/QA e gli
+export Web. I nuovi export iOS e Android contengono esattamente tre WAV ATP01,
+nessun FLAC e misurano rispettivamente 162.490.586 e 163.646.167 byte.
+
+[U] Un nuovo archivio EAS e una build installabile non sono stati generati:
+restano `NON DETERMINATO — EVIDENZA INSUFFICIENTE` fino al gate separatamente
+autorizzato. Expo Doctor passa 18/20 controlli; i due controlli remoti non sono
+eseguibili con la rete sandbox disabilitata.
+
+## D-054 - Correzione del caricamento FLAC nella Review iPhone
+
+Data: 4 settembre 2026
+Stato: patch locale verificata; nuova prova iPhone richiesta
+
+[F] La prova iPhone ha raggiunto la sessione Meditation 20 minuti con Eclipse
+Veil e Night Shore, ma Play ha mostrato `Session source 0 could not be
+decoded.` Il source index 0 del piano e Eclipse Veil. L'errore precedente non
+leggeva pero `HTMLMediaElement.error`: chiamava impropriamente "decode" ogni
+evento media, inclusi rete, abort e formato non supportato.
+
+[F] Eclipse Veil e integro: 28.167.925 byte, FLAC 24-bit/48 kHz/stereo,
+8.295.000 frame; SHA-256 e decode completo via HTTP coincidono con le prove
+registrate. HEAD e Range rispondono 200/206. Il server dichiarava invece
+`audio/x-flac` insieme a `nosniff`; RFC 9639 registra `audio/flac` e marca
+`audio/x-flac` come alias deprecato.
+
+[F] Metro ora forza `Content-Type: audio/flac` per ogni risposta FLAC, inclusi
+asset Metro e catalogo pubblico, conservando byte range e file invariati. Il
+player adattivo non precarica piu tutte le sorgenti future: prepara soltanto le
+sorgenti attive e al massimo la prossima in ordine temporale, mantenendo non
+piu di tre elementi media allocati nella partenza musica+natura. Gli errori
+riportano ora titolo, corsia, indice e codice `MediaError` reale.
+
+[F] Dopo il riavvio, Eclipse Veil e Night Shore rispondono entrambi come
+`audio/flac`; Range 0-63 risponde 206. La sessione musica piu onde ha raggiunto
+Playing nel browser interno e il timer e avanzato. Config validator, lint,
+TypeScript e Jest sono verdi: 39 suite, 183 test.
+
+[U] Il risultato sul browser iPhone resta `NON DETERMINATO — EVIDENZA
+INSUFFICIENTE`. D-055 ha poi escluso Eclipse dal prodotto per ragioni d'ascolto,
+quindi non è richiesto un fallback consumer; nessun fallback lossy viene
+assunto.
+
+## D-053 - Anteprima consumer iPhone su LAN privata, senza pacchetto audio
+
+Data: 4 settembre 2026
+Stato: implementata localmente; prova iPhone aperta
+
+[F] `localhost` aperto sull'iPhone indica il telefono stesso e non il Mac. Il
+nuovo comando `web:iphone` individua quindi l'IPv4 privata dell'interfaccia di
+rete predefinita e avvia una modalità LAN consumer separata. Il gate applicativo
+accetta soltanto l'host esatto comunicato dal launcher, in development e nel
+solo spazio IPv4 privato; IP pubblico, hostname, produzione e tunnel falliscono
+chiusi. Il launcher forza inoltre `APP_RELAX_SURFACE=consumer`, anche se la shell
+avesse conservato una vecchia variabile QA. I comandi ordinari `web` e `web:qa`
+restano vincolati a loopback.
+
+[F] Non viene creato un artifact da 2,6 GiB né copiato il catalogo: Expo serve
+dal Mac soltanto i file richiesti dal browser, e il server supporta le richieste
+HTTP Range necessarie a caricamento e seek. Gli export mobili continuano a
+usare `public-mobile`; nessun file del catalogo entra in Git, EAS o build.
+
+[F] La route consumer caricata dalla LAN non tenta autoplay dopo la
+navigazione: mostra `IPHONE PREVIEW · TAP PLAY TO BEGIN` e attende il gesto
+diretto richiesto dai browser iOS. La superficie QA/Workbench non viene esposta
+da questo comando.
+
+[F] Dal browser interno Codex, usando l'indirizzo LAN e non localhost, la Home
+consumer e la route Relax musica+natura si sono caricate. Il tap Play ha portato
+il controllo a Pause e fatto avanzare il timer; Stop ha ripristinato 20:00. La
+singola opera Open Tide ha superato lo stesso ciclo Play/Pause/Stop. Una
+richiesta parziale a un FLAC Rain ha restituito `206 Partial Content`,
+`Accept-Ranges: bytes` e il range esatto richiesto. Un riavvio di prova con
+`APP_RELAX_SURFACE=qa` nella shell ha comunque servito la Home consumer.
+
+[F] Expo `--lan` lega il server a tutte le interfacce locali: l'exact-host è un
+gate della logica di playback, non un'autenticazione né una ACL degli asset.
+Durante l'esecuzione i file pubblici possono quindi essere richiesti anche
+tramite un altro indirizzo locale del Mac.
+
+[F] Dopo la richiesta esplicita dell'utente, lo stesso launcher supporta una
+modalità `--review`: forza la radice QA, la cartella pubblica locale e apre
+direttamente `/qa-workbench`. La Review conserva anche le route consumer e usa
+lo stesso `ConsumerPlaybackSurface`, aggiungendo catalogo completo, ascolto
+singolo, A/B, sessione e scrubber. Non modifica EAS né gli export.
+
+[F] Audit di consegna LAN: tutti i 38 file del manifest locale hanno risposto
+con HEAD `200`, Range `206`, MIME e byte coerenti, per 2.706.406.941 byte. Anche
+Eclipse Veil, Moon Drone e Deep River incorporati rispondono correttamente. Gli
+otto noise sono generatori runtime. Soft Air è l'unica voce intenzionalmente
+bloccata dopo il rifiuto d'ascolto: il suo WAV tecnico esiste, ma non è un path
+consumer rotto.
+
+[F] Nella radice Review effettivamente servita su LAN, il browser interno ha
+raggiunto lo stato Playing sia con Open Tide, FLAC naturale da 26.805.900 byte,
+sia con Aquarian Echo, WAV musicale da 345.312.044 byte e file piu grande del
+manifest. Timer e posizione file sono avanzati; l'audio di prova e stato poi
+fermato. Il launcher imposta inoltre `BROWSER=none`, cosi non apre Chrome in
+parallelo alla Review richiesta nel browser interno.
+
+[F] Un audit ffprobe 8.1.2 su 38/38 file non ha trovato container o codec
+anomali: i 14 WAV sono RIFF/WAVE PCM standard 24-bit/48 kHz/stereo; i 24 FLAC
+sono lossless 24-bit/48 kHz/stereo; durate e frame coincidono. I soli outlier
+operativi sono nove WAV fra 124 e 329 MiB. La dimensione puo aumentare latenza,
+banda e costo di seek su mobile, ma non dimostra da sola il difetto riferito.
+
+[U] Compatibilità effettiva di ogni FLAC, seek, decoder simultanei e crossfade
+su Safari/Chrome iOS resta `NON DETERMINATO — EVIDENZA INSUFFICIENTE` fino alla
+prova sul dispositivo. Durante l'esecuzione il catalogo è raggiungibile dagli
+altri dispositivi della stessa rete: usare soltanto una Wi-Fi fidata e spegnere
+il server dopo il test.
+
+## D-052 - Il catalogo localhost e separato dagli export mobili
+
+Data: 3 settembre 2026
+Stato: difesa locale implementata e verificata; archivio EAS non eseguito
+
+[F] Expo SDK 57 copia ricorsivamente la cartella pubblica anche durante un
+export iOS o Android. Una prova dal checkout reale con il comando grezzo ha
+quindi incluso i 38 file di `public/audio-catalog/` per 2.706.406.941 byte,
+nonostante non fossero asset Metro. `.easignore` protegge l'archivio sorgente
+EAS, ma non governa questo passaggio locale.
+
+[F] Gli script export consumer impostano ora
+`EXPO_PUBLIC_FOLDER=public-mobile`, una radice pubblica separata e vuota. Il
+server QA localhost continua invece a usare `public/`, quindi tutte le opere
+restano ascoltabili nel Workbench senza entrare nel pacchetto mobile. I tre
+profili EAS fissano la stessa variabile e `.easignore` conserva l'esclusione
+esplicita come seconda difesa.
+
+[F] Il validatore degli export legge `metadata.json`, confronta SHA-256,
+estensione e dimensione dei soli tre WAV ATP01 e del FLAC starter, scansiona
+l'intero output e fallisce su `audio-catalog`, WAV/FLAC pubblici non processati,
+file oltre 100 MiB o output oltre 512 MiB. Le prove pulite misurano iOS
+190.634.511 byte e Android 191.790.133 byte; gli audio autorizzati sono
+183.688.057 byte su entrambe le piattaforme.
+
+[U] Nessun archivio sorgente EAS reale e stato generato o caricato. Il suo
+contenuto resta `NON DETERMINATO — EVIDENZA INSUFFICIENTE` fino a un gate EAS
+separatamente autorizzato.
+
+## D-051 - Il Workbench mostra il player consumer e l'intero catalogo
+
+Data: 3 settembre 2026
+Stato: implementato localmente dopo feedback utente; approvazione e commit aperti
+
+[F] Il Workbench non usa piu una shell scura separata come rappresentazione
+del prodotto. `ConsumerPlaybackSurface` e condiviso dai player single-track,
+adattivo e QA: l'utente vede artwork, gerarchia, timer, Play/Pause/Stop e volume
+della stessa superficie consumer, mentre i controlli tecnici restano sotto o
+accanto in una cornice development-only.
+
+[F] Il catalogo QA elenca 50 entita. Quarantanove sono riproducibili
+singolarmente sul localhost; `Soft Air` resta visibile ma bloccato per il
+precedente rifiuto all'ascolto. Trentanove file approvati dispongono di profilo
+Continuum e sono selezionabili direttamente come A/B. Noise e ATP01
+provvisori restano single-only e non vengono promossi artificialmente a
+transizioni.
+
+[F] La selezione A/B compila un piano QA esatto a due sorgenti soltanto dopo il
+superamento delle regole di compatibilita esistenti e della fattibilita
+temporale: `READY` compare soltanto se un safe exit dell'uscente entra nella
+durata QA scelta. Una coppia incompatibile o troppo lunga per quella finestra
+fallisce chiusa con le ragioni leggibili. I comandi `OPEN A/B FILE + SCRUB`
+aprono inoltre ciascuna sorgente completa nello stesso player consumer,
+preservando la coppia quando si torna alla transizione. Il planner consumer
+deterministico non viene modificato.
+
+[F] Il difetto dello scrubber dipendeva da `locationX`, assente nel click DOM
+ricevuto da React Native Web. Il controllo usa ora coordinate normalizzate,
+supporta click e drag, carica il piano prima del primo seek e disattiva
+l'eventuale finestra di audition. I controlli accessibili consentono anche
+salti di dieci secondi. Una seconda barra nella modalita single-track controlla
+la posizione reale dentro ciascuno dei 41 file riproducibili; gli otto noise
+runtime sono generatori continui e non fingono una posizione file. Il driver
+Web e il dual-deck condividono la stessa conferma: ogni sorgente attiva deve
+emettere `seeked` e trovarsi entro 20 ms dal punto richiesto prima che Play o il
+seek siano dichiarati riusciti. All'avvio dentro un overlap, entrambi i deck
+vengono preparati e verificati prima di invocare qualunque Play; se uno fallisce
+mentre l'altro e ancora pendente, il sistema attende il suo esito, mantiene
+tutto silenzioso e pulisce entrambi. Timeout, posizione diversa o errore
+falliscono chiusi, fermano il driver e riportano lo scrubber al punto
+precedente, quindi la UI non anticipa piu la posizione sonora effettiva.
+
+[F] Cambio modalita, installazione del piano e Play sono serializzati e
+cancellabili. Il Workbench ferma la sorgente precedente prima di cambiare cio
+che mostra; mantiene inoltre piani separati per sessione completa e coppia
+diretta. Lo stato Play/Pause/Stop viene riferito soltanto all'opera o al piano
+realmente caricato. Il cambio modalita azzera sempre l'indice di transizione e
+gli errori assorbiti dal controller vengono verificati prima di mostrare un
+messaggio `Playing`.
+
+[F] La disponibilita completa fallisce chiusa fuori da Web, fuori da localhost
+o in `NODE_ENV=production`; gli script `web` e `web:qa` usano inoltre
+`--localhost`, impedendo al server dei 2,6 GiB di legarsi alla LAN. Anche il
+player consumer single-track rifiuta i file `local-preview-file` fuori da
+questo perimetro. Dopo un cambio modalita volume e mute restano
+visibili ma disabilitati fino al caricamento del programma mostrato, impedendo
+che modifichino una sorgente precedente nascosta.
+
+[F] Il catalogo esterno completo e il dual-deck sono disponibili soltanto nel
+Workbench Web localhost. La radice QA puo rappresentare il contratto su una
+development build, ma blocca e dichiara indisponibile quel playback su native:
+non finge che 2,6 GiB di asset siano incorporati o gia scaricati.
+
+[F] La prova nella scheda interna Codex ha avviato Open Tide nello stesso
+player consumer, spostato il file con click e drag fino a 01:56/02:28,
+verificato i salti di dieci secondi e fermato l'audio al cambio modalita. La
+coppia Open Tide → Tidal Breath e stata portata a 09:40, esattamente all'inizio
+del crossfade, avviata soltanto dopo la conferma delle sorgenti, ascoltata oltre
+la fine del cambio a 09:52 e poi messa in pausa. Un secondo test ha spostato la
+sessione direttamente da 00:00 a 10:00 tramite click sulla barra prima di
+riportarla a 09:40. La console browser non ha registrato errori o avvisi. Questa
+e prova del percorso Web locale; non certifica precisione nativa del seek,
+decoder simultanei o crossfade su dispositivo.
+
+[U] Qualita musicale delle coppie, comportamento nativo e approvazione finale
+della nuova superficie restano gate umani separati. La revisione non e ancora
+committata; push, EAS e build non sono autorizzati.
+
 ## D-042 - Patch SDK 57 e correzione decode-uri-component
 
 Data: 2 settembre 2026
@@ -795,17 +1592,20 @@ localhost.
 [F] Seguono `Tidal Breath`, `Pearl Tide`, `Blue Interval`, `Moon Shore` e
 `Night Shore`. `Eclipse Veil` rimane disponibile e invariato nel catalogo, ma
 viene mostrato dopo il gruppo marino. Nessun file audio, gain, stato di ascolto
-o mapping di collezione è stato modificato.
+o mapping di collezione è stato modificato. Stato storico, superato da D-055.
 
 ## D-044 - Stillwater Halo chiude Cosmic / Zen Ambient
 
 Data: 3 settembre 2026
-Stato: decisione umana applicata localmente
+Stato: decisione storica, superata da D-056
 
 [F] L'utente ha chiesto di spostare `Stillwater Halo` in ultima posizione nella
 sezione Soundscapes. L'opera chiude ora la propria raccolta
 `Cosmic / Zen Ambient`; resta una traccia Relax approvata e non cambia file,
 gain, disponibilità, route o catalogazione.
+
+[F] D-056 ha successivamente eliminato l'opera dall'app mantenendo intatto il
+master esterno di archivio.
 
 ## D-045 - Il catalogo localhost è escluso dall'archivio EAS
 
@@ -970,3 +1770,70 @@ FLAC su telefono, background, lock-screen, Bluetooth, batteria o qualità
 musicale delle transizioni. Tali aspetti restano
 `NON DETERMINATO — EVIDENZA INSUFFICIENTE`. Nessun EAS, push o pubblicazione è
 autorizzato o eseguito.
+
+## D-052 - Le opere erano presenti ma nascoste dal percorso consumer M5
+
+Data: 3 settembre 2026
+Stato: correzione locale verificata, non committata
+
+[F] Il confronto dei due manifest approvati con il registro e i file locali ha
+confermato zero omissioni: 15 opere analogiche e 24 Water/Air approvate
+all'ascolto sono tutte registrate e disponibili; i tre ATP01 portano le opere
+file-backed a 42 e gli otto generatori portano il catalogo a 50 entita. I file
+aggiuntivi presenti nei pacchetti sono master, derivati e seam preview degli
+stessi lavori. Materiale esterno non manifestato non viene promosso a catalogo.
+
+[F] La regressione era di navigazione: M5 aveva sostituito gli elenchi delle
+route outcome con il solo setup adattivo e Home mostrava sei titoli
+aspirazionali non presenti nel registro. Il setup durata -> Start resta la
+prima azione; sotto compare ora `OR CHOOSE ONE SOUND` con l'intera selezione
+pubblica pertinente. Home mostra come featured reali Open Tide, Quiet Field,
+Mineral Drift, Stillwater Halo, Moonlit Veil e Astral Thread.
+
+[F] Soundscapes continua a esporre tutte le 50 entita una sola volta, ma porta
+in apertura Sea, Rain e Stream. Questo rende immediatamente visibili le 24
+opere naturali che prima iniziavano soltanto dopo 24 card Cosmic, Standalone e
+Noise. Soft Air resta visibile ma disabilitata; nessuno stato di ascolto o
+disponibilita e stato falsificato.
+
+[I] Il riscontro utente che i suoni naturali "reggono" giustifica la priorita
+editoriale corrente. Non prova decoder, transizioni, background o qualita su
+telefono reale: tali gate rimangono `NON DETERMINATO — EVIDENZA INSUFFICIENTE`.
+
+## D-053 - Musica più una famiglia naturale sotto controllo dell'utente
+
+Data: 4 settembre 2026
+Stato: decisione utente implementata nella preview Web, non committata
+
+[F] L'utente ha richiesto per la sessione musicale la scelta esplicita tra
+`Ocean waves` e `Rain`, oltre a un volume ambiente indipendente. Il volume
+principale resta separato; l'ambiente espone 0–100% e mute/unmute con target
+accessibili, senza mostrare dB, stem o controlli da DAW.
+
+[F] La famiglia naturale si sceglie prima dello Start e viene conservata
+nell'ultima sessione. Durante l'ascolto resta regolabile il suo volume separato;
+un cambio di famiglia non interrompe o rigenera di nascosto una sessione in
+corso.
+
+[F] Questa e un'eccezione stretta al divieto di mixer consumer: il programma ha
+una corsia musica e una sola corsia natura scelta dall'utente. Ogni corsia usa
+una sola opera fuori dal proprio crossfade; i cambi delle due corsie sono
+sfalsati e il piano non supera tre sorgenti simultanee. Non esiste selezione o
+somma arbitraria di più layer.
+
+[F] Dopo l'ascolto dell'utente, la durata predefinita dei passaggi musicali
+approvati e 180 secondi equal-power. La corsia natura usa cambi altrettanto
+lenti e resta nella famiglia selezionata, alternando due registrazioni Sea
+oppure due registrazioni Rain. Le sole relazioni musicali abilitate sono
+Eclipse Veil → Astral Thread, Celestial Current o Quiet Field e Stillwater Halo
+→ Quiet Field; ogni altra coppia fallisce chiusa. Questo elenco è storico: D-055
+rimuove Eclipse Veil e lascia attiva soltanto Stillwater Halo → Quiet Field.
+
+[I] Il valore ambiente 100% indica il massimo bilanciamento disponibile entro
+il margine di headroom del programma composito, non il guadagno raw unitario
+sommato alla musica. Il bus principale e i due bus di corsia restano distinti.
+
+[U] Precisione e stabilita con più decoder, carico CPU, glitch, background,
+lock-screen e resa del bilanciamento su telefono reale restano
+`NON DETERMINATO — EVIDENZA INSUFFICIENTE`. La preview localhost non sostituisce
+il driver nativo o il gate d'ascolto su device.

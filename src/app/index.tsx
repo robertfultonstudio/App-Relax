@@ -1,53 +1,17 @@
-import { type Href, useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useState } from "react";
+import { type Href, useRouter } from "expo-router";
 import { StyleSheet, Text, View } from "react-native";
-import { EditorialHeader } from "@/components/EditorialHeader";
 import { EditorialScreen } from "@/components/EditorialScreen";
+import { EditorialHeader } from "@/components/EditorialHeader";
 import { OutcomeGridTile } from "@/components/OutcomeGridTile";
-import { LastSessionAction } from "@/components/LastSessionAction";
+import { LastListeningAction } from "@/components/LastListeningAction";
 import { ProductTabBar } from "@/components/ProductTabBar";
 import { CONSUMER_OUTCOMES } from "@/content/productShell";
 import { editorial } from "@/design/editorialTheme";
 import { RITUALS_HOME_BACKGROUND } from "@/design/shellArtwork";
 import { fonts, spacing } from "@/design/theme";
-import {
-  createAdaptiveSessionHistoryStore,
-  type SavedSessionRequest,
-} from "@/state/adaptiveSessionPersistence";
-import { isAdaptivePlaybackAvailable } from "@/domain/sessions/playbackAvailability";
-
-const sessionHistoryStore = createAdaptiveSessionHistoryStore();
 
 export default function HomeScreen() {
   const router = useRouter();
-  const [lastRequest, setLastRequest] = useState<SavedSessionRequest | null>(
-    null,
-  );
-  const playbackAvailable = isAdaptivePlaybackAvailable();
-
-  useFocusEffect(
-    useCallback(() => {
-      let mounted = true;
-      void sessionHistoryStore
-        .load()
-        .then((history) => {
-          if (mounted) setLastRequest(history.lastRequest);
-        })
-        .catch(() => {
-          if (mounted) setLastRequest(null);
-        });
-      return () => {
-        mounted = false;
-      };
-    }, []),
-  );
-
-  function playLastSession(): void {
-    if (!lastRequest) return;
-    router.push(
-      `/adaptive-session/${lastRequest.outcome}?duration=${lastRequest.durationMinutes}&start=1` as Href,
-    );
-  }
 
   return (
     <EditorialScreen
@@ -57,7 +21,7 @@ export default function HomeScreen() {
     >
       <EditorialHeader
         actionLabel="Settings"
-        label="RITUALS"
+        label="HOME"
         onAction={() => router.push("/settings" as Href)}
       />
 
@@ -65,39 +29,24 @@ export default function HomeScreen() {
         What do you need right now?
       </Text>
       <Text style={styles.promise}>
-        Choose your moment. Press start. Leave the phone behind.
-      </Text>
-      <Text style={styles.availability}>
-        Choose a need, choose a duration, then start. Personalisation stays
-        optional.
+        Choose your moment and how long you have.
       </Text>
 
-      <LastSessionAction
-        available={playbackAvailable}
-        onPress={playLastSession}
-        request={lastRequest}
-      />
+      <LastListeningAction />
 
       <View
-        accessibilityLabel="Planned consumer actions"
+        accessibilityLabel="Choose your moment"
         style={styles.grid}
         testID="outcome-grid"
       >
-        {CONSUMER_OUTCOMES.map((outcome) => {
-          return (
-            <OutcomeGridTile
-              featuredTitle={outcome.evocativeTitle}
-              key={outcome.id}
-              onPress={() => router.push(`/outcome/${outcome.id}` as Href)}
-              outcome={outcome}
-            />
-          );
-        })}
+        {CONSUMER_OUTCOMES.map((outcome) => (
+          <OutcomeGridTile
+            key={outcome.id}
+            onPress={() => router.push(`/outcome/${outcome.id}` as Href)}
+            outcome={outcome}
+          />
+        ))}
       </View>
-
-      <Text style={styles.footerNote}>
-        Choose the purpose first. Music names and deeper choices come later.
-      </Text>
     </EditorialScreen>
   );
 }
@@ -106,25 +55,17 @@ const styles = StyleSheet.create({
   title: {
     color: editorial.ink,
     fontFamily: fonts.serif,
-    fontSize: 38,
-    lineHeight: 40,
+    fontSize: 32,
+    lineHeight: 35,
     letterSpacing: -0.7,
-    marginTop: spacing.sm,
+    marginTop: spacing.md,
     maxWidth: 340,
   },
   promise: {
     color: editorial.inkMuted,
-    fontFamily: fonts.serifItalic,
-    fontSize: 18,
-    lineHeight: 24,
-    marginTop: spacing.md,
-    maxWidth: 320,
-  },
-  availability: {
-    color: editorial.inkFaint,
-    fontFamily: fonts.sansMedium,
-    fontSize: 12,
-    lineHeight: 18,
+    fontFamily: fonts.sans,
+    fontSize: 14,
+    lineHeight: 20,
     marginTop: spacing.sm,
     maxWidth: 320,
   },
@@ -132,18 +73,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
-    rowGap: spacing.md,
-    marginTop: spacing.xl,
-  },
-  footerNote: {
-    color: editorial.ink,
-    fontFamily: fonts.sans,
-    fontSize: 11,
-    lineHeight: 17,
-    marginTop: spacing.xl,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: editorial.lineStrong,
-    backgroundColor: "rgba(248, 242, 232, 0.92)",
-    padding: spacing.md,
+    rowGap: spacing.sm,
+    marginTop: spacing.lg,
   },
 });

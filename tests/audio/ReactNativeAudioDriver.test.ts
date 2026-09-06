@@ -7,6 +7,10 @@ import { DEEP_SLEEP_432 } from "@/presets/deepSleep432";
 import { getConsumerWork } from "@/content/consumerCatalog";
 import { createSingleTrackProgram } from "@/domain/audio/consumerTypes";
 import { createAdaptiveSessionProgram } from "@/domain/sessions/continuumPlanner";
+import {
+  createStreamingStemSource,
+  stopStreamingStemSource,
+} from "@/audio/reactNativeAudioApi/StreamingStemSource";
 
 jest.mock("react-native-audio-api", () => ({
   AudioContext: jest.fn(),
@@ -29,7 +33,10 @@ jest.mock("react-native-audio-api", () => ({
 jest.mock("@/audio/reactNativeAudioApi/StreamingStemSource", () => ({
   createStreamingStemSource: jest.fn(() => ({
     source: {
+      currentTime: 0,
       disconnect: jest.fn(),
+      pause: jest.fn(),
+      seekToTime: jest.fn(),
       start: jest.fn(),
       stop: jest.fn(),
     },
@@ -39,6 +46,7 @@ jest.mock("@/audio/reactNativeAudioApi/StreamingStemSource", () => ({
     },
   })),
   stopStreamingStemSource: jest.fn(),
+  prepareStreamingFilePosition: jest.fn().mockResolvedValue(undefined),
 }));
 
 function createGainNode() {
@@ -47,8 +55,10 @@ function createGainNode() {
     disconnect: jest.fn(),
     gain: {
       cancelScheduledValues: jest.fn(),
+      cancelAndHoldAtTime: jest.fn(),
       linearRampToValueAtTime: jest.fn(),
       setValueAtTime: jest.fn(),
+      setValueCurveAtTime: jest.fn(),
       value: 1,
     },
   };
@@ -139,6 +149,34 @@ describe("ReactNativeAudioDriver lifecycle", () => {
     expect(PlaybackNotificationManager.hide).toHaveBeenCalledTimes(1);
   });
 
+  it("continues Stop cleanup after gain and context failures", async () => {
+    const driver = new ReactNativeAudioDriver();
+    const context = injectLoadedContext(driver);
+    context.suspend.mockRejectedValue(new Error("native context failure"));
+    const master = createGainNode();
+    master.gain.cancelScheduledValues.mockImplementation(() => {
+      throw new Error("native parameter failure");
+    });
+    const gain = createGainNode();
+    gain.disconnect.mockImplementation(() => {
+      throw new Error("native disconnect failure");
+    });
+    Object.assign(driver, {
+      masterGain: master,
+      graphStarted: true,
+      stemRuntime: new Map([
+        ["drone", { source: {}, output: {}, gain }],
+        ["ambience", { source: {}, output: {}, gain: createGainNode() }],
+      ]),
+    });
+    await expect(driver.stop()).resolves.toBeUndefined();
+    expect(stopStreamingStemSource).toHaveBeenCalledTimes(2);
+    expect(PlaybackNotificationManager.hide).toHaveBeenCalledTimes(1);
+    expect(AudioManager.setAudioSessionActivity).toHaveBeenLastCalledWith(
+      false,
+    );
+  });
+
   it("creates and starts one looping buffer for a consumer noise colour", async () => {
     const source = {
       connect: jest.fn(),
@@ -180,6 +218,7 @@ describe("ReactNativeAudioDriver lifecycle", () => {
       outcome: "meditation",
       durationMinutes: 20,
       mode: "sound-only",
+      soundKind: "nature",
       seed: "native-gate",
       allowProvisionalMetadata: true,
     });
@@ -187,7 +226,7 @@ describe("ReactNativeAudioDriver lifecycle", () => {
       "verified downloaded packages",
     );
     await expect(driver.startAdaptiveSession(program, 0.8)).rejects.toThrow(
-      "not enabled in this native build",
+      "verified downloaded packages",
     );
   });
 
@@ -209,6 +248,40 @@ describe("ReactNativeAudioDriver lifecycle", () => {
 
     expect(result).toBe("started");
     expect(AudioManager.checkNotificationPermissions).toHaveBeenCalledTimes(1);
+  });
+
+  it("runs the native adaptive graph only with injected verified leases, and Stop remains immediate during its final fade", async () => {
+    const release = jest.fn();
+    const resolver = {
+      acquire: jest.fn(async (workId: string) => ({
+        uri: `file:///cache/${workId}.flac`,
+        workId,
+        sha256: "b".repeat(64),
+        byteSize: 100,
+        release,
+      })),
+    };
+    const driver = new ReactNativeAudioDriver(resolver);
+    injectLoadedContext(driver);
+    Object.assign(driver, { masterGain: createGainNode() });
+    const program = createAdaptiveSessionProgram({
+      outcome: "meditation",
+      durationMinutes: 20,
+      mode: "sound-only",
+      soundKind: "nature",
+      seed: "native-driver-contract",
+      allowProvisionalMetadata: true,
+    });
+    await driver.loadAdaptiveSession(program);
+    await driver.startAdaptiveSession(program, 0.8);
+    expect(createStreamingStemSource).toHaveBeenCalledTimes(2);
+    await driver.scheduleFadeOut(5000, 5000);
+    await driver.stop();
+    expect(stopStreamingStemSource).toHaveBeenCalledTimes(2);
+    expect(release).toHaveBeenCalledTimes(program.works.length);
+    expect(AudioManager.setAudioSessionActivity).toHaveBeenLastCalledWith(
+      false,
+    );
   });
 
   it.each(["stop", "pause"] as const)(

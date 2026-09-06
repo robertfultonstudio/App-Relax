@@ -1,321 +1,206 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useMemo, useState } from "react";
 import { useLocalSearchParams } from "expo-router";
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { useAudioSession } from "@/audio/AudioProvider";
+import { PlaybackCancelledError } from "@/audio/AudioSessionController";
+import { usePreparedSelection } from "@/audio/usePreparedSelection";
+import { ConsumerDurationOptions } from "@/components/ConsumerDurationOptions";
+import { ConsumerPlaybackSurface } from "@/components/ConsumerPlaybackSurface";
+import { DownloadControl } from "@/components/DownloadControl";
+import { PlaybackTransport } from "@/components/PlaybackTransport";
 import { EditorialHeader } from "@/components/EditorialHeader";
 import { EditorialScreen } from "@/components/EditorialScreen";
-import { getConsumerWork, isPlayableWork } from "@/content/consumerCatalog";
+import {
+  getConsumerWork,
+  isPlayableWork,
+  isVisibleConsumerWork,
+} from "@/content/consumerCatalog";
+import {
+  CONSUMER_OUTCOMES,
+  type ConsumerOutcomeId,
+} from "@/content/productShell";
+import { getSessionPolicy } from "@/content/sessionPolicies";
 import { createSingleTrackProgram } from "@/domain/audio/consumerTypes";
-import { OUTCOME_ARTWORK } from "@/design/outcomeArtwork";
-import { editorial } from "@/design/editorialTheme";
-import { fonts, spacing } from "@/design/theme";
-
-function formatRemaining(milliseconds: number): string {
-  const seconds = Math.max(0, Math.ceil(milliseconds / 1000));
-  return `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
-}
+import {
+  consumerSelectionKey,
+  type ConsumerSelection,
+} from "@/domain/audio/consumerSelection";
+import type { SessionDurationMinutes } from "@/domain/sessions/types";
+import { isPwaWebSurface } from "@/domain/sessions/playbackAvailability";
 
 export default function ConsumerPlayerScreen() {
-  const { start, workId } = useLocalSearchParams<{
-    start?: string;
+  const params = useLocalSearchParams<{
     workId: string;
+    outcome?: string;
+    duration?: string;
   }>();
-  const work = getConsumerWork(workId);
-  const { controller, snapshot } = useAudioSession();
-  const autoStartedWorkId = useRef<string | null>(null);
-  const program = useMemo(
-    () => (work ? createSingleTrackProgram(work) : null),
-    [work],
-  );
-
-  useEffect(() => {
-    if (program && isPlayableWork(program.work)) {
-      void (async () => {
-        await controller.loadProgram(program);
-        if (start === "1" && autoStartedWorkId.current !== program.work.id) {
-          autoStartedWorkId.current = program.work.id;
-          await controller.play();
-        }
-      })();
-    }
-  }, [controller, program, start]);
-
-  if (!work || !program || !isPlayableWork(work)) return null;
-  const isPlaying = snapshot.status === "playing";
-  const isFading = snapshot.status === "fadingOut";
-  const canPlay = snapshot.status === "ready" || snapshot.status === "paused";
-  const timerLocked = isPlaying || isFading;
-  const canStop = isPlaying || snapshot.status === "paused" || isFading;
-  const volumePercent = Math.round(snapshot.volume * 100);
-
   return (
-    <EditorialScreen>
-      <EditorialHeader label={work.primaryOutcome.toUpperCase()} showBack />
-      <Image
-        accessible={false}
-        accessibilityIgnoresInvertColors
-        resizeMode="cover"
-        source={OUTCOME_ARTWORK[work.primaryOutcome]}
-        style={styles.artwork}
-      />
-      <Text style={styles.functionLabel}>
-        {work.primaryOutcome.toUpperCase()} · SINGLE WORK
-      </Text>
-      <Text accessibilityRole="header" style={styles.title}>
-        {work.title}
-      </Text>
-      {work.listeningStatus === "APPROVED — LISTENING PASSED" ? null : (
-        <Text style={styles.gate}>PREVIEW · LISTENING REVIEW PENDING</Text>
-      )}
-
-      <Text
-        accessibilityLabel={`${formatRemaining(snapshot.remainingMs)} remaining`}
-        style={styles.timer}
-      >
-        {formatRemaining(snapshot.remainingMs)}
-      </Text>
-      <View
-        accessibilityLabel="Session duration"
-        accessibilityRole="radiogroup"
-        style={styles.durationRow}
-      >
-        {program.durationOptionsMinutes.map((minutes) => (
-          <Pressable
-            accessibilityLabel={`${minutes} minutes`}
-            accessibilityRole="radio"
-            accessibilityState={{
-              disabled: timerLocked,
-              selected: snapshot.selectedDurationMinutes === minutes,
-            }}
-            disabled={timerLocked}
-            key={minutes}
-            onPress={() => void controller.setTimer(minutes)}
-            style={[
-              styles.duration,
-              snapshot.selectedDurationMinutes === minutes && styles.selected,
-            ]}
-          >
-            <Text style={styles.durationText}>{minutes} min</Text>
-          </Pressable>
-        ))}
-      </View>
-
-      {snapshot.error ? (
-        <Text accessibilityRole="alert" style={styles.error}>
-          {snapshot.error}
-        </Text>
-      ) : null}
-
-      <View style={styles.transport}>
-        <Pressable
-          accessibilityLabel="Stop"
-          accessibilityRole="button"
-          accessibilityState={{ disabled: !canStop }}
-          disabled={!canStop}
-          onPress={() => void controller.stop()}
-          style={[styles.secondaryButton, !canStop && styles.disabled]}
-        >
-          <Text style={styles.secondaryText}>Stop</Text>
-        </Pressable>
-        <Pressable
-          accessibilityLabel={isPlaying ? "Pause" : "Play"}
-          accessibilityRole="button"
-          accessibilityState={{ disabled: !isPlaying && !canPlay }}
-          disabled={!isPlaying && !canPlay}
-          onPress={() =>
-            void (isPlaying ? controller.pause() : controller.play())
+    <Player
+      key={`${params.workId}:${params.outcome ?? ""}:${params.duration ?? ""}`}
+      {...params}
+    />
+  );
+}
+function Player({
+  workId,
+  outcome: outcomeParam,
+  duration: durationParam,
+}: {
+  workId: string;
+  outcome?: string;
+  duration?: string;
+}) {
+  const resolved = getConsumerWork(workId);
+  const work =
+    resolved && isVisibleConsumerWork(resolved) && isPlayableWork(resolved)
+      ? resolved
+      : null;
+  const outcome = CONSUMER_OUTCOMES.some(({ id }) => id === outcomeParam)
+    ? (outcomeParam as ConsumerOutcomeId)
+    : (work?.primaryOutcome ?? "relax");
+  const policy = getSessionPolicy(outcome);
+  const requested = Number(durationParam) as SessionDurationMinutes;
+  const { controller, snapshot } = useAudioSession();
+  const active = controller.getConsumerSelection();
+  const [duration, setDuration] = useState<SessionDurationMinutes>(
+    policy.durations.includes(requested)
+      ? requested
+      : active?.kind === "single" && active.program.work.id === workId
+        ? active.durationMinutes
+        : policy.defaultDuration,
+  );
+  const [error, setError] = useState<string | null>(null);
+  const selection = useMemo<ConsumerSelection | null>(
+    () =>
+      work
+        ? {
+            kind: "single",
+            program: createSingleTrackProgram(work, outcome),
+            outcome,
+            durationMinutes: duration,
           }
-          style={[
-            styles.primaryButton,
-            !isPlaying && !canPlay && styles.disabled,
-          ]}
-          testID="consumer-play-pause"
-        >
-          <Text style={styles.primaryText}>{isPlaying ? "Pause" : "Play"}</Text>
-        </Pressable>
-      </View>
-
-      <View
-        accessibilityLabel={`Main volume ${volumePercent} percent`}
-        style={styles.volumePanel}
-      >
-        <Text style={styles.volumeLabel}>MAIN VOLUME · {volumePercent}%</Text>
-        <View style={styles.volumeRow}>
-          <VolumeButton
-            label="Lower volume"
-            text="−"
-            onPress={() =>
-              void controller.setVolume(Math.max(0, snapshot.volume - 0.1))
+        : null,
+    [work, outcome, duration],
+  );
+  const matching = Boolean(
+    selection &&
+    active &&
+    consumerSelectionKey(selection) === consumerSelectionKey(active),
+  );
+  const needsPreparation = !matching || snapshot.status === "error";
+  const otherSessionActive = Boolean(
+    !matching &&
+    active &&
+    ["playing", "paused", "fadingOut", "preparing", "error"].includes(
+      snapshot.status,
+    ),
+  );
+  const prepared = usePreparedSelection(selection, needsPreparation);
+  const playing =
+    matching &&
+    (snapshot.status === "playing" || snapshot.status === "fadingOut");
+  const busy = matching && snapshot.status === "preparing";
+  const ready = needsPreparation
+    ? prepared.ready
+    : ["ready", "paused", "completed"].includes(snapshot.status);
+  const visibleError =
+    error ?? prepared.error ?? (matching ? snapshot.error : null);
+  const status = visibleError
+    ? "Could not play"
+    : busy
+      ? "Preparing sound…"
+      : matching
+        ? {
+            playing: "Playing",
+            fadingOut: "Finishing",
+            paused: "Paused",
+            completed: "Completed",
+            ready: "Ready",
+            loading: "Loading sound…",
+            idle: "Ready",
+            preparing: "Preparing sound…",
+            error: "Could not play",
+          }[snapshot.status]
+        : prepared.ready
+          ? "Ready"
+          : "Loading sound…";
+  function playPause() {
+    setError(null);
+    if (!selection) return;
+    const action = playing
+      ? controller.pause()
+      : needsPreparation
+        ? controller.startSelectionFromUserGesture(selection)
+        : controller.playFromUserGesture();
+    void action.catch((reason: unknown) => {
+      if (reason instanceof PlaybackCancelledError) return;
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : "Could not play. Retry loading.",
+      );
+    });
+  }
+  return (
+    <EditorialScreen
+      footer={
+        !otherSessionActive && (
+          <PlaybackTransport
+            fixedFooter
+            canPlay={Boolean(work && ready)}
+            canStop={
+              matching && (playing || busy || snapshot.status === "paused")
             }
+            isPlaying={playing}
+            busy={busy}
+            onPlayPause={playPause}
+            onStop={() => void controller.stop().catch(() => undefined)}
+            playPauseTestID="consumer-play-pause"
           />
-          <Pressable
-            accessibilityLabel={volumePercent === 0 ? "Unmute" : "Mute"}
-            accessibilityRole="button"
-            onPress={() =>
-              void controller.setVolume(volumePercent === 0 ? 0.8 : 0)
-            }
-            style={styles.muteButton}
-          >
-            <Text style={styles.secondaryText}>
-              {volumePercent === 0 ? "Unmute" : "Mute"}
-            </Text>
-          </Pressable>
-          <VolumeButton
-            label="Raise volume"
-            text="+"
-            onPress={() =>
-              void controller.setVolume(Math.min(1, snapshot.volume + 0.1))
-            }
-          />
-        </View>
-      </View>
-      <Text style={styles.note}>
-        {work.sourceKind === "generated-noise"
-          ? "A continuous sound created when you press play."
-          : "One complete work continues without interruption."}
-      </Text>
+        )
+      }
+    >
+      <EditorialHeader label={outcome.toUpperCase()} showBack />
+      <ConsumerPlaybackSurface
+        hideTransport={!otherSessionActive}
+        previewTransport={otherSessionActive}
+        canPlay={Boolean(work && ready)}
+        canStop={matching && (playing || busy || snapshot.status === "paused")}
+        contextLabel={outcome.toUpperCase()}
+        isPlaying={playing}
+        status={work ? status : "Unavailable"}
+        error={visibleError}
+        onRetry={() => {
+          setError(null);
+          prepared.retry();
+        }}
+        note={
+          work
+            ? "One complete sound repeats for the time you choose."
+            : "Return to Sounds and choose an available work."
+        }
+        onPlayPause={playPause}
+        onStop={() => void controller.stop().catch(() => undefined)}
+        onVolumeChange={(value) => void controller.setVolume(value)}
+        volumeDisabled={!matching || busy}
+        outcome={outcome}
+        remainingMs={matching ? snapshot.remainingMs : duration * 60000}
+        title={work?.title ?? "Sound unavailable"}
+        volume={snapshot.volume}
+        playPauseTestID="consumer-play-pause"
+        options={
+          work ? (
+            <ConsumerDurationOptions
+              disabled={playing || busy}
+              options={policy.durations}
+              selectedMinutes={duration}
+              onSelect={(value) => setDuration(value as SessionDurationMinutes)}
+            />
+          ) : null
+        }
+      />
+      {work && isPwaWebSurface() && work.sourceKind === "file" ? (
+        <DownloadControl workId={work.id} />
+      ) : null}
     </EditorialScreen>
   );
 }
-
-function VolumeButton({
-  label,
-  onPress,
-  text,
-}: {
-  label: string;
-  onPress: () => void;
-  text: string;
-}) {
-  return (
-    <Pressable
-      accessibilityLabel={label}
-      accessibilityRole="button"
-      onPress={onPress}
-      style={styles.volumeButton}
-    >
-      <Text style={styles.volumeGlyph}>{text}</Text>
-    </Pressable>
-  );
-}
-
-const styles = StyleSheet.create({
-  artwork: { height: 220, width: "100%" },
-  functionLabel: {
-    color: editorial.mineralBlue,
-    fontFamily: fonts.sansSemiBold,
-    fontSize: 11,
-    letterSpacing: 1.2,
-    marginTop: spacing.lg,
-  },
-  title: {
-    color: editorial.ink,
-    fontFamily: fonts.serif,
-    fontSize: 44,
-    lineHeight: 47,
-    marginTop: spacing.sm,
-  },
-  gate: {
-    color: editorial.gold,
-    fontFamily: fonts.sansSemiBold,
-    fontSize: 11,
-    letterSpacing: 0.55,
-    marginTop: spacing.sm,
-  },
-  timer: {
-    color: editorial.ink,
-    fontFamily: fonts.serif,
-    fontSize: 58,
-    lineHeight: 64,
-    marginTop: spacing.xl,
-  },
-  durationRow: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.md },
-  duration: {
-    alignItems: "center",
-    borderColor: editorial.line,
-    borderWidth: StyleSheet.hairlineWidth,
-    justifyContent: "center",
-    minHeight: 44,
-    paddingHorizontal: spacing.md,
-  },
-  selected: { backgroundColor: "#DDE5E0", borderColor: editorial.jade },
-  durationText: {
-    color: editorial.ink,
-    fontFamily: fonts.sansMedium,
-    fontSize: 12,
-  },
-  transport: { flexDirection: "row", gap: spacing.md, marginTop: spacing.xl },
-  secondaryButton: {
-    alignItems: "center",
-    borderColor: editorial.lineStrong,
-    borderWidth: StyleSheet.hairlineWidth,
-    flex: 1,
-    justifyContent: "center",
-    minHeight: 56,
-  },
-  primaryButton: {
-    alignItems: "center",
-    backgroundColor: editorial.ink,
-    flex: 2,
-    justifyContent: "center",
-    minHeight: 56,
-  },
-  primaryText: {
-    color: editorial.paperLight,
-    fontFamily: fonts.sansSemiBold,
-    fontSize: 15,
-  },
-  secondaryText: {
-    color: editorial.ink,
-    fontFamily: fonts.sansSemiBold,
-    fontSize: 13,
-  },
-  volumePanel: {
-    borderTopColor: editorial.line,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    marginTop: spacing.xl,
-    paddingTop: spacing.md,
-  },
-  volumeLabel: {
-    color: editorial.inkMuted,
-    fontFamily: fonts.sansSemiBold,
-    fontSize: 11,
-    letterSpacing: 0.8,
-  },
-  volumeRow: { flexDirection: "row", gap: spacing.md, marginTop: spacing.md },
-  volumeButton: {
-    alignItems: "center",
-    borderColor: editorial.lineStrong,
-    borderWidth: StyleSheet.hairlineWidth,
-    height: 48,
-    justifyContent: "center",
-    width: 52,
-  },
-  volumeGlyph: {
-    color: editorial.ink,
-    fontFamily: fonts.sansMedium,
-    fontSize: 24,
-  },
-  muteButton: {
-    alignItems: "center",
-    borderColor: editorial.lineStrong,
-    borderWidth: StyleSheet.hairlineWidth,
-    flex: 1,
-    justifyContent: "center",
-    minHeight: 48,
-  },
-  note: {
-    color: editorial.inkMuted,
-    fontFamily: fonts.sans,
-    fontSize: 12,
-    lineHeight: 19,
-    marginTop: spacing.lg,
-  },
-  error: {
-    color: editorial.rose,
-    fontFamily: fonts.sansMedium,
-    fontSize: 13,
-    marginTop: spacing.md,
-  },
-  disabled: { opacity: 0.45 },
-});

@@ -1,364 +1,298 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useLocalSearchParams } from "expo-router";
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { useEffect, useMemo, useState } from "react";
+import { type Href, useLocalSearchParams, useRouter } from "expo-router";
+import { Pressable, Text } from "react-native";
 import { useAudioSession } from "@/audio/AudioProvider";
+import { PlaybackCancelledError } from "@/audio/AudioSessionController";
+import { usePreparedSelection } from "@/audio/usePreparedSelection";
+import { ConsumerPlaybackSurface } from "@/components/ConsumerPlaybackSurface";
+import { PlaybackTransport } from "@/components/PlaybackTransport";
 import { EditorialHeader } from "@/components/EditorialHeader";
 import { EditorialScreen } from "@/components/EditorialScreen";
+import { SessionNatureControl } from "@/components/SessionNatureControl";
 import { getSessionPolicy } from "@/content/sessionPolicies";
-import type { ConsumerOutcomeId } from "@/content/productShell";
+import {
+  CONSUMER_OUTCOMES,
+  type ConsumerOutcomeId,
+} from "@/content/productShell";
 import { createAdaptiveSessionProgram } from "@/domain/sessions/continuumPlanner";
 import { isAdaptivePlaybackAvailable } from "@/domain/sessions/playbackAvailability";
-import type { SessionDurationMinutes } from "@/domain/sessions/types";
-import { OUTCOME_ARTWORK } from "@/design/outcomeArtwork";
-import { editorial } from "@/design/editorialTheme";
-import { fonts, spacing } from "@/design/theme";
+import type {
+  NatureAmbienceFamily,
+  SessionDurationMinutes,
+  SessionSoundKind,
+} from "@/domain/sessions/types";
+import type { ConsumerSelection } from "@/domain/audio/consumerSelection";
 import {
   createAdaptiveSessionHistoryStore,
   createConsumerSessionSeed,
-  recentWorkIdsForOutcome,
+  recentWorkIdsForSession,
 } from "@/state/adaptiveSessionPersistence";
 
 const historyStore = createAdaptiveSessionHistoryStore();
-const OUTCOMES = [
-  "meditation",
-  "yoga",
-  "massage",
-  "relax",
-  "sleep",
-  "focus",
-] as const;
-const DURATIONS = [10, 20, 30, 45, 60, 90] as const;
-
-function formatRemaining(milliseconds: number): string {
-  const seconds = Math.max(0, Math.ceil(milliseconds / 1000));
-  return `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
-}
-
 export default function AdaptiveSessionPlayerScreen() {
   const params = useLocalSearchParams<{
-    duration?: string;
     outcomeId?: string;
-    start?: string;
+    duration?: string;
+    sound?: string;
+    nature?: string;
   }>();
+  const router = useRouter();
   const { controller, snapshot } = useAudioSession();
-  const recordedPlan = useRef<string | null>(null);
-  const [historyState, setHistoryState] = useState<{
-    outcome: ConsumerOutcomeId;
-    recentWorkIds: string[];
-    error: string | null;
-  } | null>(null);
-  const qaAvailable = isAdaptivePlaybackAvailable();
-  const outcome = OUTCOMES.includes(params.outcomeId as ConsumerOutcomeId)
+  const active = controller.getConsumerSelection();
+  const outcome = CONSUMER_OUTCOMES.some(({ id }) => id === params.outcomeId)
     ? (params.outcomeId as ConsumerOutcomeId)
     : null;
-  const parsedDuration = Number(params.duration);
-  const duration = DURATIONS.includes(parsedDuration as SessionDurationMinutes)
-    ? (parsedDuration as SessionDurationMinutes)
-    : null;
-  const seed = useMemo(
-    () =>
-      outcome && duration
-        ? createConsumerSessionSeed({
-            outcome,
-            durationMinutes: duration,
-            mode: "sound-only",
-          })
-        : null,
-    [duration, outcome],
-  );
+  const duration = Number(params.duration) as SessionDurationMinutes;
+  const sound =
+    params.sound === "music" || params.sound === "nature"
+      ? (params.sound as SessionSoundKind)
+      : null;
+  const family =
+    params.nature === undefined || params.nature === "sea"
+      ? "sea"
+      : params.nature === "rain"
+        ? "rain"
+        : null;
+  const valid =
+    outcome &&
+    sound &&
+    family &&
+    getSessionPolicy(outcome).durations.includes(duration);
+  const current =
+    active?.kind === "adaptive" &&
+    active.request.outcome === outcome &&
+    active.request.durationMinutes === duration &&
+    active.request.soundKind === sound &&
+    active.request.natureFamily === family
+      ? active
+      : null;
+  const [recent, setRecent] = useState<string[] | null>(null);
+  const [nonce] = useState(() => Date.now());
+  const [error, setError] = useState<string | null>(null);
   useEffect(() => {
-    let mounted = true;
-    if (!qaAvailable || !outcome) return;
+    let live = true;
     void historyStore
       .load()
       .then((history) => {
-        if (mounted) {
-          setHistoryState({
-            outcome,
-            recentWorkIds: recentWorkIdsForOutcome(history, outcome),
-            error: null,
-          });
-        }
+        if (live)
+          setRecent(
+            outcome && sound
+              ? recentWorkIdsForSession(history, outcome, sound)
+              : [],
+          );
       })
       .catch(() => {
-        if (mounted) {
-          setHistoryState({
-            outcome,
-            recentWorkIds: [],
-            error: "Saved session history could not be read.",
-          });
-        }
+        if (live) setRecent([]);
       });
     return () => {
-      mounted = false;
+      live = false;
     };
-  }, [outcome, qaAvailable]);
-  const currentHistory =
-    outcome && historyState?.outcome === outcome ? historyState : null;
-  const recentWorkIds = useMemo(
-    () =>
-      qaAvailable ? (currentHistory?.recentWorkIds ?? null) : ([] as string[]),
-    [currentHistory, qaAvailable],
-  );
-  const historyError = qaAvailable ? (currentHistory?.error ?? null) : null;
-  const result = useMemo(() => {
-    if (recentWorkIds === null) {
-      return { program: null, error: null };
-    }
-    if (!qaAvailable) {
+  }, [outcome, sound]);
+  const result = useMemo<{
+    selection: ConsumerSelection | null;
+    error: string | null;
+  }>(() => {
+    if (current) return { selection: current, error: null };
+    if (!valid || !outcome || !sound || !family)
       return {
-        program: null,
-        error: "Session playback is in production on this device.",
+        selection: null,
+        error: "This session is unavailable. Choose another duration or sound.",
       };
-    }
-    if (historyError) return { program: null, error: historyError };
-    if (!outcome || !duration || !seed) {
-      return { program: null, error: "This session request is not available." };
-    }
+    if (!isAdaptivePlaybackAvailable())
+      return {
+        selection: null,
+        error:
+          "Sessions are in production on this device. Choose one available sound.",
+      };
+    if (recent === null) return { selection: null, error: null };
+    const request = {
+      outcome,
+      durationMinutes: duration,
+      mode: "sound-only" as const,
+      soundKind: sound,
+      natureFamily: family as NatureAmbienceFamily,
+    };
     try {
       return {
-        program: createAdaptiveSessionProgram({
-          outcome,
-          durationMinutes: duration,
-          mode: "sound-only",
-          seed,
-          recentWorkIds,
-          allowProvisionalMetadata: true,
-        }),
+        selection: {
+          kind: "adaptive",
+          request,
+          program: createAdaptiveSessionProgram({
+            ...request,
+            seed: createConsumerSessionSeed(request, nonce),
+            recentWorkIds: recent,
+            allowProvisionalMetadata: true,
+          }),
+        },
         error: null,
       };
-    } catch (error) {
+    } catch {
       return {
-        program: null,
-        error: error instanceof Error ? error.message : "Session unavailable.",
+        selection: null,
+        error:
+          "No compatible session is available at this duration. Choose one complete sound or another duration.",
       };
     }
-  }, [duration, historyError, outcome, qaAvailable, recentWorkIds, seed]);
-
-  useEffect(() => {
-    if (!result.program) return;
-    const program = result.program;
-    void (async () => {
-      await controller.loadAdaptiveSession(program);
-      if (params.start === "1") await controller.play();
-      if (
-        controller.getSnapshot().status === "playing" &&
-        recordedPlan.current !== program.plan.id
-      ) {
-        recordedPlan.current = program.plan.id;
-        await historyStore.recordStart(
-          {
-            outcome: program.plan.outcome,
-            durationMinutes: program.plan.requestedDurationMinutes,
-            mode: "sound-only",
-          },
-          program.plan,
-        );
-      }
-    })();
-  }, [controller, params.start, result.program]);
-
-  if (recentWorkIds === null) {
-    return (
-      <EditorialScreen>
-        <EditorialHeader label="SESSION" showBack />
-        <Text accessibilityRole="header" style={styles.title}>
-          Preparing your session…
-        </Text>
-      </EditorialScreen>
-    );
-  }
-
-  if (!outcome || !duration || !result.program) {
-    return (
-      <EditorialScreen>
-        <EditorialHeader label="SESSION" showBack />
-        <Text accessibilityRole="header" style={styles.title}>
-          Session unavailable.
-        </Text>
-        <Text accessibilityRole="alert" style={styles.error}>
-          {result.error}
-        </Text>
-      </EditorialScreen>
-    );
-  }
-
-  const program = result.program;
-  const elapsedSeconds = Math.max(
-    0,
-    program.plan.totalDurationSeconds - snapshot.remainingMs / 1000,
+  }, [current, valid, outcome, sound, family, duration, recent, nonce]);
+  const selection = result.selection;
+  const matching =
+    selection?.kind === "adaptive" &&
+    selection.program.plan.id === snapshot.sessionPlanId;
+  const needsPreparation = !matching || snapshot.status === "error";
+  const otherSessionActive = Boolean(
+    !matching &&
+    active &&
+    ["playing", "paused", "fadingOut", "preparing", "error"].includes(
+      snapshot.status,
+    ),
   );
+  const prepared = usePreparedSelection(selection, needsPreparation);
+  const program = selection?.kind === "adaptive" ? selection.program : null;
+  const playing =
+    matching &&
+    (snapshot.status === "playing" || snapshot.status === "fadingOut");
+  const busy = matching && snapshot.status === "preparing";
+  const ready = needsPreparation
+    ? prepared.ready
+    : ["ready", "paused", "completed"].includes(snapshot.status);
+  const elapsed =
+    program && matching
+      ? Math.max(
+          0,
+          program.plan.totalDurationSeconds - snapshot.remainingMs / 1000,
+        )
+      : 0;
   const currentSegment =
-    [...program.plan.segments]
-      .reverse()
-      .find(
+    program?.plan.segments
+      .filter((segment) => (segment.lane ?? "primary") === "primary")
+      .findLast(
         (segment) =>
-          elapsedSeconds >= segment.startSeconds &&
-          elapsedSeconds < segment.endSeconds,
-      ) ?? program.plan.segments[0];
-  const isPlaying = snapshot.status === "playing";
-  const canPlay = snapshot.status === "ready" || snapshot.status === "paused";
-  const canStop = snapshot.status === "playing" || snapshot.status === "paused";
-  const policy = getSessionPolicy(outcome);
-
+          elapsed >= segment.startSeconds && elapsed < segment.endSeconds,
+      ) ?? program?.plan.segments[0];
+  const currentWork = program?.works.find(
+    ({ id }) => id === currentSegment?.workId,
+  );
+  const visibleError =
+    error ??
+    result.error ??
+    prepared.error ??
+    (matching ? snapshot.error : null);
+  function playPause() {
+    if (!selection) return;
+    setError(null);
+    const action = playing
+      ? controller.pause()
+      : needsPreparation
+        ? controller.startSelectionFromUserGesture(selection)
+        : controller.playFromUserGesture();
+    void action.catch((reason: unknown) => {
+      if (reason instanceof PlaybackCancelledError) return;
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : "Could not start. Retry loading.",
+      );
+    });
+  }
   return (
-    <EditorialScreen>
-      <EditorialHeader label={`${outcome.toUpperCase()} SESSION`} showBack />
-      <Image
-        accessible={false}
-        accessibilityIgnoresInvertColors
-        resizeMode="cover"
-        source={OUTCOME_ARTWORK[outcome]}
-        style={styles.artwork}
+    <EditorialScreen
+      footer={
+        !otherSessionActive && (
+          <PlaybackTransport
+            fixedFooter
+            canPlay={Boolean(program && ready)}
+            canStop={
+              matching && (playing || busy || snapshot.status === "paused")
+            }
+            isPlaying={playing}
+            busy={busy}
+            onPlayPause={playPause}
+            onStop={() => void controller.stop().catch(() => undefined)}
+            playPauseTestID="adaptive-play-pause"
+          />
+        )
+      }
+    >
+      <EditorialHeader label={outcome?.toUpperCase() ?? "SESSION"} showBack />
+      <ConsumerPlaybackSurface
+        hideTransport={!otherSessionActive}
+        previewTransport={otherSessionActive}
+        canPlay={Boolean(program && ready)}
+        canStop={matching && (playing || busy || snapshot.status === "paused")}
+        contextLabel={outcome?.toUpperCase() ?? "SESSION"}
+        currentLabel={
+          snapshot.status === "completed" ? undefined : "NOW PLAYING"
+        }
+        currentTitle={currentWork?.title}
+        error={visibleError}
+        isPlaying={playing}
+        status={
+          visibleError
+            ? "Could not play"
+            : busy
+              ? "Preparing sound…"
+              : playing
+                ? snapshot.status === "fadingOut"
+                  ? "Finishing"
+                  : "Playing"
+                : matching && snapshot.status === "completed"
+                  ? "Completed"
+                  : matching && snapshot.status === "paused"
+                    ? "Paused"
+                    : ready
+                      ? "Ready"
+                      : "Loading sound…"
+        }
+        note="Your session keeps playing while you browse. Return using the current-session bar."
+        onPlayPause={playPause}
+        onStop={() => void controller.stop().catch(() => undefined)}
+        onRetry={() => {
+          setError(null);
+          prepared.retry();
+        }}
+        onVolumeChange={(value) => void controller.setVolume(value)}
+        volumeDisabled={!matching || busy}
+        outcome={outcome ?? "relax"}
+        remainingMs={
+          matching
+            ? snapshot.remainingMs
+            : Number.isFinite(duration)
+              ? duration * 60000
+              : 0
+        }
+        title={
+          outcome ? getSessionPolicy(outcome).startLabel : "Session unavailable"
+        }
+        variant="session"
+        volume={snapshot.volume}
+        playPauseTestID="adaptive-play-pause"
+        options={
+          program?.plan.natureMix ? (
+            <SessionNatureControl
+              family={program.plan.natureMix.selectedFamily}
+              familyDisabled
+              level={
+                snapshot.natureMixLevel ?? program.plan.natureMix.initialLevel
+              }
+              onFamilyChange={() => undefined}
+              onLevelChange={(level) =>
+                void controller.setNatureMixLevel(level)
+              }
+              title="Natural ambience"
+              volumeDisabled={!matching || busy}
+            />
+          ) : null
+        }
       />
-      <Text style={styles.kicker}>SOUND ONLY · {duration} MIN</Text>
-      <Text accessibilityRole="header" style={styles.title}>
-        {policy.startLabel}
-      </Text>
-      <Text style={styles.review}>PREVIEW MODE · LISTENING REVIEW PENDING</Text>
-      <Text
-        accessibilityLabel={`${formatRemaining(snapshot.remainingMs)} remaining`}
-        style={styles.timer}
-      >
-        {formatRemaining(snapshot.remainingMs)}
-      </Text>
-      <View style={styles.nowPanel}>
-        <Text style={styles.nowLabel}>
-          {currentSegment.phase.toUpperCase()}
-        </Text>
-        <Text style={styles.nowTitle}>{currentSegment.title}</Text>
-      </View>
-      {snapshot.error ? (
-        <Text accessibilityRole="alert" style={styles.error}>
-          {snapshot.error}
-        </Text>
+      {visibleError ? (
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.push(`/outcome/${outcome ?? "relax"}` as Href)}
+          style={{ minHeight: 48, justifyContent: "center" }}
+        >
+          <Text>Choose another sound or duration</Text>
+        </Pressable>
       ) : null}
-      <View style={styles.transport}>
-        <Pressable
-          accessibilityLabel="Stop"
-          accessibilityRole="button"
-          accessibilityState={{ disabled: !canStop }}
-          disabled={!canStop}
-          onPress={() => void controller.stop()}
-          style={[styles.secondaryButton, !canStop && styles.disabled]}
-        >
-          <Text style={styles.secondaryText}>Stop</Text>
-        </Pressable>
-        <Pressable
-          accessibilityLabel={isPlaying ? "Pause" : "Play"}
-          accessibilityRole="button"
-          accessibilityState={{ disabled: !isPlaying && !canPlay }}
-          disabled={!isPlaying && !canPlay}
-          onPress={() =>
-            void (isPlaying ? controller.pause() : controller.play())
-          }
-          style={[
-            styles.primaryButton,
-            !isPlaying && !canPlay && styles.disabled,
-          ]}
-          testID="adaptive-play-pause"
-        >
-          <Text style={styles.primaryText}>{isPlaying ? "Pause" : "Play"}</Text>
-        </Pressable>
-      </View>
-      <Text style={styles.note}>
-        One work at a time. The next passage is prepared quietly, then the
-        session closes at the time you chose.
-      </Text>
     </EditorialScreen>
   );
 }
-
-const styles = StyleSheet.create({
-  artwork: { height: 200, width: "100%" },
-  kicker: {
-    color: editorial.mineralBlue,
-    fontFamily: fonts.sansSemiBold,
-    fontSize: 11,
-    letterSpacing: 1.1,
-    marginTop: spacing.lg,
-  },
-  title: {
-    color: editorial.ink,
-    fontFamily: fonts.serif,
-    fontSize: 40,
-    lineHeight: 43,
-    marginTop: spacing.sm,
-  },
-  review: {
-    color: editorial.gold,
-    fontFamily: fonts.sansSemiBold,
-    fontSize: 10,
-    letterSpacing: 0.55,
-    marginTop: spacing.sm,
-  },
-  timer: {
-    color: editorial.ink,
-    fontFamily: fonts.serif,
-    fontSize: 58,
-    lineHeight: 64,
-    marginTop: spacing.xl,
-  },
-  nowPanel: {
-    borderLeftColor: editorial.jade,
-    borderLeftWidth: 2,
-    marginTop: spacing.md,
-    paddingLeft: spacing.md,
-  },
-  nowLabel: {
-    color: editorial.inkFaint,
-    fontFamily: fonts.sansSemiBold,
-    fontSize: 10,
-    letterSpacing: 0.9,
-  },
-  nowTitle: {
-    color: editorial.ink,
-    fontFamily: fonts.serifItalic,
-    fontSize: 22,
-    marginTop: 3,
-  },
-  transport: { flexDirection: "row", gap: spacing.md, marginTop: spacing.xl },
-  secondaryButton: {
-    alignItems: "center",
-    borderColor: editorial.lineStrong,
-    borderWidth: StyleSheet.hairlineWidth,
-    flex: 1,
-    justifyContent: "center",
-    minHeight: 56,
-  },
-  primaryButton: {
-    alignItems: "center",
-    backgroundColor: editorial.ink,
-    flex: 2,
-    justifyContent: "center",
-    minHeight: 56,
-  },
-  primaryText: {
-    color: editorial.paperLight,
-    fontFamily: fonts.sansSemiBold,
-    fontSize: 15,
-  },
-  secondaryText: {
-    color: editorial.ink,
-    fontFamily: fonts.sansSemiBold,
-    fontSize: 13,
-  },
-  disabled: { opacity: 0.42 },
-  note: {
-    borderTopColor: editorial.line,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    color: editorial.inkMuted,
-    fontFamily: fonts.sans,
-    fontSize: 12,
-    lineHeight: 19,
-    marginTop: spacing.xl,
-    paddingTop: spacing.md,
-  },
-  error: {
-    color: editorial.rose,
-    fontFamily: fonts.sansMedium,
-    fontSize: 13,
-    lineHeight: 20,
-    marginTop: spacing.md,
-  },
-});

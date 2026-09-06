@@ -1,12 +1,28 @@
 import { getSessionPolicy } from "@/content/sessionPolicies";
-import { SESSION_WORK_PROFILES } from "@/content/sessionWorkProfiles";
+import {
+  PROVISIONAL_MUSIC_SESSION_PAIRINGS,
+  PROVISIONAL_MUSIC_SESSION_WORK_IDS,
+  SESSION_WORK_PROFILES,
+} from "@/content/sessionWorkProfiles";
 import { estimateOverlapPeakDbtp } from "./equalPower";
+import {
+  LEGACY_PHASE_WEIGHTS,
+  SESSION_PHASE_IDS as PHASE_IDS,
+  validateIntentPhasePolicy,
+} from "./phasePolicies";
+import {
+  getReviewedTransitionWindows,
+  hasReviewedTransitionWindowPair,
+  MUSIC_CROSSFADE_SECONDS,
+} from "./transitionWindows";
 import type {
   AdaptiveSessionPlan,
   AdaptiveSessionProgram,
   AdaptiveSessionSegment,
   AdaptiveSessionTransition,
   CreateAdaptiveSessionInput,
+  NatureAmbienceFamily,
+  SessionIntentPhasePolicy,
   SessionPhaseId,
   SessionPhaseWindow,
   SessionWorkProfile,
@@ -14,13 +30,10 @@ import type {
 import { SessionPlanningError } from "./types";
 
 const SAMPLE_RATE = 48_000 as const;
-const PHASE_IDS: readonly SessionPhaseId[] = [
-  "arrival",
-  "flow",
-  "deepening",
-  "return",
-];
-const PHASE_WEIGHTS = [0.16, 0.38, 0.3, 0.16] as const;
+const MIN_CROSSFADE_SECONDS = 4;
+const MAX_CROSSFADE_SECONDS = 300;
+const DEFAULT_NATURE_CROSSFADE_SECONDS = 180;
+const COMPOSITE_HEADROOM_TRIM_DB = -0.2;
 
 function hashSeed(seed: string): number {
   let value = 2166136261;
@@ -56,6 +69,12 @@ function seconds(frames: number): number {
 function hasValidBoundaryMetadata(profile: SessionWorkProfile): boolean {
   const duration = profile.work.durationSeconds;
   return (
+    Number.isFinite(duration) &&
+    duration > 0 &&
+    Number.isSafeInteger(profile.work.frameCount) &&
+    profile.work.frameCount > 0 &&
+    profile.work.sampleRateHz === SAMPLE_RATE &&
+    Math.round(duration * SAMPLE_RATE) === profile.work.frameCount &&
     profile.safeEntryPointsSeconds.length > 0 &&
     profile.safeExitPointsSeconds.length > 0 &&
     profile.safeEntryPointsSeconds.every(
@@ -78,7 +97,12 @@ function isSafeExitFrame(
   );
 }
 
-function buildPhases(targetFrames: number): SessionPhaseWindow[] {
+function buildPhases(
+  targetFrames: number,
+  policy?: SessionIntentPhasePolicy,
+): SessionPhaseWindow[] {
+  const weights =
+    policy?.phases.map(({ weight }) => weight) ?? LEGACY_PHASE_WEIGHTS;
   let cursor = 0;
   return PHASE_IDS.map((id, index) => {
     const endFrame =
@@ -86,10 +110,9 @@ function buildPhases(targetFrames: number): SessionPhaseWindow[] {
         ? targetFrames
         : Math.round(
             targetFrames *
-              PHASE_WEIGHTS.slice(0, index + 1).reduce(
-                (sum, weight) => sum + weight,
-                0,
-              ),
+              weights
+                .slice(0, index + 1)
+                .reduce((sum, weight) => sum + weight, 0),
           );
     const phase = {
       id,
@@ -117,7 +140,49 @@ function auditPrefix(profile: SessionWorkProfile): "PASS" | "UNREVIEWED" {
 export function evaluatePhasePlacement(
   profile: SessionWorkProfile,
   phase: SessionPhaseId,
+  policy?: SessionIntentPhasePolicy,
 ): CompatibilityResult {
+  if (policy) {
+    validateIntentPhasePolicy(policy, policy.outcome);
+    const rule = policy.phases.find(({ id }) => id === phase)!;
+    const inRange = (
+      value: number,
+      [minimum, maximum]: readonly [number, number],
+    ) => value >= minimum && value <= maximum;
+    const checks = [
+      {
+        pass: profile.continuumReadiness === "editorially-reviewed",
+        text: "reviewed profile for intent policy",
+      },
+      {
+        pass: profile.intents.includes(policy.outcome),
+        text: `reviewed intent ${policy.outcome}`,
+      },
+      { pass: profile.phaseRoles.includes(phase), text: "declared phase role" },
+      {
+        pass: inRange(profile.energyStart, rule.energyStart),
+        text: `${rule.role} initial energy`,
+      },
+      {
+        pass: inRange(profile.energyEnd, rule.energyEnd),
+        text: `${rule.role} final energy`,
+      },
+      {
+        pass: inRange(profile.density, rule.density),
+        text: `${rule.role} density`,
+      },
+      {
+        pass: rule.melodicPresence.includes(profile.melodicPresence),
+        text: `${rule.role} melody`,
+      },
+    ];
+    return {
+      compatible: checks.every(({ pass }) => pass),
+      audit: checks.map(
+        ({ pass, text }) => `${pass ? "PASS" : "BLOCK"} · ${phase} · ${text}`,
+      ),
+    };
+  }
   const checks =
     phase === "arrival"
       ? [
@@ -153,8 +218,24 @@ export function evaluatePhasePlacement(
 export function evaluateTransition(
   outgoing: SessionWorkProfile,
   incoming: SessionWorkProfile,
+  crossfadeSeconds = MUSIC_CROSSFADE_SECONDS,
 ): CompatibilityResult {
+  const userReviewedMusicPool =
+    PROVISIONAL_MUSIC_SESSION_WORK_IDS.has(outgoing.work.id) ||
+    PROVISIONAL_MUSIC_SESSION_WORK_IDS.has(incoming.work.id);
+  const editorialMusicPair = PROVISIONAL_MUSIC_SESSION_PAIRINGS.some(
+    ([outgoingId, incomingId]) =>
+      outgoingId === outgoing.work.id && incomingId === incoming.work.id,
+  );
   const checks = [
+    ...(userReviewedMusicPool
+      ? [
+          {
+            pass: editorialMusicPair,
+            text: `user-reviewed direction ${outgoing.work.title} to ${incoming.work.title}`,
+          },
+        ]
+      : []),
     {
       pass: outgoing.compatibilityGroup === incoming.compatibilityGroup,
       text: `curated compatibility group ${outgoing.compatibilityGroup}`,
@@ -181,6 +262,18 @@ export function evaluateTransition(
         incoming.safeEntryPointsSeconds.length > 0,
       text: "documented source boundary markers",
     },
+    ...(outgoing.transitionWindows || incoming.transitionWindows
+      ? [
+          {
+            pass: hasReviewedTransitionWindowPair(
+              outgoing,
+              incoming,
+              crossfadeSeconds,
+            ),
+            text: "complete reviewed pre-exit and post-entry windows",
+          },
+        ]
+      : []),
     {
       pass:
         outgoing.melodicPresence === incoming.melodicPresence ||
@@ -205,22 +298,103 @@ export function evaluateTransition(
 function chooseSequence(
   input: CreateAdaptiveSessionInput,
   profiles: readonly SessionWorkProfile[],
+  isFeasible: (sequence: readonly SessionWorkProfile[]) => boolean,
 ): SessionWorkProfile[] {
-  const recent = new Set(input.recentWorkIds?.slice(0, 12) ?? []);
+  const transitionDuration =
+    input.crossfadeSeconds ??
+    (input.soundKind === "music" ? MUSIC_CROSSFADE_SECONDS : 90);
+  // D-060: recent listening is a preference, never an eligibility veto.
+  // Newest first. Repeated IDs represent multiple successful listens.
+  const recent = input.recentWorkIds?.slice(0, 12) ?? [];
+  const recentScore = (id: string) =>
+    recent.reduce(
+      (score, item, index) => score + (item === id ? recent.length - index : 0),
+      0,
+    );
+  const preferLessRecent = (
+    values: readonly SessionWorkProfile[],
+    random: () => number,
+  ) =>
+    stableShuffle(values, random).sort(
+      (left, right) => recentScore(left.work.id) - recentScore(right.work.id),
+    );
   const available = input.availableWorkIds
     ? new Set(input.availableWorkIds)
     : null;
   const eligible = profiles
+    .filter(
+      (profile) =>
+        profile.work.listeningStatus === "APPROVED — LISTENING PASSED" &&
+        profile.work.availability !== "rejected-listening",
+    )
     .filter((profile) => profile.intents.includes(input.outcome))
+    .filter((profile) => profile.materialKind === input.soundKind)
+    .filter(
+      (profile) =>
+        !input.natureFamily ||
+        profile.materialKind !== "nature" ||
+        profile.aestheticFamily === input.natureFamily,
+    )
     .filter(
       (profile) =>
         profile.continuumReadiness === "editorially-reviewed" ||
         input.allowProvisionalMetadata === true,
     )
-    .filter((profile) => !recent.has(profile.work.id))
     .filter((profile) => !available || available.has(profile.work.id))
     .filter(hasValidBoundaryMetadata)
     .sort((left, right) => left.work.id.localeCompare(right.work.id));
+
+  if (input.soundKind === "music") {
+    const eligibleById = new Map(
+      eligible.map((profile) => [profile.work.id, profile]),
+    );
+    const pairs = PROVISIONAL_MUSIC_SESSION_PAIRINGS.flatMap(
+      ([outgoingId, incomingId]) => {
+        const outgoing = eligibleById.get(outgoingId);
+        const incoming = eligibleById.get(incomingId);
+        if (!outgoing || !incoming) return [];
+        if (
+          outgoing.work.id === incoming.work.id ||
+          outgoing.work.familyId === incoming.work.familyId
+        )
+          return [];
+        if (
+          !evaluatePhasePlacement(outgoing, "arrival", input.phasePolicy)
+            .compatible
+        )
+          return [];
+        if (
+          !evaluatePhasePlacement(incoming, "return", input.phasePolicy)
+            .compatible
+        )
+          return [];
+        if (
+          !evaluateTransition(outgoing, incoming, transitionDuration).compatible
+        )
+          return [];
+        return [[outgoing, incoming] as const];
+      },
+    );
+    const selected = stableShuffle(
+      pairs,
+      seededRandom(
+        `${input.seed}|${input.outcome}|${input.durationMinutes}|music-pair`,
+      ),
+    )
+      .sort(
+        (left, right) =>
+          left.reduce((sum, profile) => sum + recentScore(profile.work.id), 0) -
+          right.reduce((sum, profile) => sum + recentScore(profile.work.id), 0),
+      )
+      .find(isFeasible);
+    if (!selected) {
+      throw new SessionPlanningError(
+        "NO_SAFE_SEQUENCE",
+        `No user-reviewed music transition is available for ${input.outcome}.`,
+      );
+    }
+    return [...selected];
+  }
 
   if (eligible.length < PHASE_IDS.length) {
     throw new SessionPlanningError(
@@ -233,11 +407,11 @@ function chooseSequence(
     `${input.seed}|${input.outcome}|${input.durationMinutes}`,
   );
   const byPhase = PHASE_IDS.map((phase) =>
-    stableShuffle(
+    preferLessRecent(
       eligible.filter(
         (profile) =>
           profile.phaseRoles.includes(phase) &&
-          evaluatePhasePlacement(profile, phase).compatible,
+          evaluatePhasePlacement(profile, phase, input.phasePolicy).compatible,
       ),
       random,
     ),
@@ -245,7 +419,7 @@ function chooseSequence(
   const chosen: SessionWorkProfile[] = [];
 
   function search(index: number): boolean {
-    if (index === PHASE_IDS.length) return true;
+    if (index === PHASE_IDS.length) return isFeasible(chosen);
     for (const candidate of byPhase[index]) {
       if (chosen.some(({ work }) => work.id === candidate.work.id)) continue;
       if (
@@ -254,7 +428,10 @@ function chooseSequence(
         continue;
       }
       const previous = chosen.at(-1);
-      if (previous && !evaluateTransition(previous, candidate).compatible) {
+      if (
+        previous &&
+        !evaluateTransition(previous, candidate, transitionDuration).compatible
+      ) {
         continue;
       }
       chosen.push(candidate);
@@ -273,15 +450,23 @@ function chooseSequence(
   return chosen;
 }
 
-function nearestSafeEnd(
+function safeEndCandidates(
   startFrame: number,
   profile: SessionWorkProfile,
   sourceEntryFrame: number,
   desiredEndFrame: number,
+  earliestEndFrame: number,
   latestEndFrame: number,
-): number {
+  crossfadeSeconds: number,
+): number[] {
   const sourceFrames = profile.work.frameCount;
   const safeExitFrames = profile.safeExitPointsSeconds
+    .filter(
+      (point) =>
+        !profile.transitionWindows ||
+        getReviewedTransitionWindows(profile, "exit", point, crossfadeSeconds)
+          .length > 0,
+    )
     .map((point) => Math.round(point * SAMPLE_RATE))
     .filter((point) => point > 0 && point <= sourceFrames);
   const candidates: number[] = [];
@@ -293,19 +478,108 @@ function nearestSafeEnd(
           ? sourceExitFrame - sourceEntryFrame
           : sourceFrames - sourceEntryFrame + sourceExitFrame;
       const end = startFrame + loop * sourceFrames + firstTraversal;
-      if (end > startFrame && end <= latestEndFrame) candidates.push(end);
+      if (end >= earliestEndFrame && end <= latestEndFrame)
+        candidates.push(end);
     }
   }
-  const closest = candidates.sort(
+  return candidates.sort(
     (left, right) =>
       Math.abs(left - desiredEndFrame) - Math.abs(right - desiredEndFrame) ||
       left - right,
-  )[0];
-  if (closest !== undefined) return closest;
-  throw new SessionPlanningError(
-    "NO_SAFE_SEQUENCE",
-    "A safe loop-boundary transition does not fit the requested duration.",
   );
+}
+
+function chooseTimelineBoundaries(
+  chosen: readonly SessionWorkProfile[],
+  phases: readonly SessionPhaseWindow[],
+  targetFrames: number,
+  crossfadeFrames: number,
+): readonly {
+  startFrame: number;
+  endFrame: number;
+  sourceEntryFrame: number;
+}[] {
+  const placements: {
+    startFrame: number;
+    endFrame: number;
+    sourceEntryFrame: number;
+  }[] = [];
+  const crossfadeSeconds = seconds(crossfadeFrames);
+  function search(index: number): boolean {
+    if (index === chosen.length) return true;
+    const profile = chosen[index];
+    const previous = placements.at(-1);
+    const startFrame = previous ? previous.endFrame - crossfadeFrames : 0;
+    const isFinal = index === chosen.length - 1;
+    const latestEndFrame =
+      targetFrames - (chosen.length - index - 1) * (crossfadeFrames + 1);
+    const earliestEndFrame = previous
+      ? previous.endFrame + crossfadeFrames
+      : crossfadeFrames;
+    for (const point of profile.safeEntryPointsSeconds) {
+      if (
+        profile.transitionWindows &&
+        getReviewedTransitionWindows(profile, "entry", point, crossfadeSeconds)
+          .length === 0
+      )
+        continue;
+      const sourceEntryFrame = Math.round(point * SAMPLE_RATE);
+      if (previous) {
+        const outgoing = chosen[index - 1];
+        const exitFrame =
+          (previous.sourceEntryFrame +
+            previous.endFrame -
+            previous.startFrame) %
+          outgoing.work.frameCount;
+        const boundary =
+          exitFrame === 0 ? outgoing.work.durationSeconds : seconds(exitFrame);
+        if (
+          !hasReviewedTransitionWindowPair(
+            outgoing,
+            profile,
+            crossfadeSeconds,
+            boundary,
+            point,
+          )
+        )
+          continue;
+      }
+      const desiredEndFrame =
+        chosen.length === 2 ? phases[1].endFrame : phases[index].endFrame;
+      const candidates = isFinal
+        ? [targetFrames]
+        : safeEndCandidates(
+            startFrame,
+            profile,
+            sourceEntryFrame,
+            desiredEndFrame,
+            earliestEndFrame,
+            latestEndFrame,
+            crossfadeSeconds,
+          );
+      for (const endFrame of candidates) {
+        if (endFrame <= startFrame) continue;
+        const exitFrame =
+          (sourceEntryFrame + endFrame - startFrame) % profile.work.frameCount;
+        if (
+          isFinal &&
+          profile.endingPolicy === "editorial-ending-required" &&
+          !isSafeExitFrame(profile, exitFrame)
+        )
+          continue;
+        placements.push({ startFrame, endFrame, sourceEntryFrame });
+        if (search(index + 1)) return true;
+        placements.pop();
+      }
+    }
+    return false;
+  }
+  if (!search(0))
+    throw new SessionPlanningError(
+      "NO_SAFE_SEQUENCE",
+      "No complete safe-boundary timeline fits the requested duration.",
+    );
+  return placements;
 }
 
 function buildTimeline(
@@ -314,6 +588,7 @@ function buildTimeline(
   targetFrames: number,
   crossfadeFrames: number,
   curve: AdaptiveSessionTransition["curve"],
+  phasePolicy?: SessionIntentPhasePolicy,
 ): {
   segments: AdaptiveSessionSegment[];
   transitions: AdaptiveSessionTransition[];
@@ -321,26 +596,19 @@ function buildTimeline(
 } {
   const segments: AdaptiveSessionSegment[] = [];
   const transitions: AdaptiveSessionTransition[] = [];
-  let startFrame = 0;
+  const placements = chooseTimelineBoundaries(
+    chosen,
+    phases,
+    targetFrames,
+    crossfadeFrames,
+  );
+  const segmentPhases: readonly SessionPhaseId[] =
+    chosen.length === 2 ? ["arrival", "return"] : PHASE_IDS;
 
   for (let index = 0; index < chosen.length; index += 1) {
     const profile = chosen[index];
-    const sourceEntryFrame = Math.round(
-      profile.safeEntryPointsSeconds[0] * SAMPLE_RATE,
-    );
+    const { startFrame, endFrame, sourceEntryFrame } = placements[index];
     const isFinal = index === chosen.length - 1;
-    const remainingTransitions = chosen.length - index - 1;
-    const latestEndFrame =
-      targetFrames - remainingTransitions * (crossfadeFrames + 1);
-    const endFrame = isFinal
-      ? targetFrames
-      : nearestSafeEnd(
-          startFrame,
-          profile,
-          sourceEntryFrame,
-          phases[index].endFrame,
-          latestEndFrame,
-        );
     const playedFrames = endFrame - startFrame;
     const traversedFrames = sourceEntryFrame + playedFrames;
     const sourceExitFrame = traversedFrames % profile.work.frameCount;
@@ -348,7 +616,7 @@ function buildTimeline(
     const finalEnvelopeFrames = isFinal && !safeEnding ? crossfadeFrames : 0;
     segments.push({
       index,
-      phase: PHASE_IDS[index],
+      phase: segmentPhases[index],
       workId: profile.work.id,
       title: profile.work.title,
       startFrame,
@@ -362,17 +630,53 @@ function buildTimeline(
       loopCount: Math.ceil(traversedFrames / profile.work.frameCount),
       playbackTrimDb: 0,
       finalEnvelopeSeconds: seconds(finalEnvelopeFrames),
-      phaseRuleAudit: evaluatePhasePlacement(profile, PHASE_IDS[index]).audit,
+      phaseRuleAudit: evaluatePhasePlacement(
+        profile,
+        segmentPhases[index],
+        phasePolicy,
+      ).audit,
     });
 
     if (!isFinal) {
       const incomingStartFrame = endFrame - crossfadeFrames;
+      if (
+        incomingStartFrame < startFrame ||
+        (transitions.at(-1)?.endFrame ?? 0) > incomingStartFrame
+      ) {
+        throw new SessionPlanningError(
+          "NO_SAFE_SEQUENCE",
+          "A transition would overlap another transition on the same lane.",
+        );
+      }
       const next = chosen[index + 1];
-      const compatibility = evaluateTransition(profile, next);
+      const compatibility = evaluateTransition(
+        profile,
+        next,
+        seconds(crossfadeFrames),
+      );
       if (!compatibility.compatible) {
         throw new SessionPlanningError(
           "NO_SAFE_SEQUENCE",
           `Blocked transition ${profile.work.id} to ${next.work.id}.`,
+        );
+      }
+      const incomingEntry = seconds(placements[index + 1].sourceEntryFrame);
+      const boundary =
+        sourceExitFrame === 0
+          ? profile.work.durationSeconds
+          : seconds(sourceExitFrame);
+      if (
+        !hasReviewedTransitionWindowPair(
+          profile,
+          next,
+          seconds(crossfadeFrames),
+          boundary,
+          incomingEntry,
+        )
+      ) {
+        throw new SessionPlanningError(
+          "NO_SAFE_SEQUENCE",
+          "The selected source boundaries lack complete reviewed overlap windows.",
         );
       }
       const untrimmedPeakDbtp = estimateOverlapPeakDbtp(
@@ -406,7 +710,6 @@ function buildTimeline(
         ruleAudit: compatibility.audit,
         reviewStatus: "PROVISIONAL — LISTENING REVIEW REQUIRED",
       });
-      startFrame = incomingStartFrame;
     }
   }
 
@@ -448,6 +751,229 @@ function buildTimeline(
   };
 }
 
+function createNatureSegment(
+  profile: SessionWorkProfile,
+  index: number,
+  phase: "arrival" | "return",
+  startFrame: number,
+  endFrame: number,
+  playbackTrimDb: number,
+  finalEnvelopeSeconds: number,
+): AdaptiveSessionSegment {
+  const playedFrames = endFrame - startFrame;
+  const sourceEntryFrame = 0;
+  const sourceExitFrame = playedFrames % profile.work.frameCount;
+  return {
+    index,
+    lane: "nature",
+    phase,
+    workId: profile.work.id,
+    title: profile.work.title,
+    startFrame,
+    endFrame,
+    startSeconds: seconds(startFrame),
+    endSeconds: seconds(endFrame),
+    sourceEntryFrame,
+    sourceExitFrame,
+    sourceEntrySeconds: 0,
+    sourceExitSeconds: seconds(sourceExitFrame),
+    loopCount: Math.ceil(playedFrames / profile.work.frameCount),
+    playbackTrimDb,
+    finalEnvelopeSeconds: phase === "return" ? finalEnvelopeSeconds : 0,
+    phaseRuleAudit: [
+      "PROVISIONAL · coordinated user-selected natural ambience",
+      `PROVISIONAL · ${profile.aestheticFamily} remains within the selected family during ${phase}`,
+    ],
+  };
+}
+
+function selectNatureProfile(
+  family: NatureAmbienceFamily,
+  seed: string,
+  excludedWorkId?: string,
+): SessionWorkProfile {
+  const candidates = SESSION_WORK_PROFILES.filter(
+    (profile) =>
+      profile.materialKind === "nature" &&
+      profile.aestheticFamily === family &&
+      profile.work.id !== excludedWorkId,
+  );
+  const selected = stableShuffle(candidates, seededRandom(seed))[0];
+  if (!selected) {
+    throw new SessionPlanningError(
+      "NATURE_BED_UNAVAILABLE",
+      `No ${family} ambience is available for this music session.`,
+    );
+  }
+  return selected;
+}
+
+export function attachCoordinatedNatureBed(
+  program: AdaptiveSessionProgram,
+  seed: string,
+  natureFamily: NatureAmbienceFamily = "sea",
+  natureCrossfadeSeconds = DEFAULT_NATURE_CROSSFADE_SECONDS,
+): AdaptiveSessionProgram {
+  if (program.plan.soundKind !== "music") return program;
+  if (
+    natureCrossfadeSeconds < MIN_CROSSFADE_SECONDS ||
+    natureCrossfadeSeconds > MAX_CROSSFADE_SECONDS
+  ) {
+    throw new SessionPlanningError(
+      "NATURE_BED_UNAVAILABLE",
+      "Natural ambience transition must be between 4 and 300 seconds.",
+    );
+  }
+  const musicTransition = program.plan.transitions.find(
+    (transition) => (transition.lane ?? "primary") === "primary",
+  );
+  const outgoingMusic = program.plan.segments.find(
+    (segment) => segment.index === musicTransition?.outgoingSegmentIndex,
+  );
+  const incomingMusic = program.plan.segments.find(
+    (segment) => segment.index === musicTransition?.incomingSegmentIndex,
+  );
+  if (!musicTransition || !outgoingMusic || !incomingMusic) {
+    throw new SessionPlanningError(
+      "NATURE_BED_UNAVAILABLE",
+      "A reviewed music transition is required before adding natural ambience.",
+    );
+  }
+  const outgoingNature = selectNatureProfile(
+    natureFamily,
+    `${seed}|nature|outgoing|${natureFamily}`,
+  );
+  const incomingNature = selectNatureProfile(
+    natureFamily,
+    `${seed}|nature|incoming|${natureFamily}`,
+    outgoingNature.work.id,
+  );
+  const transitionFrames = Math.round(natureCrossfadeSeconds * SAMPLE_RATE);
+  const safetyFrames = 60 * SAMPLE_RATE;
+  const afterStartFrame = musicTransition.endFrame;
+  const afterEndFrame = afterStartFrame + transitionFrames;
+  const canFollowMusic =
+    afterEndFrame + safetyFrames <= program.plan.targetFrames;
+  const beforeEndFrame = musicTransition.startFrame;
+  const beforeStartFrame = beforeEndFrame - transitionFrames;
+  const canLeadMusic = beforeStartFrame >= safetyFrames;
+  if (!canFollowMusic && !canLeadMusic) {
+    throw new SessionPlanningError(
+      "NATURE_BED_UNAVAILABLE",
+      "The requested session is too short for separate slow music and nature transitions.",
+    );
+  }
+  const natureStartFrame = canFollowMusic ? afterStartFrame : beforeStartFrame;
+  const natureEndFrame = canFollowMusic ? afterEndFrame : beforeEndFrame;
+  const untrimmedPeakDbtp = estimateOverlapPeakDbtp(
+    outgoingNature.work,
+    incomingNature.work,
+    "equal-power",
+  );
+  if (untrimmedPeakDbtp === null) {
+    throw new SessionPlanningError(
+      "NATURE_BED_UNAVAILABLE",
+      "Natural ambience peak metrics are unavailable.",
+    );
+  }
+  const transitionTrimDb = Math.min(0, -1.1 - untrimmedPeakDbtp);
+  const trim = Number(transitionTrimDb.toFixed(3));
+  const firstNatureIndex = program.plan.segments.length;
+  const natureSegments = [
+    createNatureSegment(
+      outgoingNature,
+      firstNatureIndex,
+      "arrival",
+      0,
+      natureEndFrame,
+      trim,
+      natureCrossfadeSeconds,
+    ),
+    createNatureSegment(
+      incomingNature,
+      firstNatureIndex + 1,
+      "return",
+      natureStartFrame,
+      program.plan.targetFrames,
+      trim,
+      natureCrossfadeSeconds,
+    ),
+  ];
+  const natureTransition: AdaptiveSessionTransition = {
+    index: program.plan.transitions.length,
+    lane: "nature",
+    outgoingSegmentIndex: firstNatureIndex,
+    incomingSegmentIndex: firstNatureIndex + 1,
+    startFrame: natureStartFrame,
+    endFrame: natureEndFrame,
+    startSeconds: seconds(natureStartFrame),
+    endSeconds: seconds(natureEndFrame),
+    durationSeconds: natureCrossfadeSeconds,
+    curve: "equal-power",
+    transitionClass: "natural-water",
+    untrimmedPeakDbtp,
+    transitionTrimDb: trim,
+    clippingRiskDbtp: Number((untrimmedPeakDbtp + trim).toFixed(3)),
+    ruleAudit: [
+      "PROVISIONAL · user-selected natural ambience changes gradually",
+      `PASS · ${natureFamily} family remains user-selected`,
+      `PASS · staggered ${canFollowMusic ? "after" : "before"} the music transition`,
+      "PASS · no simultaneous music and nature crossfade",
+    ],
+    reviewStatus: "PROVISIONAL — LISTENING REVIEW REQUIRED",
+  };
+  const segments = [
+    ...program.plan.segments.map((segment) => ({
+      ...segment,
+      lane: segment.lane ?? ("primary" as const),
+    })),
+    ...natureSegments,
+  ];
+  const transitions = [
+    ...program.plan.transitions.map((transition) => ({
+      ...transition,
+      lane: transition.lane ?? ("primary" as const),
+    })),
+    natureTransition,
+  ];
+  const natureIdentity = JSON.stringify({
+    seed,
+    musicPlanId: program.plan.id,
+    natureCrossfadeSeconds,
+    natureFamily,
+    works: natureSegments.map(({ workId }) => workId),
+    transition: {
+      startFrame: natureStartFrame,
+      endFrame: natureEndFrame,
+    },
+  });
+  const natureHash = hashSeed(natureIdentity).toString(16).padStart(8, "0");
+  return {
+    ...program,
+    works: [...program.works, outgoingNature.work, incomingNature.work],
+    fadeOutSeconds: Math.max(program.fadeOutSeconds, natureCrossfadeSeconds),
+    plan: {
+      ...program.plan,
+      id: `${program.plan.id}-nature-${natureHash}`,
+      segments,
+      transitions,
+      natureMix: {
+        initialLevel: 0.5,
+        minimumLevel: 0,
+        maximumLevel: 1,
+        levelStep: 0.1,
+        selectedFamily: natureFamily,
+        availableFamilies: ["sea", "rain"],
+        headroomStrategy: "fixed-music-equal-ceiling",
+        musicWorkIds: [outgoingMusic.workId, incomingMusic.workId],
+        natureWorkIds: natureSegments.map(({ workId }) => workId),
+      },
+      compositeHeadroomTrimDb: COMPOSITE_HEADROOM_TRIM_DB,
+      offlineReady: false,
+    },
+  };
+}
+
 export function createAdaptiveSessionProgram(
   input: CreateAdaptiveSessionInput,
 ): AdaptiveSessionProgram {
@@ -464,29 +990,55 @@ export function createAdaptiveSessionProgram(
       `${input.durationMinutes} minutes is not offered for ${input.outcome}.`,
     );
   }
+  if (input.phasePolicy)
+    validateIntentPhasePolicy(input.phasePolicy, input.outcome);
   const profiles = input.profiles ?? SESSION_WORK_PROFILES;
-  const selected = chooseSequence(input, profiles);
   const targetFrames = input.durationMinutes * 60 * SAMPLE_RATE;
-  const crossfadeSeconds = input.crossfadeSeconds ?? 12;
-  if (crossfadeSeconds < 4 || crossfadeSeconds > 30) {
-    throw new Error("Crossfade duration must be between 4 and 30 seconds.");
+  const crossfadeSeconds =
+    input.crossfadeSeconds ??
+    (input.soundKind === "music" ? MUSIC_CROSSFADE_SECONDS : 90);
+  if (
+    !Number.isFinite(crossfadeSeconds) ||
+    crossfadeSeconds < MIN_CROSSFADE_SECONDS ||
+    crossfadeSeconds > MAX_CROSSFADE_SECONDS
+  ) {
+    throw new Error("Crossfade duration must be between 4 and 300 seconds.");
   }
   const crossfadeFrames = Math.round(crossfadeSeconds * SAMPLE_RATE);
-  const phases = buildPhases(targetFrames);
+  const phases = buildPhases(targetFrames, input.phasePolicy);
+  const selected = chooseSequence(input, profiles, (sequence) => {
+    try {
+      buildTimeline(
+        sequence,
+        phases,
+        targetFrames,
+        crossfadeFrames,
+        input.curve ?? "equal-power",
+        input.phasePolicy,
+      );
+      return true;
+    } catch (error) {
+      if (error instanceof SessionPlanningError) return false;
+      throw error;
+    }
+  });
   const timeline = buildTimeline(
     selected,
     phases,
     targetFrames,
     crossfadeFrames,
     input.curve ?? "equal-power",
+    input.phasePolicy,
   );
   const canonicalIdentity = JSON.stringify({
     seed: input.seed,
     outcome: input.outcome,
+    soundKind: input.soundKind,
     durationMinutes: input.durationMinutes,
     recentWorkIds: [...(input.recentWorkIds ?? [])],
     availableWorkIds: [...(input.availableWorkIds ?? [])],
     crossfadeSeconds,
+    phasePolicy: input.phasePolicy,
     curve: input.curve ?? "equal-power",
     segments: timeline.segments.map(
       ({
@@ -516,10 +1068,11 @@ export function createAdaptiveSessionProgram(
   const plan: AdaptiveSessionPlan = {
     schemaVersion: 1,
     kind: "adaptive-session-plan",
-    id: `continuum-${input.outcome}-${input.durationMinutes}-${identity}`,
+    id: `continuum-${input.outcome}-${input.soundKind}-${input.durationMinutes}-${identity}`,
     seed: input.seed,
     outcome: input.outcome,
     mode: "sound-only",
+    soundKind: input.soundKind,
     requestedDurationMinutes: input.durationMinutes,
     sampleRateHz: SAMPLE_RATE,
     targetFrames,
@@ -537,13 +1090,20 @@ export function createAdaptiveSessionProgram(
       ? "PROVISIONAL — QA ONLY"
       : "REVIEWED — EDITORIAL METADATA",
   };
-  return {
+  const program: AdaptiveSessionProgram = {
     kind: "adaptive-session",
     plan,
     works: selected.map(({ work }) => work),
     fadeInSeconds: 2,
     fadeOutSeconds: crossfadeSeconds,
   };
+  return input.soundKind === "music" && input.includeNatureBed !== false
+    ? attachCoordinatedNatureBed(
+        program,
+        input.seed,
+        input.natureFamily ?? "sea",
+      )
+    : program;
 }
 
 export function overrideTransition(
@@ -552,16 +1112,35 @@ export function overrideTransition(
   durationSeconds: number,
   curve: AdaptiveSessionTransition["curve"],
 ): AdaptiveSessionProgram {
-  if (durationSeconds < 4 || durationSeconds > 30) {
-    throw new Error("Workbench transition duration must be 4–30 seconds.");
+  if (
+    durationSeconds < MIN_CROSSFADE_SECONDS ||
+    durationSeconds > MAX_CROSSFADE_SECONDS
+  ) {
+    throw new Error("Workbench transition duration must be 4–300 seconds.");
   }
   const transition = program.plan.transitions[transitionIndex];
   if (!transition) throw new Error("Unknown transition.");
   const durationFrames = Math.round(durationSeconds * SAMPLE_RATE);
   const startFrame = transition.endFrame - durationFrames;
+  if (startFrame <= 0) {
+    throw new Error("The selected transition does not fit this session.");
+  }
+  const overlapsOtherLane = program.plan.transitions.some(
+    (item) =>
+      item.index !== transitionIndex &&
+      (item.lane ?? "primary") !== (transition.lane ?? "primary") &&
+      startFrame < item.endFrame &&
+      transition.endFrame > item.startFrame,
+  );
+  if (overlapsOtherLane) {
+    throw new Error(
+      "This duration would overlap the music and natural ambience changes.",
+    );
+  }
   const segments = program.plan.segments.map((segment) => {
     if (segment.index !== transition.incomingSegmentIndex) return segment;
-    const work = program.works[segment.index];
+    const work = program.works.find(({ id }) => id === segment.workId);
+    if (!work) throw new Error(`Unknown work ${segment.workId}.`);
     const playedFrames = segment.endFrame - startFrame;
     const traversedFrames = segment.sourceEntryFrame + playedFrames;
     return {
@@ -575,9 +1154,24 @@ export function overrideTransition(
   });
   const transitions = program.plan.transitions.map((item) => {
     if (item.index !== transitionIndex) return item;
+    const outgoingSegment = segments.find(
+      ({ index }) => index === item.outgoingSegmentIndex,
+    );
+    const incomingSegment = segments.find(
+      ({ index }) => index === item.incomingSegmentIndex,
+    );
+    const outgoingWork = program.works.find(
+      ({ id }) => id === outgoingSegment?.workId,
+    );
+    const incomingWork = program.works.find(
+      ({ id }) => id === incomingSegment?.workId,
+    );
+    if (!outgoingWork || !incomingWork) {
+      throw new Error("Transition work metadata is unavailable.");
+    }
     const untrimmedPeakDbtp = estimateOverlapPeakDbtp(
-      program.works[item.outgoingSegmentIndex],
-      program.works[item.incomingSegmentIndex],
+      outgoingWork,
+      incomingWork,
       curve,
     );
     if (untrimmedPeakDbtp === null) {
