@@ -9,6 +9,11 @@ import type {
 import type { TransitionAudition } from "@/domain/sessions/workbench";
 import { positionMediaElement } from "./positionMediaElement";
 import {
+  ClockedWavSource,
+  type AudioElementPort,
+  type PcmWorkReaderFactory,
+} from "./ClockedWavSource";
+import {
   awaitWebAudioSource,
   resolveLocalPreviewWork,
   type WebAudioSourceLease,
@@ -18,6 +23,10 @@ import {
 const SILENT_GAIN = 0.0001;
 const MEDIA_DECK_COUNT = 4;
 const USER_GESTURE_CONFIRMATION_TIMEOUT_MS = 10_000;
+// Future PCM decks are already bounded and preloaded. Give their final seek
+// and buffer prime a deterministic deadline, while keeping the audible start
+// pinned to the exact session clock below.
+const CLOCKED_TRANSITION_PREPARE_LEAD_SECONDS = 1;
 
 class StalePreparationError extends Error {
   constructor() {
@@ -31,17 +40,18 @@ function isStalePreparation(error: unknown): boolean {
 }
 
 interface MediaDeck {
-  element: HTMLAudioElement;
+  clockedPcm: boolean;
+  element: AudioElementPort;
   generation: number;
   segmentIndex: number | null;
-  source: MediaElementAudioSourceNode;
+  source: AudioNode;
 }
 
 interface SegmentRuntime {
   deck: MediaDeck;
-  element: HTMLAudioElement;
+  element: AudioElementPort;
   gain: GainNode;
-  source: MediaElementAudioSourceNode;
+  source: AudioNode;
 }
 
 interface PreparedSegment {
@@ -87,6 +97,8 @@ export class AdaptiveWebPlayback {
   private gesturePrimedPositionSeconds: number | null = null;
   private gesturePrimedGeneration: number | null = null;
   private userGesturePromise: Promise<void> | null = null;
+  private userGestureGeneration: number | null = null;
+  private userGesturePositionSeconds: number | null = null;
   private gestureAbort: AbortController | null = null;
   private timers: ReturnType<typeof setTimeout>[] = [];
   private sessionBus: GainNode | null = null;
@@ -99,6 +111,9 @@ export class AdaptiveWebPlayback {
   private natureLevel: NatureMixLevel = 0;
   private audition: TransitionAudition | null = null;
   private failureReported = false;
+  private pendingStarts = 0;
+  private startAbortRevision = 0;
+  private awaitingInitialRunway = false;
 
   constructor(
     private readonly context: AudioContext,
@@ -110,6 +125,8 @@ export class AdaptiveWebPlayback {
     ) =>
       | WebAudioWorkSource
       | Promise<WebAudioWorkSource> = resolveLocalPreviewWork,
+    private readonly clockedWav = false,
+    private readonly pcmReaderFactory?: PcmWorkReaderFactory,
   ) {}
 
   async load(program: AdaptiveSessionProgram): Promise<void> {
@@ -137,9 +154,33 @@ export class AdaptiveWebPlayback {
       this.program = program;
       this.natureLevel = program.plan.natureMix?.initialLevel ?? 0;
       this.urls.clear();
-      if (new Set(program.plan.segments.map(({ workId }) => workId)).size > 8)
+      // URL leases are not decoded buffers. Long sessions can vary the nature
+      // recording about every ten minutes while retaining the four-deck pool.
+      const completePractice =
+        program.plan.endingStrategy === "source-file-boundary-review-only" ||
+        program.plan.endingStrategy === "extended-loop-boundary-review-only";
+      const mix = program.plan.natureMix;
+      const natureLimit = Math.max(
+        2,
+        Math.ceil(program.plan.requestedDurationMinutes / 10),
+      );
+      const musicLimit = completePractice ? 8 : 4;
+      if (
+        mix &&
+        (natureLimit > 9 ||
+          mix.musicWorkIds.length > musicLimit ||
+          mix.natureWorkIds.length > natureLimit)
+      )
         throw new Error(
-          "An adaptive program cannot acquire more than eight unique audio files.",
+          "The session exceeds its bounded music and nature catalogue.",
+        );
+      const maximumFiles = mix ? musicLimit + natureLimit : 8;
+      if (
+        new Set(program.plan.segments.map(({ workId }) => workId)).size >
+        maximumFiles
+      )
+        throw new Error(
+          `An adaptive program cannot acquire more than ${maximumFiles} unique audio files.`,
         );
       for (const segment of program.plan.segments) {
         const work = program.works.find(({ id }) => id === segment.workId);
@@ -195,6 +236,10 @@ export class AdaptiveWebPlayback {
   }
 
   activateUserGesture(): void {
+    if (!this.playing && this.sessionBus) {
+      this.sessionBus.gain.cancelScheduledValues(this.context.currentTime);
+      this.sessionBus.gain.value = 0;
+    }
     this.gestureAbort?.abort();
     const gestureAbort = new AbortController();
     this.gestureAbort = gestureAbort;
@@ -211,6 +256,9 @@ export class AdaptiveWebPlayback {
     const activationAttempts: Promise<unknown>[] = [this.context.resume()];
     for (const deck of this.decks) {
       if (!deck.element.src) continue;
+      // AudioContext resume is the gesture for PCM sources. Starting them here
+      // would establish a second, earlier clock before the session is ready.
+      if (deck.element.playAt) continue;
       const generation = deck.generation;
       const segmentIndex = deck.segmentIndex;
       const attempt = deck.element.play();
@@ -257,6 +305,8 @@ export class AdaptiveWebPlayback {
     });
     void activation.catch(() => undefined);
     this.userGesturePromise = activation;
+    this.userGestureGeneration = activationGeneration;
+    this.userGesturePositionSeconds = target;
   }
 
   async prepareForUserGesture(positionSeconds: number): Promise<void> {
@@ -275,17 +325,18 @@ export class AdaptiveWebPlayback {
     this.sessionOffsetSeconds = target;
     const generation = this.deckGeneration;
 
-    const candidates = program.plan.segments
-      .filter((segment) => segment.endSeconds > target)
-      .sort(
-        (left, right) =>
-          Math.max(target, left.startSeconds) -
-            Math.max(target, right.startSeconds) || left.index - right.index,
-      )
-      .slice(0, this.decks.size);
+    const candidates = this.preparationCandidates(target);
     try {
+      // HTML media still needs every deck unlocked in the direct gesture.
+      // PCM future sources are primed after Start and must not hold up Ready.
       const preloadResults = await Promise.allSettled(
-        candidates.map(({ index }) => this.prime(index, generation)),
+        candidates
+          .filter(
+            ({ index, startSeconds }) =>
+              !this.usesClockedPcm(index) ||
+              (startSeconds > target && startSeconds <= target + 8),
+          )
+          .map(({ index }) => this.prime(index, generation)),
       );
       const preloadFailure = preloadResults.find(
         (result): result is PromiseRejectedResult =>
@@ -334,33 +385,42 @@ export class AdaptiveWebPlayback {
   }
 
   async pause(): Promise<void> {
-    if (!this.playing) return;
+    ++this.startAbortRevision;
+    if (!this.playing) {
+      if (this.pendingStarts > 0) this.resetDeckAssignments();
+      return;
+    }
     this.sessionOffsetSeconds = this.positionSeconds();
     this.playing = false;
     this.clearTimers();
+    this.sessionBus?.gain.cancelScheduledValues(this.context.currentTime);
+    if (this.sessionBus) this.sessionBus.gain.value = 0;
     for (const { element } of this.runtimes.values()) element.pause();
     for (const { element } of this.preloaded.values()) element.pause();
-    this.prepared = [...this.runtimes.entries()].flatMap(
-      ([segmentIndex, runtime]) => {
-        const segment = this.program?.plan.segments.find(
-          ({ index }) => index === segmentIndex,
-        );
-        const work = this.program?.works.find(
-          ({ id }) => id === segment?.workId,
-        );
-        return segment && work
-          ? [
-              {
-                segment,
-                runtime,
-                baseGain: dbToLinear(
-                  work.playbackGainDb + segment.playbackTrimDb,
-                ),
-              },
-            ]
-          : [];
-      },
-    );
+    const pausedRuntimes = [...this.runtimes.entries()];
+    this.prepared = pausedRuntimes.flatMap(([segmentIndex, runtime]) => {
+      const segment = this.program?.plan.segments.find(
+        ({ index }) => index === segmentIndex,
+      );
+      const work = this.program?.works.find(({ id }) => id === segment?.workId);
+      return segment &&
+        work &&
+        this.sessionOffsetSeconds >= segment.startSeconds &&
+        this.sessionOffsetSeconds < segment.endSeconds
+        ? [
+            {
+              segment,
+              runtime,
+              baseGain: dbToLinear(
+                work.playbackGainDb + segment.playbackTrimDb,
+              ),
+            },
+          ]
+        : [];
+    });
+    const resumable = new Set(this.prepared.map(({ runtime }) => runtime));
+    for (const [segmentIndex, runtime] of pausedRuntimes)
+      if (!resumable.has(runtime)) this.release(segmentIndex, runtime);
     this.preparedPositionSeconds = this.sessionOffsetSeconds;
   }
 
@@ -370,9 +430,10 @@ export class AdaptiveWebPlayback {
     await this.startFrom(this.sessionOffsetSeconds);
   }
 
-  async seek(positionSeconds: number): Promise<void> {
+  async seek(positionSeconds: number, clearAudition = false): Promise<void> {
     if (!this.program) throw new Error("No adaptive session is loaded.");
     const target = this.normalizePosition(this.program, positionSeconds);
+    if (clearAudition) this.audition = null;
     const restart = this.playing;
     this.playing = false;
     this.clearTimers();
@@ -390,6 +451,7 @@ export class AdaptiveWebPlayback {
   }
 
   async configureAudition(audition: TransitionAudition | null): Promise<void> {
+    if (audition === null && this.audition === null) return;
     this.audition = audition;
     if (!this.program) return;
     const restart = this.playing;
@@ -438,11 +500,48 @@ export class AdaptiveWebPlayback {
     if (!this.playing) return this.sessionOffsetSeconds;
     return (
       this.sessionOffsetSeconds +
-      (this.context.currentTime - this.startedAtContextSeconds)
+      Math.max(0, this.context.currentTime - this.startedAtContextSeconds)
     );
   }
 
+  async prepareReviewSeek(
+    positionSeconds: number,
+    signal: AbortSignal,
+  ): Promise<boolean> {
+    if (
+      this.playing ||
+      this.pendingStarts ||
+      this.positionAborts.size ||
+      this.preloadPromises.size ||
+      !this.program ||
+      !this.pcmReaderFactory?.prepareReview ||
+      !Number.isFinite(positionSeconds) ||
+      positionSeconds < 0 ||
+      positionSeconds >= this.program.plan.totalDurationSeconds
+    )
+      return false;
+    const candidates = this.preparationCandidates(positionSeconds).filter(
+      (s) => s.startSeconds <= positionSeconds + 8,
+    );
+    const targets = candidates.map((s) => {
+      const work = this.workForSegment(s.index);
+      const url = this.urls.get(s.index);
+      if (!work || !url)
+        throw new Error("Review source missing from the current plan.");
+      return {
+        url,
+        work,
+        positionSeconds:
+          (s.sourceEntrySeconds +
+            Math.max(0, positionSeconds - s.startSeconds)) %
+          work.durationSeconds,
+      };
+    });
+    return this.pcmReaderFactory.prepareReview(targets, signal);
+  }
+
   async stop(prepareForReplay = false): Promise<void> {
+    ++this.startAbortRevision;
     this.sourceLoadController?.abort();
     this.gestureAbort?.abort();
     this.gestureAbort = null;
@@ -451,6 +550,9 @@ export class AdaptiveWebPlayback {
     this.userGesturePromise = null;
     this.clearTimers();
     this.resetDeckAssignments();
+    // Paused same-source seeks may reuse idle workers; an explicit Stop must
+    // release every decoder, including a deck no longer assigned to a segment.
+    for (const { element } of this.decks) element.releasePcmReader?.();
     this.disconnectBuses();
     if (prepareForReplay && this.program) {
       this.primeForUserGesture(0);
@@ -468,6 +570,22 @@ export class AdaptiveWebPlayback {
   }
 
   private async startFrom(positionSeconds: number): Promise<void> {
+    // Every new start/resume is a new scheduling epoch. This also invalidates
+    // an activation already awaiting preparation when Seek restarts playback.
+    const revision = ++this.startAbortRevision;
+    this.awaitingInitialRunway = true;
+    ++this.pendingStarts;
+    try {
+      await this.startPreparedFrom(positionSeconds, revision);
+    } finally {
+      --this.pendingStarts;
+    }
+  }
+
+  private async startPreparedFrom(
+    positionSeconds: number,
+    revision: number,
+  ): Promise<void> {
     const program = this.program;
     if (!program) throw new Error("No adaptive session is loaded.");
     const target = this.normalizePosition(program, positionSeconds);
@@ -488,10 +606,9 @@ export class AdaptiveWebPlayback {
     }
     if (!this.sessionBus)
       throw new Error("Adaptive session bus is unavailable.");
-    this.sessionBus.gain.value = Math.max(
-      0,
-      this.volume * this.compositeHeadroomGain(),
-    );
+    if (revision !== this.startAbortRevision) throw new StalePreparationError();
+    this.sessionBus.gain.cancelScheduledValues(this.context.currentTime);
+    this.sessionBus.gain.value = 0;
     this.sessionOffsetSeconds = target;
     const generation = this.deckGeneration;
 
@@ -499,34 +616,126 @@ export class AdaptiveWebPlayback {
       const prepared = this.prepared;
       this.prepared = [];
       this.preparedPositionSeconds = null;
-      this.startedAtContextSeconds = this.context.currentTime;
+      const gestureActivation = this.takeUserGesturePromise(target);
+      await Promise.all([
+        ...(gestureActivation
+          ? [gestureActivation]
+          : prepared
+              .filter(({ runtime }) => !runtime.element.playAt)
+              .map(({ runtime }) => runtime.element.play())),
+        ...prepared
+          .filter(({ runtime }) => runtime.element.playAt)
+          .map(({ runtime }) => runtime.element.prepareForPlayback!()),
+      ]);
+      if (
+        generation !== this.deckGeneration ||
+        revision !== this.startAbortRevision
+      )
+        throw new StalePreparationError();
+      const hasClockedSources = prepared.some(
+        ({ runtime }) => runtime.element.playAt,
+      );
+      if (hasClockedSources) {
+        // A Safari-unlocked HTML deck may have advanced while the PCM worker
+        // prepared. Discard that silent preroll before establishing the clock.
+        // HTML media still cannot promise sample-clock alignment; the indexed
+        // FLAC adapter is required to close that separate platform limitation.
+        await Promise.all(
+          prepared
+            .filter(({ runtime }) => !runtime.element.playAt)
+            .map(async ({ runtime, segment }) => {
+              runtime.element.pause();
+              const work = program.works.find(
+                ({ id }) => id === segment.workId,
+              )!;
+              const offset =
+                (segment.sourceEntrySeconds +
+                  Math.max(0, target - segment.startSeconds)) %
+                work.durationSeconds;
+              const abort = new AbortController();
+              this.positionAborts.set(segment.index, abort);
+              try {
+                await positionMediaElement(
+                  runtime.element,
+                  offset,
+                  abort.signal,
+                  false,
+                );
+                if (generation !== this.deckGeneration)
+                  throw new StalePreparationError();
+                await runtime.element.play();
+              } finally {
+                if (this.positionAborts.get(segment.index) === abort)
+                  this.positionAborts.delete(segment.index);
+              }
+            }),
+        );
+      }
+      if (
+        generation !== this.deckGeneration ||
+        revision !== this.startAbortRevision
+      )
+        throw new StalePreparationError();
+      this.startedAtContextSeconds =
+        this.context.currentTime + (hasClockedSources ? 0.06 : 0);
+      this.sessionBus.gain.setValueAtTime(
+        Math.max(0, this.volume * this.compositeHeadroomGain()),
+        this.startedAtContextSeconds,
+      );
       this.playing = true;
-      for (const item of prepared) {
+      for (const item of prepared)
         this.scheduleEnvelope(
           item.runtime,
           item.segment,
           target,
           item.baseGain,
         );
-      }
-      const gestureActivation = this.takeUserGesturePromise();
-      if (gestureActivation) {
-        await gestureActivation;
-      } else {
-        await Promise.all(
-          prepared.map(({ runtime }) => runtime.element.play()),
-        );
-      }
+      await Promise.all(
+        prepared
+          .filter(({ runtime }) => runtime.element.playAt)
+          .map(({ runtime }) =>
+            runtime.element.playAt!(this.startedAtContextSeconds),
+          ),
+      );
       const active = new Set(
         [...this.runtimes.values()].map(({ element }) => element),
       );
       for (const { element } of this.decks) {
         if (!active.has(element)) element.pause();
       }
-      if (generation !== this.deckGeneration) throw new StalePreparationError();
-      this.primeNextUpcoming(target);
+      if (
+        generation !== this.deckGeneration ||
+        revision !== this.startAbortRevision
+      )
+        throw new StalePreparationError();
+      // Never let distant downloads compete with the audible sources while
+      // their first 32 s runway is still filling. Play itself stays immediate.
+      void Promise.all(
+        prepared.map(({ runtime }) => runtime.element.prepareLookahead?.()),
+      )
+        .then(() => {
+          if (
+            this.playing &&
+            generation === this.deckGeneration &&
+            revision === this.startAbortRevision
+          ) {
+            this.awaitingInitialRunway = false;
+            this.primeNextUpcoming(this.positionSeconds());
+          }
+        })
+        .catch((error) => {
+          if (
+            this.playing &&
+            generation === this.deckGeneration &&
+            revision === this.startAbortRevision
+          )
+            void this.fail(error);
+        });
     } catch (error) {
-      if (generation !== this.deckGeneration) {
+      if (
+        generation !== this.deckGeneration ||
+        revision !== this.startAbortRevision
+      ) {
         throw new StalePreparationError();
       }
       this.playing = false;
@@ -541,16 +750,42 @@ export class AdaptiveWebPlayback {
 
     for (const segment of program.plan.segments) {
       if (segment.startSeconds > target) {
-        this.schedule(segment.startSeconds - target, () => {
-          if (generation !== this.deckGeneration) return;
-          void this.activate(segment, generation).catch((error) => {
+        const clocked = this.canScheduleClockedTransition(segment.index);
+        const startContextSeconds = clocked
+          ? this.contextTimeAt(segment.startSeconds)
+          : undefined;
+        const activationDelay =
+          startContextSeconds === undefined
+            ? this.delayUntil(segment.startSeconds)
+            : Math.max(
+                0,
+                startContextSeconds -
+                  CLOCKED_TRANSITION_PREPARE_LEAD_SECONDS -
+                  this.context.currentTime,
+              );
+        this.schedule(activationDelay, () => {
+          if (
+            generation !== this.deckGeneration ||
+            revision !== this.startAbortRevision
+          )
+            return;
+          void this.activate(
+            segment,
+            generation,
+            revision,
+            startContextSeconds,
+          ).catch((error) => {
             if (!isStalePreparation(error)) void this.fail(error);
           });
         });
       }
       if (segment.endSeconds > target) {
-        this.schedule(segment.endSeconds - target, () => {
-          if (generation === this.deckGeneration) this.release(segment.index);
+        this.schedule(this.delayUntil(segment.endSeconds), () => {
+          if (
+            generation === this.deckGeneration &&
+            revision === this.startAbortRevision
+          )
+            this.release(segment.index);
         });
       }
     }
@@ -558,8 +793,12 @@ export class AdaptiveWebPlayback {
     const stopAt =
       this.audition?.endSeconds ?? program.plan.totalDurationSeconds;
     if (stopAt > target) {
-      this.schedule(stopAt - target, () => {
-        if (generation !== this.deckGeneration) return;
+      this.schedule(this.delayUntil(stopAt), () => {
+        if (
+          generation !== this.deckGeneration ||
+          revision !== this.startAbortRevision
+        )
+          return;
         if (this.audition && this.playing) {
           void this.restartAudition().catch((error) => {
             if (!isStalePreparation(error)) void this.fail(error);
@@ -571,60 +810,179 @@ export class AdaptiveWebPlayback {
     }
   }
 
+  private delayUntil(sessionPosition: number): number {
+    return Math.max(
+      0,
+      this.contextTimeAt(sessionPosition) - this.context.currentTime,
+    );
+  }
+
+  private contextTimeAt(sessionPosition: number): number {
+    return (
+      this.startedAtContextSeconds + sessionPosition - this.sessionOffsetSeconds
+    );
+  }
+
   private async activate(
     segment: AdaptiveSessionSegment,
     expectedGeneration = this.deckGeneration,
+    expectedRevision = this.startAbortRevision,
+    scheduledStartContextSeconds?: number,
   ): Promise<void> {
     if (
-      !this.playing ||
-      expectedGeneration !== this.deckGeneration ||
+      !this.activationIsCurrent(
+        segment,
+        expectedGeneration,
+        expectedRevision,
+      ) ||
       this.runtimes.has(segment.index)
     ) {
       return;
     }
     const generation = expectedGeneration;
-    const position = this.positionSeconds();
+    const revision = expectedRevision;
+    if (scheduledStartContextSeconds !== undefined)
+      this.assertClockedStartPending(
+        segment,
+        generation,
+        revision,
+        scheduledStartContextSeconds,
+      );
+    const position =
+      scheduledStartContextSeconds === undefined
+        ? this.positionSeconds()
+        : segment.startSeconds;
     if (position >= segment.endSeconds) return;
-    const prepared = await this.prepare(segment, position, generation);
-    await this.alignIncomingToClock(prepared, generation);
-    if (
-      !this.playing ||
-      generation !== this.deckGeneration ||
-      this.positionSeconds() >= segment.endSeconds
-    ) {
-      this.release(segment.index, prepared.runtime);
-      return;
-    }
-    const actualPosition = this.positionSeconds();
-    this.scheduleEnvelope(
-      prepared.runtime,
-      prepared.segment,
-      actualPosition,
-      prepared.baseGain,
-    );
+    let prepared: PreparedSegment | undefined;
     try {
-      await prepared.runtime.element.play();
-    } catch (error) {
+      prepared = await this.prepare(segment, position, generation);
       if (
-        !this.playing ||
-        generation !== this.deckGeneration ||
-        prepared.runtime.deck.generation !== generation ||
-        prepared.runtime.deck.segmentIndex !== segment.index
-      ) {
+        !this.activationIsCurrent(
+          segment,
+          generation,
+          revision,
+          prepared.runtime,
+        )
+      )
         throw new StalePreparationError();
+      await this.alignIncomingToClock(
+        prepared,
+        generation,
+        revision,
+        scheduledStartContextSeconds,
+      );
+      if (
+        !this.activationIsCurrent(
+          segment,
+          generation,
+          revision,
+          prepared.runtime,
+        )
+      )
+        throw new StalePreparationError();
+
+      const envelopePosition =
+        scheduledStartContextSeconds === undefined
+          ? this.positionSeconds()
+          : segment.startSeconds;
+      if (envelopePosition >= segment.endSeconds) {
+        if (scheduledStartContextSeconds !== undefined)
+          throw new Error(
+            "A scheduled PCM phrase missed its session clock; playback stopped without skipping audio.",
+          );
+        this.release(segment.index, prepared.runtime);
+        return;
       }
+      this.scheduleEnvelope(
+        prepared.runtime,
+        prepared.segment,
+        envelopePosition,
+        prepared.baseGain,
+      );
+
+      if (scheduledStartContextSeconds !== undefined) {
+        const { element } = prepared.runtime;
+        if (!element.playAt || !element.prepareForPlayback)
+          throw new Error(
+            "A scheduled PCM source lost its audio-clock capability.",
+          );
+        this.assertClockedStartPending(
+          segment,
+          generation,
+          revision,
+          scheduledStartContextSeconds,
+          prepared.runtime,
+        );
+        await element.prepareForPlayback();
+        this.assertClockedStartPending(
+          segment,
+          generation,
+          revision,
+          scheduledStartContextSeconds,
+          prepared.runtime,
+        );
+        await element.playAt(scheduledStartContextSeconds);
+      } else {
+        await prepared.runtime.element.play();
+      }
+    } catch (error) {
+      const stale = !this.activationIsCurrent(
+        segment,
+        generation,
+        revision,
+        prepared?.runtime,
+      );
+      if (prepared) this.release(segment.index, prepared.runtime);
+      if (stale) throw new StalePreparationError();
       throw error;
     }
-    if (!this.playing || generation !== this.deckGeneration) {
+    if (!prepared)
+      throw new Error("Incoming audio preparation did not complete.");
+    if (
+      !this.activationIsCurrent(segment, generation, revision, prepared.runtime)
+    ) {
       this.release(segment.index, prepared.runtime);
-      return;
+      throw new StalePreparationError();
     }
     this.primeNextUpcoming(this.positionSeconds());
+  }
+
+  private activationIsCurrent(
+    segment: AdaptiveSessionSegment,
+    generation: number,
+    revision: number,
+    runtime?: SegmentRuntime,
+  ): boolean {
+    return (
+      this.playing &&
+      generation === this.deckGeneration &&
+      revision === this.startAbortRevision &&
+      (!runtime ||
+        (runtime.deck.generation === generation &&
+          runtime.deck.segmentIndex === segment.index))
+    );
+  }
+
+  private assertClockedStartPending(
+    segment: AdaptiveSessionSegment,
+    generation: number,
+    revision: number,
+    startContextSeconds: number,
+    runtime?: SegmentRuntime,
+  ): void {
+    if (!this.activationIsCurrent(segment, generation, revision, runtime))
+      throw new StalePreparationError();
+    if (this.context.currentTime >= startContextSeconds)
+      throw new Error(
+        "A scheduled PCM phrase missed its session clock; playback stopped without skipping audio.",
+      );
   }
 
   private async alignIncomingToClock(
     prepared: PreparedSegment,
     generation: number,
+    revision: number,
+    scheduledStartContextSeconds?: number,
   ): Promise<void> {
     const { segment, runtime } = prepared;
     const duration = this.program?.works.find(
@@ -638,13 +996,19 @@ export class AdaptiveWebPlayback {
       // A slow seek must not start an incoming deck seconds behind its gain
       // envelope. Retry at most twice; never spin or silently accept drift.
       for (let attempt = 0; attempt <= 2; attempt += 1) {
-        if (
-          !this.playing ||
-          generation !== this.deckGeneration ||
-          runtime.deck.segmentIndex !== segment.index
-        )
+        if (!this.activationIsCurrent(segment, generation, revision, runtime))
           throw new StalePreparationError();
-        const position = this.positionSeconds();
+        if (
+          scheduledStartContextSeconds !== undefined &&
+          this.context.currentTime >= scheduledStartContextSeconds
+        )
+          throw new Error(
+            "A scheduled PCM phrase missed its session clock; playback stopped without skipping audio.",
+          );
+        const position =
+          scheduledStartContextSeconds === undefined
+            ? this.positionSeconds()
+            : segment.startSeconds;
         if (position >= segment.endSeconds) return;
         const target =
           (segment.sourceEntrySeconds +
@@ -668,7 +1032,12 @@ export class AdaptiveWebPlayback {
         );
       }
     } catch (error) {
-      if (generation !== this.deckGeneration || abortController.signal.aborted)
+      if (
+        generation !== this.deckGeneration ||
+        revision !== this.startAbortRevision ||
+        abortController.signal.aborted ||
+        !this.playing
+      )
         throw new StalePreparationError();
       throw error;
     } finally {
@@ -691,7 +1060,11 @@ export class AdaptiveWebPlayback {
     if (!work || !url)
       throw new Error(`Missing session work ${segment.workId}.`);
     if (generation !== this.deckGeneration) throw new StalePreparationError();
-    await this.prime(segment.index, generation);
+    const sourcePosition =
+      (segment.sourceEntrySeconds +
+        Math.max(0, sessionPositionSeconds - segment.startSeconds)) %
+      work.durationSeconds;
+    await this.prime(segment.index, generation, sourcePosition);
     if (generation !== this.deckGeneration) throw new StalePreparationError();
     const deck = this.preloaded.get(segment.index);
     if (
@@ -704,10 +1077,6 @@ export class AdaptiveWebPlayback {
     const { element, source } = deck;
     element.loop = true;
     element.preload = "auto";
-    const sourcePosition =
-      (segment.sourceEntrySeconds +
-        Math.max(0, sessionPositionSeconds - segment.startSeconds)) %
-      work.durationSeconds;
     try {
       const abortController = new AbortController();
       this.positionAborts.set(segment.index, abortController);
@@ -780,18 +1149,11 @@ export class AdaptiveWebPlayback {
     this.createSilentBuses();
     this.sessionOffsetSeconds = target;
     const generation = this.deckGeneration;
-    const candidates = program.plan.segments
-      .filter((segment) => segment.endSeconds > target)
-      .sort(
-        (left, right) =>
-          Math.max(target, left.startSeconds) -
-            Math.max(target, right.startSeconds) || left.index - right.index,
-      )
-      .slice(0, this.decks.size);
+    const candidates = this.preparationCandidates(target);
 
     for (const segment of candidates) {
       const url = this.urls.get(segment.index);
-      const deck = this.availableDecks.shift();
+      const deck = this.takeDeck(segment.index);
       if (!url || !deck) {
         this.resetDeckAssignments();
         this.disconnectBuses();
@@ -858,7 +1220,10 @@ export class AdaptiveWebPlayback {
     baseGain: number,
   ): void {
     if (!this.program) return;
-    const now = this.context.currentTime;
+    const now = Math.max(
+      this.context.currentTime,
+      this.startedAtContextSeconds + position - this.sessionOffsetSeconds,
+    );
     // Pause retains these nodes, but their AudioParam clock keeps running.
     // Remove old curves (including an active curve) before re-anchoring the
     // envelope to the session clock. Never stack resume automation on top.
@@ -897,6 +1262,7 @@ export class AdaptiveWebPlayback {
         ]),
       ),
     ].sort((a, b) => a - b);
+    let previousCurveEnd = now;
     for (let index = 0; index < boundaries.length - 1; index += 1) {
       const start = boundaries[index],
         end = boundaries[index + 1];
@@ -910,11 +1276,23 @@ export class AdaptiveWebPlayback {
       const values = Float32Array.from({ length: 65 }, (_, point) =>
         this.gainAt(segment.index, start + ((end - start) * point) / 64),
       );
+      // Subtract session-relative positions BEFORE adding the context anchor.
+      // (now + start) - position can round below now even when start===position,
+      // making the initial setValueAtTime illegally fall inside this curve.
+      // Reuse each computed end at contiguous boundaries for the same reason.
+      const curveStart = Math.max(previousCurveEnd, now + (start - position));
+      const curveEnd = now + (end - position);
+      const curveDuration = curveEnd - curveStart;
+      if (curveDuration <= 0)
+        throw new Error(
+          "Audio envelope interval is too small for the current clock.",
+        );
       runtime.gain.gain.setValueCurveAtTime(
         multiplyCurve(values, baseGain),
-        now + start - position,
-        end - start,
+        curveStart,
+        curveDuration,
       );
+      previousCurveEnd = curveStart + curveDuration;
     }
   }
 
@@ -979,6 +1357,7 @@ export class AdaptiveWebPlayback {
   private prime(
     index: number,
     generation = this.deckGeneration,
+    positionSeconds?: number,
   ): Promise<void> {
     if (generation !== this.deckGeneration) {
       return Promise.reject(new StalePreparationError());
@@ -997,7 +1376,7 @@ export class AdaptiveWebPlayback {
     );
     const sourceLabel = work?.title ?? `Session source ${index}`;
     const lane = segment?.lane ?? "primary";
-    const deck = this.availableDecks.shift();
+    const deck = this.takeDeck(index);
     if (!deck) {
       return Promise.reject(
         new Error("No free media deck is available for the next transition."),
@@ -1085,8 +1464,14 @@ export class AdaptiveWebPlayback {
       element.addEventListener("loadedmetadata", ready, { once: true });
       element.addEventListener("error", failed, { once: true });
       try {
-        element.load();
-        if (element.readyState >= 1) ready();
+        if (element.prepareAt) {
+          void element
+            .prepareAt(positionSeconds ?? segment?.sourceEntrySeconds ?? 0)
+            .then(ready, (error) => settle(() => reject(error)));
+        } else {
+          element.load();
+          if (element.readyState >= 1) ready();
+        }
       } catch (error) {
         settle(() =>
           reject(
@@ -1112,8 +1497,9 @@ export class AdaptiveWebPlayback {
   private primeNextUpcoming(positionSeconds: number): void {
     if (
       !this.program ||
+      !this.playing ||
+      this.awaitingInitialRunway ||
       this.runtimes.size >= MEDIA_DECK_COUNT ||
-      this.preloaded.size > 0 ||
       this.availableDecks.length === 0
     ) {
       return;
@@ -1122,13 +1508,35 @@ export class AdaptiveWebPlayback {
       .filter(
         (segment) =>
           segment.startSeconds > positionSeconds &&
-          !this.runtimes.has(segment.index),
+          !this.runtimes.has(segment.index) &&
+          !this.preloaded.has(segment.index) &&
+          !this.preloadPromises.has(segment.index) &&
+          this.availableDecks.some(
+            (deck) => deck.clockedPcm === this.usesClockedPcm(segment.index),
+          ),
       )
       .sort((left, right) => left.startSeconds - right.startSeconds)[0];
     if (!next) return;
-    void this.prime(next.index).catch((error) => {
-      if (!isStalePreparation(error)) void this.fail(error);
-    });
+    const generation = this.deckGeneration;
+    const revision = this.startAbortRevision;
+    void this.prime(next.index, generation)
+      .then(() => {
+        if (
+          this.playing &&
+          generation === this.deckGeneration &&
+          revision === this.startAbortRevision
+        )
+          this.primeNextUpcoming(this.positionSeconds());
+      })
+      .catch((error) => {
+        if (
+          this.playing &&
+          generation === this.deckGeneration &&
+          revision === this.startAbortRevision &&
+          !isStalePreparation(error)
+        )
+          void this.fail(error);
+      });
   }
 
   private async fail(error: unknown): Promise<void> {
@@ -1162,6 +1570,10 @@ export class AdaptiveWebPlayback {
   private release(index: number, expectedRuntime?: SegmentRuntime): void {
     const runtime = this.runtimes.get(index);
     if (!runtime || (expectedRuntime && runtime !== expectedRuntime)) return;
+    // Pause snapshots active runtimes for Resume. If an ahead-of-time future
+    // activation is cancelled after that snapshot, remove the same runtime so
+    // Resume cannot revive a phrase that never reached its clock anchor.
+    this.prepared = this.prepared.filter((item) => item.runtime !== runtime);
     resetRuntime(runtime);
     this.runtimes.delete(index);
     this.recycleDeck(runtime.deck);
@@ -1175,6 +1587,10 @@ export class AdaptiveWebPlayback {
   private clearTimers(): void {
     for (const timer of this.timers) clearTimeout(timer);
     this.timers = [];
+    // Timer cancellation alone cannot stop an activation already awaiting a
+    // seek. Pause, Seek and every new scheduling revision all pass here.
+    for (const abort of this.positionAborts.values()) abort.abort();
+    this.positionAborts.clear();
   }
 
   private clearRuntimes(): void {
@@ -1189,6 +1605,10 @@ export class AdaptiveWebPlayback {
 
   private resetDeckAssignments(): void {
     this.deckGeneration += 1;
+    // A Play confirmation belongs to the exact sources/position that received
+    // the gesture. Keep its identity until consumed so a stale confirmation
+    // cannot silently suppress Play on freshly prepared (and paused) decks.
+    this.gestureAbort?.abort();
     for (const { element } of this.decks) element.pause();
     for (const cancel of this.preloadCancels.values()) cancel();
     this.preloadCancels.clear();
@@ -1207,22 +1627,150 @@ export class AdaptiveWebPlayback {
     this.gesturePrimedGeneration = null;
   }
 
-  private createDeckPool(): void {
-    const count = Math.min(
-      MEDIA_DECK_COUNT,
-      this.program?.plan.segments.length ?? MEDIA_DECK_COUNT,
+  private usesClockedPcm(index: number): boolean {
+    const work = this.workForSegment(index);
+    const filename = work?.localPreviewFilename ?? this.urls.get(index) ?? "";
+    return (
+      this.clockedWav &&
+      (/\.wav(?:$|\?)/i.test(filename) ||
+        (!!this.pcmReaderFactory && /\.flac$/i.test(filename)))
     );
-    for (let index = 0; index < count; index += 1) {
-      const element = new Audio();
+  }
+
+  private workForSegment(index: number): ConsumerAudioWork | undefined {
+    const segment = this.program?.plan.segments.find(
+      (item) => item.index === index,
+    );
+    return this.program?.works.find((work) => work.id === segment?.workId);
+  }
+
+  private canScheduleClockedTransition(index: number): boolean {
+    if (!this.usesClockedPcm(index)) return false;
+    const clockedDecks = [...this.decks].filter(({ clockedPcm }) => clockedPcm);
+    return (
+      clockedDecks.length > 0 &&
+      clockedDecks.every(
+        ({ element }) => element.playAt && element.prepareForPlayback,
+      )
+    );
+  }
+
+  private takeDeck(index: number): MediaDeck | undefined {
+    const sameSource = this.availableDecks.findIndex(
+      (deck) =>
+        deck.clockedPcm === this.usesClockedPcm(index) &&
+        deck.element.src === this.urls.get(index),
+    );
+    const position =
+      sameSource >= 0
+        ? sameSource
+        : this.availableDecks.findIndex(
+            (deck) => deck.clockedPcm === this.usesClockedPcm(index),
+          );
+    return position < 0
+      ? undefined
+      : this.availableDecks.splice(position, 1)[0];
+  }
+
+  /** Reserve active sources first, then the next sources of each decoder type.
+   * A distant nature preload must not consume or block the next music deck. */
+  private preparationCandidates(target: number): AdaptiveSessionSegment[] {
+    const capacity = new Map<boolean, number>([
+      [true, 0],
+      [false, 0],
+    ]);
+    for (const deck of this.decks)
+      capacity.set(deck.clockedPcm, capacity.get(deck.clockedPcm)! + 1);
+    return (this.program?.plan.segments ?? [])
+      .filter((segment) => segment.endSeconds > target)
+      .sort(
+        (left, right) =>
+          Math.max(target, left.startSeconds) -
+            Math.max(target, right.startSeconds) || left.index - right.index,
+      )
+      .filter((segment) => {
+        const pcm = this.usesClockedPcm(segment.index);
+        const remaining = capacity.get(pcm)!;
+        if (!remaining) return false;
+        capacity.set(pcm, remaining - 1);
+        return true;
+      });
+  }
+
+  private createDeckPool(): void {
+    const segments = this.program?.plan.segments ?? [];
+    const pcmSegments = segments.filter((segment) =>
+      this.usesClockedPcm(segment.index),
+    );
+    const mediaSegments = segments.filter(
+      (segment) => !this.usesClockedPcm(segment.index),
+    );
+    const mixed = pcmSegments.length > 0 && mediaSegments.length > 0;
+    const capacity = (items: AdaptiveSessionSegment[]) => {
+      if (!mixed) return Math.min(MEDIA_DECK_COUNT, items.length);
+      const peak = Math.max(
+        0,
+        ...items.map(
+          ({ startFrame }) =>
+            items.filter(
+              (item) =>
+                item.startFrame <= startFrame && item.endFrame > startFrame,
+            ).length,
+        ),
+      );
+      return Math.min(items.length, Math.max(2, peak));
+    };
+    const kinds = [
+      ...Array<boolean>(capacity(pcmSegments)).fill(true),
+      ...Array<boolean>(capacity(mediaSegments)).fill(false),
+    ];
+    if (kinds.length > MEDIA_DECK_COUNT)
+      throw new Error(
+        "Mixed-format session exceeds the bounded decoder capacity.",
+      );
+    // Dedicated ports are created before the direct gesture and reused. A FLAC
+    // ambience never switches WAV music back to HTML media looping/full decode.
+    for (const clockedPcm of kinds) {
+      const pcm = clockedPcm
+        ? new ClockedWavSource(
+            this.context,
+            undefined,
+            this.pcmReaderFactory
+              ? (url) => {
+                  const index = [...this.urls].find(
+                    ([, source]) => source === url,
+                  )?.[0];
+                  const work =
+                    index === undefined
+                      ? undefined
+                      : this.workForSegment(index);
+                  if (!work)
+                    throw new Error("PCM source is not part of the session.");
+                  return this.pcmReaderFactory!(url, work);
+                }
+              : undefined,
+          )
+        : null;
+      const element = pcm ?? new Audio();
       element.loop = true;
       element.preload = "metadata";
       const deck = {
+        clockedPcm,
         element,
         generation: this.deckGeneration,
         segmentIndex: null,
-        source: this.context.createMediaElementSource(element),
+        source:
+          pcm?.output ??
+          this.context.createMediaElementSource(element as HTMLAudioElement),
       };
       this.decks.add(deck);
+      if (pcm)
+        element.addEventListener("error", () => {
+          if (this.playing && deck.segmentIndex !== null)
+            void this.fail(
+              new Error(element.error?.message ?? "PCM playback failed."),
+            );
+        });
       this.availableDecks.push(deck);
     }
   }
@@ -1271,9 +1819,21 @@ export class AdaptiveWebPlayback {
     this.sessionBus = null;
   }
 
-  private takeUserGesturePromise(): Promise<void> | null {
+  private takeUserGesturePromise(
+    positionSeconds: number,
+  ): Promise<void> | null {
     const activation = this.userGesturePromise;
     this.userGesturePromise = null;
+    if (
+      activation &&
+      (this.userGestureGeneration !== this.deckGeneration ||
+        this.userGesturePositionSeconds === null ||
+        Math.abs(this.userGesturePositionSeconds - positionSeconds) > 0.001)
+    ) {
+      throw new Error(
+        "The session position changed after Play. Wait for the position to be ready, then press Play again.",
+      );
+    }
     return activation;
   }
 

@@ -22,11 +22,51 @@ jest.mock("@/state/lastListeningPersistence", () => ({
   loadLastListening: () => mockLoadLastListening(),
 }));
 jest.mock("@/domain/sessions/playbackAvailability", () => ({
+  isNativeCatalogPreview: () => false,
   isAdaptivePlaybackAvailable: () => true,
   isPwaWebSurface: () => false,
 }));
 
 describe("unified last listening action", () => {
+  it("UI03 starts and navigates only once across repeated taps, unlocking after failure", async () => {
+    mockLoadLastListening.mockResolvedValue({
+      schemaVersion: 1,
+      kind: "single",
+      workId: "field-sea-003-open-tide",
+      outcome: "massage",
+      durationMinutes: 90,
+      updatedAt: 1,
+    } as LastListening);
+    const pending = deferred();
+    mockAudio.controller.startSelectionFromUserGesture.mockReturnValueOnce(
+      pending.promise,
+    );
+    const screen = await render(<LastListeningAction />);
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Play your last session" }),
+      ).toBeEnabled(),
+    );
+    const button = screen.getByRole("button", {
+      name: "Play your last session",
+    });
+    await fireEvent.press(button);
+    await fireEvent.press(button);
+    expect(button).toBeDisabled();
+    expect(
+      mockAudio.controller.startSelectionFromUserGesture,
+    ).toHaveBeenCalledTimes(1);
+    expect(mockPush).not.toHaveBeenCalled();
+    await act(async () => pending.reject(new Error("Start rejected")));
+    await waitFor(() => expect(button).toBeEnabled());
+    await fireEvent.press(button);
+    expect(mockPush).toHaveBeenCalledTimes(1);
+    expect(
+      mockAudio.controller.startSelectionFromUserGesture.mock.calls[1][0],
+    ).toEqual(
+      mockAudio.controller.startSelectionFromUserGesture.mock.calls[0][0],
+    );
+  });
   beforeEach(() => {
     mockAudio = createConsumerAudioMock();
     mockPush.mockClear();
@@ -115,6 +155,7 @@ describe("unified last listening action", () => {
         screen.getByRole("button", { name: "Play your last session" }),
       ).toBeEnabled(),
     );
+    expect(screen.getByText(/Rain · relax · 45 min/)).toBeTruthy();
     expect(mockAudio.controller.prepareSelection).toHaveBeenCalledWith(
       expect.objectContaining({
         kind: "adaptive",

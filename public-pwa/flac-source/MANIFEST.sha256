@@ -1,0 +1,14 @@
+c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4  ./LICENSES/Apache-2.0.txt
+6061814f5d78279f100d5c882cb87ba9a04c67ebedc1ef2e2cade5c83454954b  ./LICENSES/BSD-3-Clause-libFLAC.txt
+3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986  ./LICENSES/GPL-3.0.txt
+e3a994d82e644b03a792a930f574002658412f62407f5fee083f2555c5f23118  ./LICENSES/LGPL-3.0-or-later.txt
+0c674380fc911eb212710557e99cbda2c2756f00e55dfe29584a96d85f0c09c9  ./LICENSES/MIT-wasm-audio-decoders.txt
+6e1466897867e7ad6de267e660c14e75700eb72544882c2d6d3f167c6013ab19  ./LICENSES/Zlib-puff.txt
+0f45dc97bde41c75f3a8846b319f026cf6e591b23b2de72c84e8fb5a2178e988  ./SOURCE_AND_RELINK.md
+7feab777b31a0752a424dea691a75664916d93c4ea02422497277e4f10e3465b  ./THIRD_PARTY_NOTICES.md
+57760c229a603218baf445fed34ea9e50783a74ce78caf89f699b6e405bd7ef3  ./VALIDATION.json
+fe177c8e9f3fba5cfb4e5d8367620bd12321a4e761ee0dd2d4646d4570801a03  ./application/scripts/build-pwa-flac-worker.mjs.txt
+46f155b3603f5a22702bb651c24f93e51bcb7ed73b6eea692e96cdb7395b2c00  ./application/src/pwa-review/flac/create-flac-frame-decoder.ts.txt
+47fade1882352263a3ba05a85d617b66223ac83ac7f806490f67d3963074ff04  ./application/src/pwa-review/flac/flac-decoder-protocol.ts.txt
+a2411803abe5d6186fc9941497cec26eafdf167a972230c5f6307cc2e4bff1ac  ./application/src/pwa-review/flac/flac-decoder.worker.ts.txt
+37cfcc258a77800d370b841e33cf19a18a3be6a990c0d1332ea3e01cb4ac4272  ./source/codec-parser-2.5.0.tgz

@@ -43,7 +43,11 @@ import {
   type StreamingStemSource,
 } from "./StreamingStemSource";
 import { AdaptiveNativePlayback } from "./AdaptiveNativePlayback";
-import type { NativeAudioSourceResolver } from "./NativeAudioSourceResolver";
+import {
+  assertVerifiedNativeAudioFile,
+  type NativeAudioSourceResolver,
+  type VerifiedNativeAudioFile,
+} from "./NativeAudioSourceResolver";
 
 interface RemovableSubscription {
   remove(): void;
@@ -129,9 +133,29 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
   private adaptive: AdaptiveNativePlayback | null = null;
   private loadedAdaptivePlanId: string | null = null;
   private adaptiveHandlers: AdaptiveSessionEventHandlers | null = null;
+  private lifecycleGeneration = 0;
+  private disposed = false;
+  private programFileLease: VerifiedNativeAudioFile | null = null;
+  private desiredAudioFocus = false;
+  private audioFocusRevision = 0;
+
+  private async synchronizeAudioFocus(): Promise<void> {
+    let revision: number;
+    do {
+      revision = this.audioFocusRevision;
+      await AudioManager.setAudioSessionActivity(this.desiredAudioFocus);
+    } while (revision !== this.audioFocusRevision);
+  }
+
+  private requestAudioFocus(active: boolean): Promise<void> {
+    this.desiredAudioFocus = active;
+    ++this.audioFocusRevision;
+    return this.synchronizeAudioFocus();
+  }
 
   constructor(
     private readonly nativeSourceResolver?: NativeAudioSourceResolver,
+    private readonly nativePolicy: { allowHathaPreview?: boolean } = {},
   ) {}
 
   activateUserGesture(): void {
@@ -188,7 +212,10 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
     ) {
       return;
     }
-    await this.stop();
+    const stopping = this.stop();
+    const generation = this.lifecycleGeneration;
+    await stopping;
+    this.assertCurrentOperation(generation);
     this.ensureContext();
     const context = this.requireContext();
     this.stemLocalUris.clear();
@@ -206,6 +233,7 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
           throw new Error(`Asset hash mismatch for ${stem.label}.`);
         }
         await asset.downloadAsync();
+        this.assertCurrentOperation(generation);
         if (!asset.localUri?.startsWith("file://")) {
           throw new Error(`No local file available for ${stem.label}.`);
         }
@@ -226,6 +254,7 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
         await context.suspend();
       }
     } catch (error) {
+      if (generation !== this.lifecycleGeneration) throw error;
       this.stemLocalUris.clear();
       this.brownNoiseBuffer = null;
       this.loadedPresetId = null;
@@ -254,7 +283,10 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
     ) {
       return;
     }
-    await this.stop();
+    const stopping = this.stop();
+    const generation = this.lifecycleGeneration;
+    await stopping;
+    this.assertCurrentOperation(generation);
     this.ensureContext();
     const context = this.requireContext();
     this.programLocalUri = null;
@@ -275,34 +307,53 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
       return;
     }
     const descriptor = CONSUMER_ASSETS[program.work.assetKey];
-    if (!descriptor) {
-      throw new Error(`${program.work.title} is not embedded in this build.`);
-    }
+    let lease: VerifiedNativeAudioFile | null = null;
     try {
-      const asset = Asset.fromModule(descriptor.moduleId);
-      if (asset.hash !== descriptor.md5) {
-        throw new Error(`Asset hash mismatch for ${program.work.title}.`);
+      if (descriptor) {
+        const asset = Asset.fromModule(descriptor.moduleId);
+        if (asset.hash !== descriptor.md5) {
+          throw new Error(`Asset hash mismatch for ${program.work.title}.`);
+        }
+        await asset.downloadAsync();
+        this.assertCurrentOperation(generation);
+        if (!asset.localUri?.startsWith("file://")) {
+          throw new Error(`No local file available for ${program.work.title}.`);
+        }
+        this.programLocalUri = asset.localUri;
+      } else {
+        lease =
+          (await this.nativeSourceResolver?.acquire(program.work.id)) ?? null;
+        if (!lease)
+          throw new Error("This sound needs a verified local audio file.");
+        assertVerifiedNativeAudioFile(lease, program.work.id);
+        this.assertCurrentOperation(generation);
+        this.programLocalUri = lease.uri;
+        this.programFileLease = lease;
+        lease = null;
       }
-      await asset.downloadAsync();
-      if (!asset.localUri?.startsWith("file://")) {
-        throw new Error(`No local file available for ${program.work.title}.`);
-      }
-      this.programLocalUri = asset.localUri;
       this.programPlaybackGain = dbToLinear(program.work.playbackGainDb);
       this.loadedProgramId = program.work.id;
       this.loadedPresetId = null;
       if (context.state === "running") await context.suspend();
     } catch (error) {
+      await lease?.release();
+      if (generation !== this.lifecycleGeneration) throw error;
+      const ownedLease = this.programFileLease;
+      this.programFileLease = null;
       this.programLocalUri = null;
       this.programNoiseBuffer = null;
       this.loadedProgramId = null;
+      await ownedLease?.release();
       if (context.state === "running") await context.suspend();
       throw error;
     }
   }
 
   async loadAdaptiveSession(program: AdaptiveSessionProgram): Promise<void> {
-    await this.stop();
+    const stopping = this.stop();
+    const generation = this.lifecycleGeneration;
+    await stopping;
+    this.assertCurrentOperation(generation);
     if (!this.nativeSourceResolver) {
       throw new Error(
         "Adaptive mobile sessions need verified downloaded packages; mobile asset delivery is in production.",
@@ -336,6 +387,7 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
           );
         },
       },
+      this.nativePolicy,
     );
     this.adaptive = adaptive;
     try {
@@ -346,7 +398,7 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
       this.loadedProgramId = null;
       this.loadedPresetId = null;
     } catch (error) {
-      await this.stop();
+      if (this.adaptive === adaptive) await this.stop();
       throw error;
     }
   }
@@ -358,9 +410,11 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
     if (this.graphStarted) {
       return;
     }
-    if (this.loadedPresetId !== preset.id) {
-      await this.loadPreset(preset);
-    }
+    const loading =
+      this.loadedPresetId !== preset.id ? this.loadPreset(preset) : undefined;
+    const generation = this.lifecycleGeneration;
+    await loading;
+    this.assertCurrentOperation(generation);
 
     try {
       const context = this.requireContext();
@@ -396,8 +450,10 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
 
       if (context.state === "suspended") {
         await context.resume();
+        this.assertCurrentOperation(generation);
       }
-      await AudioManager.setAudioSessionActivity(true);
+      await this.requestAudioFocus(true);
+      this.assertCurrentOperation(generation);
       const startAt = context.currentTime + 0.1;
       master.gain.cancelScheduledValues(context.currentTime);
       master.gain.setValueAtTime(SILENT_GAIN, context.currentTime);
@@ -419,7 +475,7 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
         notificationGeneration,
       );
     } catch (error) {
-      await this.stop();
+      if (generation === this.lifecycleGeneration) await this.stop();
       throw error;
     }
   }
@@ -429,9 +485,13 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
     volume: number,
   ): Promise<void> {
     if (this.graphStarted) return;
-    if (this.loadedProgramId !== program.work.id) {
-      await this.loadSingleTrack(program);
-    }
+    const loading =
+      this.loadedProgramId !== program.work.id
+        ? this.loadSingleTrack(program)
+        : undefined;
+    const generation = this.lifecycleGeneration;
+    await loading;
+    this.assertCurrentOperation(generation);
     if (program.work.sourceKind === "file" && !this.programLocalUri) {
       throw new Error(`No local file available for ${program.work.title}.`);
     }
@@ -458,10 +518,7 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
       }
       const gain = context.createGain();
       this.programVolume = Math.min(1, Math.max(0, volume));
-      gain.gain.value = Math.max(
-        SILENT_GAIN,
-        this.programPlaybackGain * this.programVolume,
-      );
+      gain.gain.value = this.programPlaybackGain * this.programVolume;
       if (program.work.sourceKind === "generated-noise") {
         const source = context.createBufferSource();
         source.buffer = this.programNoiseBuffer;
@@ -480,7 +537,9 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
       }
 
       if (context.state === "suspended") await context.resume();
-      await AudioManager.setAudioSessionActivity(true);
+      this.assertCurrentOperation(generation);
+      await this.requestAudioFocus(true);
+      this.assertCurrentOperation(generation);
       const startAt = context.currentTime + 0.1;
       master.gain.cancelScheduledValues(context.currentTime);
       master.gain.setValueAtTime(SILENT_GAIN, context.currentTime);
@@ -498,14 +557,14 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
       }
       this.graphStarted = true;
       this.notificationDesiredState = "playing";
-      const generation = ++this.notificationGeneration;
+      const notificationGeneration = ++this.notificationGeneration;
       void this.showPlaybackNotification(
         program.work.title,
         "App Relax",
-        generation,
+        notificationGeneration,
       );
     } catch (error) {
-      await this.stop();
+      if (generation === this.lifecycleGeneration) await this.stop();
       throw error;
     }
   }
@@ -516,8 +575,13 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
     positionSeconds = 0,
   ): Promise<void> {
     if (this.graphStarted) return;
-    if (this.loadedAdaptivePlanId !== program.plan.id)
-      await this.loadAdaptiveSession(program);
+    const loading =
+      this.loadedAdaptivePlanId !== program.plan.id
+        ? this.loadAdaptiveSession(program)
+        : undefined;
+    const lifecycleGeneration = this.lifecycleGeneration;
+    await loading;
+    this.assertCurrentOperation(lifecycleGeneration);
     try {
       AudioManager.setAudioSessionOptions({
         iosCategory: "playback",
@@ -525,7 +589,8 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
         iosOptions: ["allowAirPlay"],
       });
       AudioManager.observeAudioInterruptions(true);
-      await AudioManager.setAudioSessionActivity(true);
+      await this.requestAudioFocus(true);
+      this.assertCurrentOperation(lifecycleGeneration);
       this.masterGain!.gain.cancelScheduledValues(
         this.requireContext().currentTime,
       );
@@ -534,6 +599,7 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
         this.requireContext().currentTime,
       );
       await this.adaptive!.start(volume, positionSeconds);
+      this.assertCurrentOperation(lifecycleGeneration);
       this.graphStarted = true;
       this.notificationDesiredState = "playing";
       const generation = ++this.notificationGeneration;
@@ -543,7 +609,7 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
         generation,
       );
     } catch (error) {
-      await this.stop();
+      if (lifecycleGeneration === this.lifecycleGeneration) await this.stop();
       throw error;
     }
   }
@@ -590,10 +656,13 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
       return;
     }
     const notificationGeneration = ++this.notificationGeneration;
+    const generation = this.lifecycleGeneration;
     this.notificationDesiredState = "playing";
     await this.context.resume();
+    this.assertCurrentOperation(generation);
     AudioManager.observeAudioInterruptions(true);
-    await AudioManager.setAudioSessionActivity(true);
+    await this.requestAudioFocus(true);
+    this.assertCurrentOperation(generation);
     this.adaptive?.resume();
     if (this.notificationPermissionGranted) {
       try {
@@ -620,7 +689,7 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
     if (releaseAudioFocus) {
       AudioManager.observeAudioInterruptions(false);
       try {
-        await AudioManager.setAudioSessionActivity(false);
+        await this.requestAudioFocus(false);
       } catch {
         // The context is already suspended; focus release remains best-effort.
       }
@@ -640,17 +709,19 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
   }
 
   async stop(): Promise<void> {
+    ++this.lifecycleGeneration;
+    this.desiredAudioFocus = false;
+    ++this.audioFocusRevision;
     const adaptive = this.adaptive;
     this.adaptive = null;
     this.loadedAdaptivePlanId = null;
     const notificationGeneration = ++this.notificationGeneration;
     this.notificationDesiredState = "hidden";
-    let adaptiveCleanupError: unknown;
-    try {
-      await adaptive?.stop();
-    } catch (error) {
-      adaptiveCleanupError = error;
-    }
+    // Silence sources synchronously; file-lease cleanup must not delay Stop.
+    const adaptiveCleanup = adaptive?.stop().then(
+      () => undefined,
+      (error: unknown) => error,
+    );
     try {
       if (this.context && this.masterGain) {
         const now = this.context.currentTime;
@@ -693,6 +764,12 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
     this.sourceGains.clear();
     this.graphStarted = false;
     this.singleTrackPositionSeconds = 0;
+    const fileLease = this.programFileLease;
+    this.programFileLease = null;
+    if (fileLease) {
+      this.programLocalUri = null;
+      this.loadedProgramId = null;
+    }
     AudioManager.observeAudioInterruptions(false);
 
     try {
@@ -711,14 +788,17 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
       await this.reconcilePlaybackNotification();
     }
     try {
-      await AudioManager.setAudioSessionActivity(false);
+      await this.synchronizeAudioFocus();
     } catch {
       // The graph is already silent; native lifecycle tests cover platform cleanup.
     }
+    const adaptiveCleanupError = await adaptiveCleanup;
+    await fileLease?.release();
     if (adaptiveCleanupError) throw adaptiveCleanupError;
   }
 
   async dispose(): Promise<void> {
+    this.disposed = true;
     await this.stop();
     this.removeSubscriptions();
     if (this.context && this.context.state !== "closed") {
@@ -767,10 +847,7 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
       this.singleTrackRuntime?.gain ?? this.singleTrackNoiseRuntime?.gain;
     if (!node || !this.context) return;
     const now = this.context.currentTime;
-    const target = Math.max(
-      SILENT_GAIN,
-      this.programPlaybackGain * this.programVolume,
-    );
+    const target = this.programPlaybackGain * this.programVolume;
     node.gain.cancelScheduledValues(now);
     node.gain.setValueAtTime(Math.max(SILENT_GAIN, node.gain.value), now);
     if (fadeMs > 0)
@@ -820,6 +897,7 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
   }
 
   private ensureContext(): void {
+    if (this.disposed) throw new Error("Native audio driver is disposed.");
     if (this.context) {
       return;
     }
@@ -834,6 +912,11 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
       throw new Error("AudioContext has not been initialized.");
     }
     return this.context;
+  }
+
+  private assertCurrentOperation(generation: number): void {
+    if (this.disposed || generation !== this.lifecycleGeneration)
+      throw new Error("Native audio operation cancelled.");
   }
 
   private createBinauralGraph(

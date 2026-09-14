@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { type Href, useFocusEffect, useRouter } from "expo-router";
 import { Pressable, Text, View } from "react-native";
 import { useAudioSession } from "@/audio/AudioProvider";
@@ -21,8 +21,18 @@ import {
 } from "@/state/lastListeningPersistence";
 import { editorial } from "@/design/editorialTheme";
 import { fonts } from "@/design/theme";
+import type {
+  CreateAdaptiveSessionInput,
+  AdaptiveSessionProgram,
+} from "@/domain/sessions/types";
 
-export function LastListeningAction() {
+export function LastListeningAction({
+  reviewProgramFactory,
+}: {
+  reviewProgramFactory?: (
+    input: CreateAdaptiveSessionInput,
+  ) => AdaptiveSessionProgram;
+} = {}) {
   const router = useRouter();
   const { controller } = useAudioSession();
   const [saved, setSaved] = useState<{
@@ -31,6 +41,8 @@ export function LastListeningAction() {
     nonce: number;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [starting, setStarting] = useState(false);
+  const pending = useRef(false);
   useFocusEffect(
     useCallback(() => {
       let live = true;
@@ -83,7 +95,7 @@ export function LastListeningAction() {
       return {
         kind: "adaptive",
         request: last.request,
-        program: createAdaptiveSessionProgram({
+        program: (reviewProgramFactory ?? createAdaptiveSessionProgram)({
           ...last.request,
           seed: createConsumerSessionSeed(last.request, saved.nonce),
           recentWorkIds: saved.recent,
@@ -93,7 +105,7 @@ export function LastListeningAction() {
     } catch {
       return null;
     }
-  }, [saved]);
+  }, [saved, reviewProgramFactory]);
   const prepared = usePreparedSelection(selection);
   if (!saved || !selection) return null;
   const duration =
@@ -102,8 +114,8 @@ export function LastListeningAction() {
       : selection.request.durationMinutes;
   const title =
     selection.kind === "single"
-      ? selection.program.work.title
-      : selection.request.outcome;
+      ? selection.outcome
+      : `${selection.request.soundKind === "music" ? "Music" : selection.request.natureFamily === "rain" ? "Rain" : "Ocean waves"} · ${selection.request.outcome}`;
   return (
     <View
       style={{
@@ -115,9 +127,15 @@ export function LastListeningAction() {
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Play your last session"
-        accessibilityState={{ disabled: !prepared.ready }}
-        disabled={!prepared.ready}
+        accessibilityState={{
+          disabled: !prepared.ready || starting,
+          busy: starting,
+        }}
+        disabled={!prepared.ready || starting}
         onPress={() => {
+          if (pending.current || !prepared.ready) return;
+          pending.current = true;
+          setStarting(true);
           setError(null);
           void controller
             .startSelectionFromUserGesture(selection)
@@ -125,6 +143,10 @@ export function LastListeningAction() {
             .catch(() => {
               setError("Could not start. Retry or choose a need below.");
               prepared.retry();
+            })
+            .finally(() => {
+              pending.current = false;
+              setStarting(false);
             });
         }}
         style={{ minHeight: 56, justifyContent: "center" }}
@@ -136,7 +158,7 @@ export function LastListeningAction() {
             color: editorial.ink,
           }}
         >
-          Play your last session →
+          {starting ? "Starting…" : "Play your last session →"}
         </Text>
         <Text
           style={{

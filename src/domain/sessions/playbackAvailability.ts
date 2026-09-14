@@ -7,6 +7,7 @@ export interface AdaptivePlaybackEnvironment {
   lanPreviewHost?: string;
   pwaAudioDelivery?: string;
   secureContext?: boolean;
+  nativePreview?: string;
 }
 
 function isPrivateIpv4(hostname: string): boolean {
@@ -51,8 +52,11 @@ export function isAdaptivePlaybackAvailable(
     lanPreviewHost: process.env.EXPO_PUBLIC_APP_RELAX_LAN_PREVIEW_HOST,
     pwaAudioDelivery: process.env.EXPO_PUBLIC_APP_RELAX_PWA_AUDIO,
     secureContext: globalThis.isSecureContext,
+    nativePreview: process.env.EXPO_PUBLIC_APP_RELAX_NATIVE_PREVIEW,
   },
 ): boolean {
+  if (environment.platform === "android" && environment.nativePreview === "1")
+    return true;
   const loopback = isLoopbackWebPreviewHost(environment.hostname);
   const pwaDeliveryAvailable =
     environment.pwaAudioDelivery === "same-origin" &&
@@ -72,4 +76,11 @@ export function isAdaptivePlaybackAvailable(
 
 export function isPwaWebSurface(): boolean {
   return process.env.EXPO_PUBLIC_APP_RELAX_PWA === "1";
+}
+
+export function isNativeCatalogPreview(): boolean {
+  return (
+    Platform.OS === "android" &&
+    process.env.EXPO_PUBLIC_APP_RELAX_NATIVE_PREVIEW === "1"
+  );
 }

@@ -98,8 +98,10 @@ function buildSessionProgram(draft: QaWorkbenchDraft): AdaptiveSessionProgram {
 
 export default function AdaptiveQaWorkbench({
   localPlaybackAvailable = isAdaptivePlaybackAvailable(),
+  initialSingleWorkId,
 }: {
   localPlaybackAvailable?: boolean;
+  initialSingleWorkId?: string;
 } = {}) {
   const { width } = useWindowDimensions();
   const isWide = width >= 860;
@@ -123,7 +125,14 @@ export default function AdaptiveQaWorkbench({
     }),
   );
   const [pairProgram, setPairProgram] = useState(pairBaseProgram);
-  const [mode, setMode] = useState<WorkbenchMode>("session");
+  const initialSingle =
+    localPlaybackAvailable &&
+    QA_CATALOG.find(
+      (entry) => entry.playable && entry.work.id === initialSingleWorkId,
+    );
+  const [mode, setMode] = useState<WorkbenchMode>(
+    initialSingle ? "single" : "session",
+  );
   const [selectedTransition, setSelectedTransition] = useState(0);
   const [cursorSeconds, setCursorSeconds] = useState(0);
   const [auditMessage, setAuditMessage] = useState("NOT RUN");
@@ -135,7 +144,9 @@ export default function AdaptiveQaWorkbench({
   const [pairSlot, setPairSlot] = useState<PairSlot>("outgoing");
   const [outgoingWorkId, setOutgoingWorkId] = useState(DEFAULT_OUTGOING);
   const [incomingWorkId, setIncomingWorkId] = useState(DEFAULT_INCOMING);
-  const [singleWorkId, setSingleWorkId] = useState(DEFAULT_OUTGOING);
+  const [singleWorkId, setSingleWorkId] = useState(
+    initialSingle ? initialSingle.work.id : DEFAULT_OUTGOING,
+  );
   const [singleDurationMinutes, setSingleDurationMinutes] = useState(30);
   const [singlePositionSeconds, setSinglePositionSeconds] = useState(0);
   const [natureFamily, setNatureFamily] = useState<NatureAmbienceFamily>("sea");
@@ -172,7 +183,9 @@ export default function AdaptiveQaWorkbench({
         (!query ||
           entry.work.title.toLowerCase().includes(query) ||
           entry.work.id.toLowerCase().includes(query) ||
-          entry.work.primaryOutcome.toLowerCase().includes(query) ||
+          (entry.work.primaryOutcome ?? "unclassified nature").includes(
+            query,
+          ) ||
           entry.work.collectionIds.some((id) => id.includes(query))),
     );
   }, [catalogFilter, catalogQuery]);
@@ -810,14 +823,18 @@ export default function AdaptiveQaWorkbench({
             <View
               style={[
                 styles.consumerFrame,
-                { backgroundColor: OUTCOME_EDITORIAL_SURFACE[previewOutcome] },
+                {
+                  backgroundColor: previewOutcome
+                    ? OUTCOME_EDITORIAL_SURFACE[previewOutcome]
+                    : editorial.paper,
+                },
               ]}
             >
               <EditorialHeader
                 label={
                   mode === "single"
-                    ? previewOutcome.toUpperCase()
-                    : `${previewOutcome.toUpperCase()} SESSION`
+                    ? (previewOutcome?.toUpperCase() ?? "NATURAL TEXTURE")
+                    : `${previewOutcome?.toUpperCase()} SESSION`
                 }
                 showBack
               />
@@ -826,7 +843,7 @@ export default function AdaptiveQaWorkbench({
                 canStop={previewCanStop}
                 contextLabel={
                   mode === "single"
-                    ? `${singleEntry.work.primaryOutcome.toUpperCase()} · SINGLE WORK`
+                    ? `${singleEntry.work.primaryOutcome?.toUpperCase() ?? "UNCLASSIFIED NATURE"} · SINGLE WORK`
                     : `${program.plan.natureMix ? "MUSIC + NATURE" : "NATURAL SOUNDS"} · SOUND ONLY · ${program.plan.requestedDurationMinutes} MIN`
                 }
                 currentLabel={
@@ -1507,7 +1524,7 @@ function CatalogRow({
       <View style={styles.catalogCopy}>
         <Text style={styles.catalogTitle}>{entry.work.title}</Text>
         <Text style={styles.catalogMeta}>
-          {entry.work.primaryOutcome.toUpperCase()} ·{" "}
+          {entry.work.primaryOutcome?.toUpperCase() ?? "UNCLASSIFIED NATURE"} ·{" "}
           {entry.work.sourceKind === "file" ? "FILE" : "GENERATED NOISE"} ·{" "}
           {entry.readiness.replaceAll("-", " ").toUpperCase()}
         </Text>

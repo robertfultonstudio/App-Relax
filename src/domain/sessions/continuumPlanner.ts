@@ -28,6 +28,9 @@ import type {
   SessionWorkProfile,
 } from "./types";
 import { SessionPlanningError } from "./types";
+import { HATHA_AUDIO_WORKS } from "@/content/hathaCatalog";
+import { getCyclePhaseCandidates, matchesCyclePhase } from "./cycleStructure";
+import { natureTransitionSlots } from "./natureTransitionSlots";
 
 const SAMPLE_RATE = 48_000 as const;
 const MIN_CROSSFADE_SECONDS = 4;
@@ -63,7 +66,9 @@ function stableShuffle<T>(values: readonly T[], random: () => number): T[] {
 }
 
 function seconds(frames: number): number {
-  return Number((frames / SAMPLE_RATE).toFixed(6));
+  // Preserve the same sample boundary across independently assembled lanes.
+  // Decimal rounding can create a sub-sample four-deck overlap at a shared join.
+  return frames / SAMPLE_RATE;
 }
 
 function hasValidBoundaryMetadata(profile: SessionWorkProfile): boolean {
@@ -142,6 +147,12 @@ export function evaluatePhasePlacement(
   phase: SessionPhaseId,
   policy?: SessionIntentPhasePolicy,
 ): CompatibilityResult {
+  if (!matchesCyclePhase(profile.work, phase)) {
+    return {
+      compatible: false,
+      audit: ["BLOCK · documented cycle phase role"],
+    };
+  }
   if (policy) {
     validateIntentPhasePolicy(policy, policy.outcome);
     const rule = policy.phases.find(({ id }) => id === phase)!;
@@ -220,6 +231,12 @@ export function evaluateTransition(
   incoming: SessionWorkProfile,
   crossfadeSeconds = MUSIC_CROSSFADE_SECONDS,
 ): CompatibilityResult {
+  if (outgoing.work.cycle || incoming.work.cycle) {
+    return {
+      compatible: false,
+      audit: ["BLOCK · final WAV cycle transition windows are not reviewed"],
+    };
+  }
   const userReviewedMusicPool =
     PROVISIONAL_MUSIC_SESSION_WORK_IDS.has(outgoing.work.id) ||
     PROVISIONAL_MUSIC_SESSION_WORK_IDS.has(incoming.work.id);
@@ -754,7 +771,7 @@ function buildTimeline(
 function createNatureSegment(
   profile: SessionWorkProfile,
   index: number,
-  phase: "arrival" | "return",
+  phase: SessionPhaseId,
   startFrame: number,
   endFrame: number,
   playbackTrimDb: number,
@@ -779,7 +796,7 @@ function createNatureSegment(
     sourceExitSeconds: seconds(sourceExitFrame),
     loopCount: Math.ceil(playedFrames / profile.work.frameCount),
     playbackTrimDb,
-    finalEnvelopeSeconds: phase === "return" ? finalEnvelopeSeconds : 0,
+    finalEnvelopeSeconds,
     phaseRuleAudit: [
       "PROVISIONAL · coordinated user-selected natural ambience",
       `PROVISIONAL · ${profile.aestheticFamily} remains within the selected family during ${phase}`,
@@ -790,13 +807,13 @@ function createNatureSegment(
 function selectNatureProfile(
   family: NatureAmbienceFamily,
   seed: string,
-  excludedWorkId?: string,
+  excludedWorkIds: readonly string[] = [],
 ): SessionWorkProfile {
   const candidates = SESSION_WORK_PROFILES.filter(
     (profile) =>
       profile.materialKind === "nature" &&
       profile.aestheticFamily === family &&
-      profile.work.id !== excludedWorkId,
+      !excludedWorkIds.includes(profile.work.id),
   );
   const selected = stableShuffle(candidates, seededRandom(seed))[0];
   if (!selected) {
@@ -813,9 +830,11 @@ export function attachCoordinatedNatureBed(
   seed: string,
   natureFamily: NatureAmbienceFamily = "sea",
   natureCrossfadeSeconds = DEFAULT_NATURE_CROSSFADE_SECONDS,
+  musicGuardSeconds = 0,
 ): AdaptiveSessionProgram {
   if (program.plan.soundKind !== "music") return program;
   if (
+    !Number.isFinite(natureCrossfadeSeconds) ||
     natureCrossfadeSeconds < MIN_CROSSFADE_SECONDS ||
     natureCrossfadeSeconds > MAX_CROSSFADE_SECONDS
   ) {
@@ -824,104 +843,107 @@ export function attachCoordinatedNatureBed(
       "Natural ambience transition must be between 4 and 300 seconds.",
     );
   }
-  const musicTransition = program.plan.transitions.find(
-    (transition) => (transition.lane ?? "primary") === "primary",
+  const primary = program.plan.segments.filter(
+    (s) => (s.lane ?? "primary") === "primary",
   );
-  const outgoingMusic = program.plan.segments.find(
-    (segment) => segment.index === musicTransition?.outgoingSegmentIndex,
-  );
-  const incomingMusic = program.plan.segments.find(
-    (segment) => segment.index === musicTransition?.incomingSegmentIndex,
-  );
-  if (!musicTransition || !outgoingMusic || !incomingMusic) {
+  if (!primary.length) {
     throw new SessionPlanningError(
       "NATURE_BED_UNAVAILABLE",
-      "A reviewed music transition is required before adding natural ambience.",
+      "A primary music source is required before adding natural ambience.",
     );
   }
-  const outgoingNature = selectNatureProfile(
-    natureFamily,
-    `${seed}|nature|outgoing|${natureFamily}`,
-  );
-  const incomingNature = selectNatureProfile(
-    natureFamily,
-    `${seed}|nature|incoming|${natureFamily}`,
-    outgoingNature.work.id,
-  );
   const transitionFrames = Math.round(natureCrossfadeSeconds * SAMPLE_RATE);
-  const safetyFrames = 60 * SAMPLE_RATE;
-  const afterStartFrame = musicTransition.endFrame;
-  const afterEndFrame = afterStartFrame + transitionFrames;
-  const canFollowMusic =
-    afterEndFrame + safetyFrames <= program.plan.targetFrames;
-  const beforeEndFrame = musicTransition.startFrame;
-  const beforeStartFrame = beforeEndFrame - transitionFrames;
-  const canLeadMusic = beforeStartFrame >= safetyFrames;
-  if (!canFollowMusic && !canLeadMusic) {
-    throw new SessionPlanningError(
-      "NATURE_BED_UNAVAILABLE",
-      "The requested session is too short for separate slow music and nature transitions.",
-    );
-  }
-  const natureStartFrame = canFollowMusic ? afterStartFrame : beforeStartFrame;
-  const natureEndFrame = canFollowMusic ? afterEndFrame : beforeEndFrame;
-  const untrimmedPeakDbtp = estimateOverlapPeakDbtp(
-    outgoingNature.work,
-    incomingNature.work,
-    "equal-power",
+  const starts = natureTransitionSlots(
+    program.plan,
+    natureCrossfadeSeconds,
+    new Set(
+      SESSION_WORK_PROFILES.filter(
+        (profile) =>
+          profile.materialKind === "nature" &&
+          profile.aestheticFamily === natureFamily,
+      ).map(({ work }) => work.id),
+    ).size,
+    musicGuardSeconds,
   );
-  if (untrimmedPeakDbtp === null) {
+  if (!starts.length) {
     throw new SessionPlanningError(
       "NATURE_BED_UNAVAILABLE",
-      "Natural ambience peak metrics are unavailable.",
+      "This session has no room for regularly changing ambience separate from its music transitions.",
     );
   }
-  const transitionTrimDb = Math.min(0, -1.1 - untrimmedPeakDbtp);
-  const trim = Number(transitionTrimDb.toFixed(3));
+  const profiles: SessionWorkProfile[] = [];
+  for (let index = 0; index <= starts.length; index++) {
+    profiles.push(
+      selectNatureProfile(
+        natureFamily,
+        `${seed}|nature|${index}|${natureFamily}`,
+        profiles.map(({ work }) => work.id),
+      ),
+    );
+  }
+  const peaks = profiles.slice(1).map((profile, index) => {
+    const peak = estimateOverlapPeakDbtp(
+      profiles[index].work,
+      profile.work,
+      "equal-power",
+    );
+    if (peak === null)
+      throw new SessionPlanningError(
+        "NATURE_BED_UNAVAILABLE",
+        "Natural ambience peak metrics are unavailable.",
+      );
+    return peak;
+  });
+  // One stable trim across the entire lane; a shared source must not change
+  // level merely because the following pair has a different peak estimate.
+  const trim = Number(
+    Math.min(0, ...peaks.map((peak) => -1.1 - peak)).toFixed(3),
+  );
   const firstNatureIndex = program.plan.segments.length;
-  const natureSegments = [
-    createNatureSegment(
-      outgoingNature,
-      firstNatureIndex,
-      "arrival",
-      0,
-      natureEndFrame,
+  const natureSegments = profiles.map((profile, index) => {
+    const startFrame = index === 0 ? 0 : starts[index - 1];
+    const last = index === profiles.length - 1;
+    const phase =
+      program.plan.phases.find(
+        (phase) =>
+          startFrame >= phase.startFrame && startFrame < phase.endFrame,
+      )?.id ?? "arrival";
+    return createNatureSegment(
+      profile,
+      firstNatureIndex + index,
+      phase,
+      startFrame,
+      last ? program.plan.targetFrames : starts[index] + transitionFrames,
       trim,
-      natureCrossfadeSeconds,
-    ),
-    createNatureSegment(
-      incomingNature,
-      firstNatureIndex + 1,
-      "return",
-      natureStartFrame,
-      program.plan.targetFrames,
-      trim,
-      natureCrossfadeSeconds,
-    ),
-  ];
-  const natureTransition: AdaptiveSessionTransition = {
-    index: program.plan.transitions.length,
-    lane: "nature",
-    outgoingSegmentIndex: firstNatureIndex,
-    incomingSegmentIndex: firstNatureIndex + 1,
-    startFrame: natureStartFrame,
-    endFrame: natureEndFrame,
-    startSeconds: seconds(natureStartFrame),
-    endSeconds: seconds(natureEndFrame),
-    durationSeconds: natureCrossfadeSeconds,
-    curve: "equal-power",
-    transitionClass: "natural-water",
-    untrimmedPeakDbtp,
-    transitionTrimDb: trim,
-    clippingRiskDbtp: Number((untrimmedPeakDbtp + trim).toFixed(3)),
-    ruleAudit: [
-      "PROVISIONAL · user-selected natural ambience changes gradually",
-      `PASS · ${natureFamily} family remains user-selected`,
-      `PASS · staggered ${canFollowMusic ? "after" : "before"} the music transition`,
-      "PASS · no simultaneous music and nature crossfade",
-    ],
-    reviewStatus: "PROVISIONAL — LISTENING REVIEW REQUIRED",
-  };
+      last ? natureCrossfadeSeconds : 0,
+    );
+  });
+  const natureTransitions: AdaptiveSessionTransition[] = starts.map(
+    (startFrame, index) => ({
+      index: program.plan.transitions.length + index,
+      lane: "nature",
+      outgoingSegmentIndex: firstNatureIndex + index,
+      incomingSegmentIndex: firstNatureIndex + index + 1,
+      startFrame,
+      endFrame: startFrame + transitionFrames,
+      startSeconds: seconds(startFrame),
+      endSeconds: seconds(startFrame + transitionFrames),
+      durationSeconds: natureCrossfadeSeconds,
+      curve: "equal-power",
+      transitionClass: "natural-water",
+      untrimmedPeakDbtp: peaks[index],
+      transitionTrimDb: trim,
+      clippingRiskDbtp: Number((peaks[index] + trim).toFixed(3)),
+      ruleAudit: [
+        "PROVISIONAL · user-selected natural ambience changes gradually",
+        `PASS · ${natureFamily} family remains user-selected`,
+        "PASS · outside every music transition",
+        "PASS · no simultaneous music and nature crossfade",
+        "PASS · distributed across the session; no repeated nature recording",
+      ],
+      reviewStatus: "PROVISIONAL — LISTENING REVIEW REQUIRED",
+    }),
+  );
   const segments = [
     ...program.plan.segments.map((segment) => ({
       ...segment,
@@ -934,7 +956,7 @@ export function attachCoordinatedNatureBed(
       ...transition,
       lane: transition.lane ?? ("primary" as const),
     })),
-    natureTransition,
+    ...natureTransitions,
   ];
   const natureIdentity = JSON.stringify({
     seed,
@@ -942,15 +964,15 @@ export function attachCoordinatedNatureBed(
     natureCrossfadeSeconds,
     natureFamily,
     works: natureSegments.map(({ workId }) => workId),
-    transition: {
-      startFrame: natureStartFrame,
-      endFrame: natureEndFrame,
-    },
+    transitions: natureTransitions.map(({ startFrame, endFrame }) => ({
+      startFrame,
+      endFrame,
+    })),
   });
   const natureHash = hashSeed(natureIdentity).toString(16).padStart(8, "0");
   return {
     ...program,
-    works: [...program.works, outgoingNature.work, incomingNature.work],
+    works: [...program.works, ...profiles.map(({ work }) => work)],
     fadeOutSeconds: Math.max(program.fadeOutSeconds, natureCrossfadeSeconds),
     plan: {
       ...program.plan,
@@ -965,7 +987,7 @@ export function attachCoordinatedNatureBed(
         selectedFamily: natureFamily,
         availableFamilies: ["sea", "rain"],
         headroomStrategy: "fixed-music-equal-ceiling",
-        musicWorkIds: [outgoingMusic.workId, incomingMusic.workId],
+        musicWorkIds: [...new Set(primary.map((s) => s.workId))],
         natureWorkIds: natureSegments.map(({ workId }) => workId),
       },
       compositeHeadroomTrimDb: COMPOSITE_HEADROOM_TRIM_DB,
@@ -988,6 +1010,22 @@ export function createAdaptiveSessionProgram(
     throw new SessionPlanningError(
       "UNSUPPORTED_DURATION",
       `${input.durationMinutes} minutes is not offered for ${input.outcome}.`,
+    );
+  }
+  if (input.cycleId) {
+    const structuralCoverage = PHASE_IDS.every(
+      (phase) =>
+        getCyclePhaseCandidates(HATHA_AUDIO_WORKS, input.cycleId!, phase)
+          .length > 0,
+    );
+    // MIDI functions are documented, but the edited/rotated WAVs have no
+    // reviewed inter-work windows or ending contract. Never fall back to rain
+    // or unrelated music when a specific cycle was requested.
+    throw new SessionPlanningError(
+      "CYCLE_TRANSITIONS_UNREVIEWED",
+      structuralCoverage
+        ? "This cycle has documented roles. Transitions on the final audio still need review. Choose an individual sound."
+        : "This cycle has no complete documented structure. Choose an individual sound.",
     );
   }
   if (input.phasePolicy)

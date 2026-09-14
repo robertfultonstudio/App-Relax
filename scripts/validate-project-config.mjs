@@ -20,6 +20,10 @@ const pwaPreviewLauncher = readFileSync(
   join(projectRoot, "scripts", "start-pwa-web-preview.mjs"),
   "utf8",
 );
+const pwaPreviewCatalog = readFileSync(
+  join(projectRoot, "scripts/current-pwa-preview.mjs"),
+  "utf8",
+);
 const metroConfig = readFileSync(join(projectRoot, "metro.config.js"), "utf8");
 
 function assert(condition, message) {
@@ -29,7 +33,7 @@ function assert(condition, message) {
 }
 
 assert(
-  packageJson.dependencies.expo === "~57.0.20",
+  packageJson.dependencies.expo === "~57.0.22",
   "Expo SDK 57 must remain pinned",
 );
 assert(
@@ -111,10 +115,11 @@ assert(
   pwaPreviewLauncher.includes("createServer(preview.handler)") &&
     pwaPreviewLauncher.includes('server.listen(port, "127.0.0.1"') &&
     pwaPreviewLauncher.includes('join(projectRoot, "dist", "m5-pwa")') &&
-    pwaPreviewLauncher.includes(
-      'join(projectRoot, "public", "audio-catalog")',
-    ) &&
-    pwaPreviewLauncher.includes('"M4_LOCAL_LISTENING_MANIFEST.json"') &&
+    pwaPreviewLauncher.includes("createCurrentPwaPreview({") &&
+    pwaPreviewCatalog.includes('"docs/M4_LOCAL_LISTENING_MANIFEST.json"') &&
+    pwaPreviewCatalog.includes('"src/pwa-review/flacIndexManifest.json"') &&
+    pwaPreviewCatalog.includes('"src/content/localNaturalAudioFiles.json"') &&
+    pwaPreviewCatalog.includes('join(projectRoot, "public/audio-catalog")') &&
     !pwaPreviewLauncher.includes("spawn("),
   "PWA preview must serve the static export and approved local audio on loopback without Metro",
 );
@@ -186,6 +191,11 @@ assert(
   "native export audio-scope validator script is missing",
 );
 for (const [profileName, profile] of Object.entries(easJson.build ?? {})) {
+  assert(
+    profile.env?.EXPO_PUBLIC_APP_RELAX_NATIVE_PREVIEW ===
+      (profileName === "preview-android" ? "1" : undefined),
+    `EAS profile ${profileName} must keep native catalogue preview scoped to the authorized Android APK`,
+  );
   assert(
     profile.env?.APP_RELAX_SURFACE !== "qa",
     `EAS profile ${profileName} must not select the QA router surface`,

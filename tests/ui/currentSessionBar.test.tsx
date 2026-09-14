@@ -3,12 +3,19 @@ import { CurrentSessionBar } from "@/components/CurrentSessionBar";
 import { getConsumerWork } from "@/content/consumerCatalog";
 import { createSingleTrackProgram } from "@/domain/audio/consumerTypes";
 import { createAdaptiveSessionProgram } from "@/domain/sessions/continuumPlanner";
+import { createListeningNatureProgram } from "@/pwa-review/createListeningNatureProgram";
+import { createWholeFileReviewProgram } from "@/pwa-review/createWholeFileReviewProgram";
 import type { PlaybackStatus } from "@/domain/audio/types";
 import { createConsumerAudioMock } from "./helpers/consumerAudioMock";
 
 let mockAudio = createConsumerAudioMock();
 let mockPath = "/";
 let mockParams: Record<string, string> = {};
+let mockPwa = false;
+jest.mock("@/domain/sessions/playbackAvailability", () => ({
+  isNativeCatalogPreview: () => false,
+  isPwaWebSurface: () => mockPwa,
+}));
 const mockPush = jest.fn();
 jest.mock("expo-router", () => ({
   usePathname: () => mockPath,
@@ -20,7 +27,62 @@ jest.mock("@/audio/AudioProvider", () => ({
 }));
 
 describe("persistent current listening bar", () => {
+  it("opens the actual running PWA duration and its review, not a different setup selection", async () => {
+    mockPwa = true;
+    const request = {
+      outcome: "yoga" as const,
+      durationMinutes: 30 as const,
+      mode: "sound-only" as const,
+      soundKind: "music" as const,
+      natureFamily: "sea" as const,
+      includeNatureBed: false,
+    };
+    mockAudio.setActive({
+      kind: "adaptive",
+      request,
+      program: createWholeFileReviewProgram({ ...request, seed: "current-30" }),
+    });
+    mockAudio.publish({ status: "playing", remainingMs: 29 * 60000 });
+    mockPath = "/outcome/yoga";
+    mockParams = { duration: "90" };
+    const screen = await render(<CurrentSessionBar />);
+    expect(screen.getByText("29:00 · 30 min · Player & review →")).toBeTruthy();
+    await fireEvent.press(
+      screen.getByRole("button", { name: "Return to current session" }),
+    );
+    expect(mockPush).toHaveBeenCalledWith(
+      "/adaptive-session/yoga?duration=30&sound=music&nature=off&active=1&review=1",
+    );
+    expect(
+      mockAudio.controller.startSelectionFromUserGesture,
+    ).not.toHaveBeenCalled();
+  });
+  it("does not duplicate transport when nature is added to the current single-recording player", async () => {
+    const program = createListeningNatureProgram(
+      getConsumerWork("astral-thread")!,
+      "focus",
+      30,
+      "rain",
+    );
+    mockAudio.setActive({
+      kind: "adaptive",
+      program,
+      request: {
+        outcome: "focus",
+        durationMinutes: 30,
+        mode: "sound-only",
+        soundKind: "music",
+        natureFamily: "rain",
+      },
+    });
+    mockAudio.publish({ status: "playing" });
+    mockPath = "/listen/astral-thread";
+    mockParams = { outcome: "focus", duration: "30" };
+    const screen = await render(<CurrentSessionBar />);
+    expect(screen.queryByTestId("current-session-bar")).toBeNull();
+  });
   beforeEach(() => {
+    mockPwa = false;
     mockAudio = createConsumerAudioMock();
     mockAudio.setActive({
       kind: "single",
@@ -42,6 +104,8 @@ describe("persistent current listening bar", () => {
       mockAudio.publish({ status, remainingMs: 89 * 60_000 });
       const screen = await render(<CurrentSessionBar />);
       expect(screen.getByTestId("current-session-bar")).toBeTruthy();
+      expect(screen.queryByText("Pink Noise")).toBeNull();
+      expect(screen.getByText("Massage")).toBeTruthy();
       expect(screen.getByText("89:00 · Return →")).toBeTruthy();
       await fireEvent.press(
         screen.getByRole("button", { name: "Return to current session" }),

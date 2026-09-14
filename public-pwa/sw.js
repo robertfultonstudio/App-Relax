@@ -63,6 +63,41 @@ self.addEventListener("activate", (event) => {
 
 // An OPFS download alone does not prove that a future offline page can open.
 self.addEventListener("message", (event) => {
+  // Explicit recovery from a stale installed shell; never interrupt another client.
+  if (
+    event.origin === self.location.origin &&
+    event.data?.type === "APP_RELAX_APPLY_UPDATE" &&
+    event.ports?.[0]
+  ) {
+    event.waitUntil(
+      (async () => {
+        const sender = event.source?.url ? new URL(event.source.url) : null;
+        if (
+          sender?.origin !== self.location.origin ||
+          sender.pathname !== "/update.html"
+        )
+          return;
+        const clients = await self.clients.matchAll({
+          type: "window",
+          includeUncontrolled: true,
+        });
+        const otherApp = clients.some((client) => {
+          const url = new URL(client.url);
+          return (
+            url.origin === self.location.origin &&
+            url.pathname !== "/update.html"
+          );
+        });
+        if (otherApp) {
+          event.ports[0].postMessage({ type: "APP_RELAX_UPDATE_BLOCKED" });
+          return;
+        }
+        await self.skipWaiting();
+        event.ports[0].postMessage({ type: "APP_RELAX_UPDATE_ACCEPTED" });
+      })(),
+    );
+    return;
+  }
   if (
     event.origin !== self.location.origin ||
     event.data?.type !== "APP_RELAX_CHECK_SHELL" ||
@@ -100,7 +135,9 @@ self.addEventListener("fetch", (event) => {
   if (
     request.method !== "GET" ||
     url.origin !== self.location.origin ||
-    isAudioRequest(request, url)
+    isAudioRequest(request, url) ||
+    url.pathname === "/update.html" ||
+    url.pathname === "/pwa-update.js"
   ) {
     return;
   }

@@ -12,6 +12,7 @@ module.exports = defineConfig([
       "node_modules/**",
       "output/**",
       "tmp/**",
+      "public-pwa/flac-decoder.worker.min.js",
     ],
   },
 ]);

@@ -43,6 +43,7 @@ export class TechnicalMedia extends EventTarget {
 }
 function gainNode() {
   let intervals: { start: number; end: number }[] = [];
+  let points: number[] = [];
   return {
     connect: jest.fn(),
     disconnect: jest.fn(),
@@ -50,8 +51,13 @@ function gainNode() {
       value: 1,
       cancelScheduledValues: jest.fn((time: number) => {
         intervals = intervals.filter((i) => i.end < time);
+        points = points.filter((point) => point < time);
       }),
-      setValueAtTime: jest.fn(),
+      setValueAtTime: jest.fn((_value: number, time: number) => {
+        if (intervals.some((i) => time > i.start && time < i.end))
+          throw new Error("Technical AudioParam point overlaps a curve");
+        points.push(time);
+      }),
       linearRampToValueAtTime: jest.fn(),
       setValueCurveAtTime: jest.fn(
         (curve: Float32Array, when: number, duration: number) => {
@@ -61,12 +67,10 @@ function gainNode() {
             duration <= 0
           )
             throw new Error("Invalid technical AudioParam curve");
-          if (
-            intervals.some(
-              (i) => when < i.end - 1e-9 && when + duration > i.start + 1e-9,
-            )
-          )
+          if (intervals.some((i) => when < i.end && when + duration > i.start))
             throw new Error("Overlapping technical AudioParam curves");
+          if (points.some((point) => point > when && point < when + duration))
+            throw new Error("Technical AudioParam curve overlaps a point");
           intervals.push({ start: when, end: when + duration });
         },
       ),
@@ -74,7 +78,7 @@ function gainNode() {
   };
 }
 /** No network/decoder/device: records the real scheduler's Web Audio commands. */
-export function adaptiveWebHarness() {
+export function adaptiveWebHarness(contextOffsetSeconds = 0) {
   const original = globalThis.Audio;
   const media: TechnicalMedia[] = [];
   Object.defineProperty(globalThis, "Audio", {
@@ -94,7 +98,7 @@ export function adaptiveWebHarness() {
   }[] = [];
   const context = {
     get currentTime() {
-      return Date.now() / 1000;
+      return contextOffsetSeconds + Date.now() / 1000;
     },
     resume: jest.fn(async () => {}),
     createGain: () => {

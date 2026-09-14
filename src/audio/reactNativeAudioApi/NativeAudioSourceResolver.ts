@@ -1,6 +1,8 @@
-/** A lease over bytes verified by the storage adapter immediately before acquire.
+/** A lease over immutable private bytes verified at import by the storage adapter.
  * The adapter must match SHA-256/size against its trusted manifest and prevent
  * deletion/replacement until release. A filename or availability flag is not proof.
+ * A persisted import attestation may be reused only while the private file's
+ * size/stamp still matches; a changed or missing file must fail closed.
  */
 export interface VerifiedNativeAudioFile {
   readonly uri: string;

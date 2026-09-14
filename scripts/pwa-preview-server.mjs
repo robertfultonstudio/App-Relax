@@ -22,6 +22,9 @@ const CONTENT_TYPES = {
   ".woff": "font/woff",
   ".woff2": "font/woff2",
   ".txt": "text/plain; charset=utf-8",
+  ".sha256": "text/plain; charset=utf-8",
+  ".md": "text/plain; charset=utf-8",
+  ".tgz": "application/gzip",
   ".wav": "audio/wav",
   ".flac": "audio/flac",
 };
@@ -57,14 +60,28 @@ export function createPwaPreviewHandler({
   artifactRoot,
   audioCatalogRoot,
   manifestPath,
+  additionalAudioFiles = [],
+  losslessRoot,
   port = 8095,
 }) {
   const shellRoot = realpathSync(artifactRoot);
   const audioRoot = realpathSync(audioCatalogRoot);
+  const derivativeRoot = losslessRoot ? realpathSync(losslessRoot) : null;
   const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+  if (additionalAudioFiles.length) {
+    if (
+      manifest.fileCount !== manifest.files?.length ||
+      manifest.totalBytes !== manifest.files.reduce((n, f) => n + f.bytes, 0)
+    ) {
+      throw new Error("Invalid base audio manifest.");
+    }
+    manifest.files.push(...additionalAudioFiles);
+    manifest.fileCount = manifest.files.length;
+    manifest.totalBytes = manifest.files.reduce((n, f) => n + f.bytes, 0);
+  }
   const resources = new Map();
 
-  function addResource(url, path, expectedBytes) {
+  function addResource(url, path, expectedBytes, sourceSha256) {
     const info = lstatSync(path);
     if (!info.isFile() || info.isSymbolicLink())
       throw new Error(`Unsafe preview resource: ${url}`);
@@ -73,6 +90,9 @@ export function createPwaPreviewHandler({
     resources.set(url, {
       path,
       bytes: info.size,
+      mtimeMs: info.mtimeMs,
+      etag: `"${info.size}-${info.mtimeMs}-${info.ino}"`,
+      sourceSha256,
       type: CONTENT_TYPES[extname(path).toLowerCase()],
     });
   }
@@ -102,6 +122,26 @@ export function createPwaPreviewHandler({
         `Missing PWA export: ${required}. Run export:web:pwa first.`,
       );
   }
+  // A valid export is not enough if this server omits a precached extension:
+  // one 404 rejects the whole installation and leaves the previous shell active.
+  const precache = resources.get("/precache-manifest.js");
+  if (precache) {
+    const assignment =
+      /^self\.APP_RELAX_PRECACHE\s*=\s*(\{[\s\S]*\});?\s*$/.exec(
+        readFileSync(precache.path, "utf8"),
+      );
+    if (!assignment) throw new Error("Invalid PWA precache manifest.");
+    const { urls } = JSON.parse(assignment[1]);
+    if (!Array.isArray(urls) || urls.length === 0)
+      throw new Error("Invalid PWA precache URL list.");
+    for (const url of urls) {
+      if (
+        typeof url !== "string" ||
+        !resources.has(url === "/" ? "/index.html" : url)
+      )
+        throw new Error(`Unserved PWA precache resource: ${url}`);
+    }
+  }
   if (
     !Array.isArray(manifest.files) ||
     manifest.fileCount !== manifest.files.length ||
@@ -120,10 +160,22 @@ export function createPwaPreviewHandler({
       throw new Error("Invalid or duplicate audio manifest entry.");
     names.add(item.filename);
     audioBytes += item.bytes;
+    let audioPath = join(audioRoot, item.filename);
+    // Only an explicitly approved FLAC absent from the existing catalog may
+    // come from the selected derivatives directory. Never mask a corrupt or
+    // symlinked catalog entry with a fallback, or expose a directory listing.
+    if (
+      derivativeRoot &&
+      item.filename.endsWith(".flac") &&
+      !lstatSync(audioPath, { throwIfNoEntry: false })
+    ) {
+      audioPath = join(derivativeRoot, item.filename);
+    }
     addResource(
       `/audio-catalog/${item.filename}`,
-      join(audioRoot, item.filename),
+      audioPath,
       item.bytes,
+      item.sha256,
     );
   }
   if (audioBytes !== manifest.totalBytes)
@@ -160,9 +212,39 @@ export function createPwaPreviewHandler({
       resource = resources.get(`${pathname.replace(/\/$/, "")}.html`);
     if (!resource)
       return plainResponse(response, 404, "Resource not found.", method);
-    if (isAudio) response.setHeader("Accept-Ranges", "bytes");
+    if (isAudio) {
+      let current;
+      try {
+        current = lstatSync(resource.path);
+      } catch {
+        return plainResponse(
+          response,
+          500,
+          "Resource could not be read.",
+          method,
+        );
+      }
+      if (
+        !current.isFile() ||
+        current.isSymbolicLink() ||
+        current.size !== resource.bytes ||
+        current.mtimeMs !== resource.mtimeMs
+      )
+        return plainResponse(
+          response,
+          409,
+          "Audio changed since preview startup.",
+          method,
+        );
+      response.setHeader("Accept-Ranges", "bytes");
+      response.setHeader("ETag", resource.etag);
+      if (resource.sourceSha256)
+        response.setHeader("X-Content-SHA256", resource.sourceSha256);
+    }
     const range =
-      method === "GET"
+      method === "GET" &&
+      (!request.headers["if-range"] ||
+        request.headers["if-range"] === resource.etag)
         ? parseByteRange(request.headers.range, resource.bytes)
         : null;
     if (range === false) {

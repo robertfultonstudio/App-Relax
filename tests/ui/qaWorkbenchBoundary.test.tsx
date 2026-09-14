@@ -123,7 +123,7 @@ describe("QA Workbench boundary", () => {
     expect(screen.getByText("EXACT CONSUMER VIEW")).toBeTruthy();
     expect(
       screen.getByText(
-        "48 ITEMS · 47 PLAYABLE IN LOCAL REVIEW · 33 TRANSITION-READY",
+        "58 ITEMS · 57 PLAYABLE IN LOCAL REVIEW · 33 TRANSITION-READY",
       ),
     ).toBeTruthy();
     expect(screen.getByText("Soft Air")).toBeTruthy();
@@ -185,6 +185,27 @@ describe("QA Workbench boundary", () => {
       1,
     );
   });
+
+  it.each([
+    ["field-recording-01", "Field Ambience"],
+    ["night-birds-b1", "Night Birds"],
+  ])(
+    "opens %s for manual review without autoplay or an invented activity",
+    async (id, title) => {
+      const screen = await render(
+        <AdaptiveQaWorkbench localPlaybackAvailable initialSingleWorkId={id} />,
+      );
+      expect(
+        screen.getByText("UNCLASSIFIED NATURE · SINGLE WORK"),
+      ).toBeTruthy();
+      expect(screen.getByLabelText(`${title} file scrubber`)).toBeTruthy();
+      expect(
+        screen.getByText("PREVIEW MODE · LISTENING REVIEW PENDING"),
+      ).toBeTruthy();
+      expect(mockController.loadProgram).not.toHaveBeenCalled();
+      expect(mockController.play).not.toHaveBeenCalled();
+    },
+  );
 
   it("resets the selected transition when moving from a full session to a direct pair", async () => {
     const screen = await render(<AdaptiveQaWorkbench localPlaybackAvailable />);

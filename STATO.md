@@ -1,6 +1,871 @@
 # Stato progetto
 
-Aggiornato: 6 settembre 2026
+Aggiornato: 14 settembre 2026
+
+## D-105 — errore aggiornamento e controlli review corretti nella PWA
+
+[F] Dopo la prova negativa di Robert, pubblicata PLAYER-REVIEW.23 sullo
+stesso sito owner-only: versione 34, deployment riuscito alle 01:46:16 UTC.
+Il pulsante update non registra più il service worker che la review disattiva;
+nessun audio salvato o impostazione viene cancellato. Pannello sviluppatore
+aperto di default nei player privati, anche con Rain/Ocean. Play richiede la
+categoria audio musicale iOS quando l'API opzionale è disponibile.
+
+[F] 667/667 test in 91 suite, lint/typecheck/Prettier, asset safety e scan
+firme segreti PASS; hosting 17/17. Online: 79 HTML e 105 asset corrispondono
+all'export finale. Update → Home senza errore; Hatha90+Ocean Playing,
+timeline aperta con 8 brani/13 giunzioni complessive e salto/ripresa verificati
+nel browser Codex autorizzato. Catalogo remoto 45 FLAC invariato.
+
+[U] L'iPhone riceveva già HTTP206 per gli audio; questo non provava suono.
+Il silenzioso del telefono non è stato confermato: la correzione categoria
+audio non equivale a un ascolto iPhone superato. Qualità, loop e nuova prova
+sonora restano gate umano. Nessuna APK/EAS o commit/push canonico.
+Dettagli e provenienza: `docs/PWA_PRIVATE_D105_FIX.md`.
+
+## D-104 — PWA privata aggiornata per il test sul telefono
+
+[F] Su nuova richiesta esplicita di Robert, pubblicata PLAYER-REVIEW.22
+sullo stesso sito owner-only. Sites versione 33, deployment riuscito alle
+01:13:38 UTC; 79 pagine e 105 asset remoti verificati contro l'export fresco.
+Controlli di sviluppo per loop/giunzioni, Hatha 30/45/60/90, Rain/Ocean e
+grafica consumer conservati. Export: 184 file, 12.430.679 byte, zero audio.
+
+[F] 653/653 test app, 10/10 decoder e 17/17 hosting PASS. Catalogo remoto
+invariato: 45 registrazioni; le due texture local-only non sono state caricate.
+Nessuna nuova APK/EAS, modifica accessi o commit/push della repository app.
+Il solo checkout isolato Sites è stato committato/pushato per pubblicare.
+Preview locale spenta; aggiornamento telefono tramite `/update.html`.
+
+[U] La richiesta automatica senza identità al catalogo audio è respinta
+con HTTP 401: non è prova di audio mancante e non è stata aggirata. Ascolto,
+latenza e loop sul telefono della nuova pubblicazione restano da verificare
+con l'account autorizzato. Prove e limiti: `docs/PWA_PRIVATE_D104.md`.
+
+## D-103 — autorizzata una nuova APK, esclusivamente a costo zero
+
+[F] Robert autorizza una sola nuova build Android consumer con il fix Ocean
+D-102. Candidato 1.0.3 / versionCode 4; motore e catalogo invariati rispetto
+alla correzione verificata. Prima dell'invio: quota Free e assenza di costi
+verificate live, controlli finali e archivio isolato. Nessun retry cloud,
+PWA, commit, push, store o nuova credenziale autorizzati.
+
+[F] Preflight 653/653 e Doctor 20/20 PASS; kit 47/47 ricontrollato, archivio
+177 file / 160.186.901 byte. Free Android 2/15, 13 residue, costo stimato
+zero verificato subito prima dell'invio. Unico job inviato alle 00:08:47 UTC:
+`11e48eab-81b1-4134-8077-244e173512ab`. `docs/ANDROID_APK_D103_PREFLIGHT.md`.
+
+[F] Build FINISHED alle 00:31:08 UTC. APK 1.0.3/4: 293.084.262 byte,
+SHA-256 `56c64cdeb525c2d95d7b2d15426052e65afe1222ab99b529ad55160a5c4be3ea`.
+Costo finale verificato zero; Android Free 3/15 usate, 12 residue.
+Installazione in aggiornamento riuscita, Settings 1.0.3 e 47/47 importati.
+Avvio Hatha90+Ocean, pausa/ripresa e volume/mute distinti osservati senza
+Metro. Ocean ancora Playing a81:24 (516s), oltre la prima giunzione;
+segnale presente anche con natura muta. Rain→Stop→Ocean→Stop riusciti,
+Ready90:00 ripristinato. Prove nell'APK esatta, non nel development client.
+
+[F] Audit pacchetto positivo salvo gate assoluto sul marker legacy
+`./audio-test.tsx`: presente già nella 1.0.2, fuori dalla navigazione
+consumer, conforme alla separazione ATP01 documentata. FAIL stretto e
+addendum conservati, nessuna nuova regressione dimostrata. PWA/Workbench
+review esclusi. AGENTS.md registra la scelta dinamica di strumenti/skill.
+
+[F] Smoke aggiuntivo Astral Thread FLAC/Night Birds WAV: segnale corrente,
+pausa e Stop PASS2/2; non è ascolto47/47. Emulatore/ADB spenti e porte
+verificate libere, nessun Metro. APK e LEGGIMI nella cartella
+`/Users/RF/Documents/App Relax Android Test 20260913/`. Nessun commit/push.
+
+[U] L'APK 1.0.2/3 conserva il precedente FAIL. La qualità sonora e il
+long-run su telefono restano prove umane, non conseguenze della build.
+
+## D-102 — Ocean waves: correzione locale verificata sul client nativo
+
+[F] Su richiesta esplicita di Robert, riprodotto l'errore con il development
+client esistente: il decoder Hatha02 avanzava a4,936s ma aveva perso la
+finestra di conferma iniziale100ms. Il file era leggibile, durata corretta.
+Corretti avvio concorrente e recupero limitato della posizione, senza
+aumentare tolleranza/timeout o modificare audio, piani e livelli.
+
+[F] Sei nuove regressioni, Jest653/653 in89 suite; audio257/257 in22suite,
+Doctor20/20, Expo install check e validatori asset/config PASS; security con
+i soli due residui image-size già accettati.
+Audit indipendente su copia: nessun nuovo blocker. Avvii Ocean nativi,
+pausa/ripresa, mute ambiente e prima giunzione musicale superati. Dopo la
+rimozione della diagnostica: Rain → Stop → Ocean → Stop riusciti, segnale
+AudioFlinger corrente non nullo. Emulatore/Metro/ADB spenti. Archivio locale
+PASS; export Metro Android/iOS e relativi controlli PASS, catalogo escluso.
+Regressione finale ripetuta: 653/653; Prettier e secret scan PASS.
+Prove: `docs/ANDROID_OCEAN_D102_FIX.md`.
+
+[U] D-102 NON è nell'APK1.0.2/3 già compilata: quell'artefatto conserva il
+precedente FAIL. Nessuna nuova build, PWA o commit. Nuova APK e ascolto reale
+restano gate separati; non si dichiara l'artefatto già corretto.
+
+## D-101 — APK 1.0.2/3 compilata, consegna bloccata su Ocean waves
+
+[F] Robert autorizza nuovamente «APK». Ripreso soltanto il percorso Android
+consumer interno, senza PWA, commit/push o store. La precedente APK 1.0.1/2
+rimane non consegnabile: il gate Hatha deve essere ripetuto con la correzione.
+
+[F] Preflight: 647/647 test, lint/typecheck/Prettier, Doctor20/20,
+config/asset/security e due export Metro PASS. Archivio177 file,
+160.158.967 byte, nessun catalogo consumer o segreto. Kit offline47/47
+ricontrollato integralmente per hash. Dettagli: `docs/ANDROID_APK_D101_PREFLIGHT.md`.
+
+[F] Development client Android con sorgenti correnti: Hatha30 Off e Hatha90
+Rain avviati, pausa/ripresa osservate; Hatha90 resta Playing oltre8min.
+Nessuna certificazione sonora dall'emulatore. Metro, emulatore e ADB spenti
+durante l'attesa cloud; dati del catalogo conservati.
+
+[F] Una sola build interna1.0.2/versionCode3 conclusa FINISHED il13settembre
+21:50:55UTC: `71e00fbe-bc05-4a61-ab70-13a2dc7d75a3`. APK scaricata,
+293.083.762 byte; SHA-256
+`676ba51bb369588d52b335eac70de2e2c765c6f7217f737d1b4967a09d2a1780`.
+Audit indipendente del pacchetto PASS e installazione in aggiornamento
+riuscita. Quota Free live finale: Android2/15 utilizzate,13 residue;
+overage e totale stimato0 centesimi. Nessun retry cloud.
+
+[F] APK esatta, senza Metro: Settings1.0.2 e47/47 importati; Hatha90+Rain
+avviata, pausa/ripresa e volumi/mute separati osservati, Stop→Ready90:00.
+Playing81:38 e segnale nativo non nullo oltre l'istante della prima giunzione
+(465,75s). Questa prova funzionale non certifica un crossfade inudibile.
+
+[F] Gate FAIL: Ocean waves non si avvia. Riprodotto dopo Stop della sessione
+Rain, con Retry loading e dopo riavvio pulito: Could not play a90:00.
+L'APK1.0.2/3 è quindi un candidato conservato, NON una consegna completamente
+funzionante. Nessun fix speculativo o seconda build dopo il fallimento.
+
+[U] Causa nativa esatta NON DETERMINATO — EVIDENZA INSUFFICIENTE. La possibile
+perdita della finestra di conferma seek durante preparazioni parallele è
+un'ipotesi di codice, non la causa dimostrata del run. Prima occorre una
+diagnosi riproducibile senza cloud; un'altra APK richiede nuova approvazione.
+Qualità sonora, tutti47 decoder e long-run/telefono restano gate distinti.
+
+[F] Emulatore, Metro e ADB spenti e assenza dei processi/porte verificata;
+catalogo importato conservato. HEAD invariata, index vuoto, nessun commit,
+push, nuova PWA o modifica ai byte audio. Le sezioni seguenti sono cronologia.
+
+## D-100 — PWA ricontrollata dai sorgenti attuali, soltanto locale
+
+[F] Export web locale `dist/pwa-d100` concluso con le patch correnti:
+184 file / 12.431.440 byte, nessun byte audio incorporato. Precache:
+161 URL, tutti HTTP 200. Worker FLAC 10/10 e configurazione PASS.
+Controverifica degli import su copia isolata e controllo del bundle:
+nessun collegamento allo storage privato Android rilevato nella PWA.
+
+[F] Browser Codex: aggiornamento shell riuscito; Yoga immediato e Hatha
+30/45/60/90 presenti. Hatha 90 + Rain: Play, Pausa, salto alla prima
+transizione in 304 ms e Stop → Ready 90:00. Nessun errore console osservato.
+Server locale e scheda di prova chiusi. Dettagli e hash:
+`docs/PWA_CURRENT_SOURCE_D100.md`.
+
+[U] Nessuna nuova APK/build EAS, pubblicazione, copia audio o commit.
+Il candidato locale aggiornato non è la versione online. Android resta
+sospeso; ascolto iPhone, qualità dei loop e long-run non sono certificati.
+
+## D-099 — PWA locale: corretti catalogo FLAC e aggiornamento shell
+
+[F] Il launcher locale dichiarava pronto il catalogo ma23 URL correnti davano 404. Ora collega i45 FLAC e le due texture locali in sola lettura, senza copie
+né nuovi audio. La UI PWA conserva45 registrazioni; le due texture non vengono
+promosse da local-only. Conservati21 URL WAV precedenti per compatibilità.
+
+[F] Corretto anche un404 del manifesto SHA-256 che impediva il precache e
+lasciava la vecchia shell attiva. Nuovo gate: nessun avvio con URL precache
+non servibili. Test HTTP19/19, worker10/10, Jest644/89, typecheck e validator
+PWA/config/boundary PASS. Browser: Astral seek96ms; Hatha90+Rain avviata,
+salti272/355ms e Stop→Ready90:00. Non sono misure/ascolto iPhone.
+
+[U] Online invariata .21; nessuna build/export nuovo, upload o commit.
+Prova sul candidato locale .22 D-093 preesistente, non un export del checkout
+aggiornato dopo D-096/D-097. Dettagli: `docs/PWA_LOCAL_PREVIEW_D099.md`.
+Latenza quasi-zero, qualità dei loop e long-run restano da verificare.
+
+## D-098 — ritorno alla PWA, Android sospeso su richiesta
+
+[F] Robert chiede di continuare con la PWA. Nessuna seconda build Android:
+controllo live EAS Free1/15 Android usate,14 residue fino al1 ottobre2026,
+overage0 e costo stimato0 centesimi. Nessuna nuova pubblicazione PWA in
+questo passaggio; resta online la versione precedente.
+
+[F] Prima della sospensione, il fix delle curve ha superato un controllo
+indipendente compilando la vera ParamControlQueue C++ della libreria copiata:
+ottimizzato e ASan/UBSan PASS. Non è una prova dell'intero motore Android.
+Riutilizzato il development client già esistente, senza build e conservando
+i file importati; avvio della Home riuscito. Test Hatha con il fix non
+completato prima del cambio di priorità. Ripristinata l'APK release precedente
+nell'AVD, senza cancellare dati; emulator e Metro spenti. La prima APK resta
+non consegnabile. Ulteriori rischi di seek/teardown segnalati dall'audit sono
+da riprodurre, non risolti o certificati in questo passaggio.
+
+## APK consumer con catalogo offline — D-097, consegna bloccata dal runtime
+
+[F] La risposta di Robert chiude la scelta di delivery D-095/D-096: procedere
+con APK e catalogo separato da importare una volta su Android. Tutte le
+registrazioni ammesse, incluse Hatha e le due texture locali, sono nel perimetro;
+quelle respinte restano escluse. Nessuna nuova pubblicazione PWA autorizzata.
+
+[F] Storage privato, import verificato e factory/sessioni Android collegati.
+Kit esterno pronto: 47 file, 2.434.210.564 byte, copie SHA-256 verificate.
+Gate finali: 643 test in 89 suite, lint/typecheck, validatori, Expo Doctor
+20/20 ed export Android/iOS PASS; audit con i soli residui image-size già
+accettati. Archivio EAS controllato: 177 file, 160.156.690 byte, senza kit
+pesante, Workbench/PWA o segreti. Rimane una route legacy ATP01, descritta
+nel rapporto APK; non si dichiara assenza assoluta di codice tecnico.
+Nessun commit creato.
+
+[F] Dopo verifica live Free Android 0/15 e costo stimato zero, avviata una
+sola build consumer Android 1.0.1 / versionCode 2, firma esistente congelata:
+`dde27cac-c2b3-476a-b0af-92cc6b8e214e`.
+[Build EAS](https://expo.dev/accounts/robert-fulton-studio/projects/app-relax/builds/dde27cac-c2b3-476a-b0af-92cc6b8e214e).
+
+[F] Build FINISHED il 13 settembre alle 18:27:01 UTC. APK 293.082.242 byte,
+SHA-256 `bdc6c20019ee9a04486d4ec25d2920384682a9f2fdf539ca826dcadadffc2ea3`.
+Installazione in aggiornamento sull'AVD API34 x86_64: Success, firma accettata
+e dati conservati. Versione release 1.0.1/2, non-debuggable. Quota dopo il job:
+Free Android 1/15, costo stimato e overage zero. Nessuna seconda build.
+
+[F] Import SAF completato il 13 settembre entro le 19:19:54 UTC: Settings
+attesta 47/47, Home consumer reale aperta. Cancellazione e riavvio avevano
+conservato 9 file verificati; il completamento non ha ricominciato da zero.
+Il primo import sul vecchio emulatore è lento, nell'ordine di decine di
+minuti. Night Birds WAV e Astral Thread FLAC riprodotti nativamente: segnale
+non nullo su AudioFlinger stereo48kHz verso speaker, Play/Pausa/ripresa/Stop
+verificati sul WAV. Questo non è ascolto umano né prova di tutti47 decoder.
+
+[F] Gate FAIL: Hatha90, con Rain e senza ambiente, termina in errore di
+preparazione sull'APK1.0.1/2. Non consegnabile come completamente funzionante.
+Diagnosi locale: un mock reso fedele all'esclusione stretta delle curve RNAA
+riproduce due fallimenti prima nascosti (overlap ~2,3e-13s). Correzione locale
+dei confini assoluti delle curve, test su clock non interi e regressione
+644/644 verdi. Questa correzione NON è nell'APK già compilata.
+
+[U] Il legame causale fra errore Hatha osservato e overlap riprodotto resta
+da confermare con una nuova APK; la UI release non espone l'errore tecnico.
+Nuova build/test richiesti, nessun secondo job avviato. Artefatti e dettaglio
+in `docs/ANDROID_CONSUMER_OFFLINE_KIT.md`. Emulatore, ADB e processi di prova
+spenti; catalogo importato conservato nell'AVD, nessun commit/push/PWA.
+
+[U] Loop percepito, sessioni native complete e telefono reale restano
+NON DETERMINATO — EVIDENZA INSUFFICIENTE. La milestone non è completata.
+Le sezioni D-096 e precedenti sotto sono cronologia, non lo stato corrente.
+
+## Prerequisiti APK e sicurezza — D-096
+
+[F] Lettura live EAS su `robert-fulton-studio`: piano Free, Android0/15,
+costi stimati0 centesimi nel periodo1 settembre–1 ottobre2026. Nessuna build
+o upload avviati. Il controllo va ripetuto prima della build effettiva.
+
+[F] Corretti i residui tooling D-069: aggiornamento patch Expo57.0.22 e
+moduli SDK57 raccomandati, RN0.86.3 invariato. Risolti i due advisory Joi
+con17.13.6 e quello js-yaml con3.15.2/4.3.2. Il primo override di Joi
+copriva solo17.11.0: rilevata e corretta anche la copia transitiva17.13.4.
+Installazione locale pnpm11.16.0/Node22.23.1 con lockfile congelato e
+script installazione disattivati; nessuna installazione globale/sistema.
+
+[F] Audit policy PASS WITH ACCEPTED RESIDUALS solo per i due `image-size`
+già registrati; Expo install check PASS e Doctor20/20. Verifiche di regressione
+624 test/85 suite, lint/typecheck/peers, asset/audio/config/boundary e
+Prettier/diff PASS. Export Android/iOS e archivio locale EAS validati:
+catalogo pesante e superfici review esclusi, nessun segreto rilevato.
+L'archivio attuale conserva i tre WAV tecnici ATP01; non è un APK consumer
+finale né una misura del suo peso. Dettagli e hash in D-096.
+
+[U] La scelta import offline/download del catalogo Android resta pendente;
+non sono stati abilitati storage fittizi né modificata la PWA online. Gli
+aggiornamenti delle dipendenze non completano il collegamento Android.
+
+## Collegamento Android in corso — D-095
+
+[F] Robert ha autorizzato il completamento del collegamento nativo e la
+successiva build APK. Costo zero da verificare live prima dell'upload; niente
+commit, push/store o pubblicazione PWA impliciti.
+
+[F] Il driver nativo accetta ora anche una singola opera tramite un resolver
+di file verificati, con rilascio della lease a Stop e rifiuto di identità/URI
+non validi. Stop annulla caricamenti/avvii tardivi; volume zero è zero reale.
+Lo scheduler applica il medesimo bilanciamento Web: musica 0,5 e natura
+0–0,5, senza recuperare volume di nascosto quando la natura viene mutata.
+
+[F] Verifiche: 624 test/85 suite PASS (30 test nelle due suite native),
+typecheck, lint, Prettier dei sei file toccati, diff check e validatori
+asset-safety/config/boundary/catalogo PASS. HEAD invariato, index vuoto;
+91 modifiche tracciate e71 voci non tracciate nel worktree complessivo.
+
+[F] Manifest FLAC della review corrente: 45 file, 2.371.806.490 byte
+(2,209 GiB); Hatha 8 file/750.323.352 byte. Otto file superano100 MiB.
+Questi sono numeri dei manifest, non nuovi byte copiati o una delivery nativa.
+
+[I] Proposto APK leggero più catalogo separato da importare una volta sul
+telefono e usare offline, senza nuovi servizi o account. È stata chiesta
+conferma rispetto a un download direttamente dall'app: resta una scelta di
+delivery, non un difetto risolvibile abilitando soltanto un flag.
+
+[U] Factory/storage/UI Android non ancora collegati, sessioni Hatha native
+ancora bloccate dalla policy di ascolto provvisorio. Nessun APK avviato;
+quota EAS non consumata (lettura successiva in D-096). Test software non provano decoder,
+loop, latenza o background sul telefono: NON DETERMINATO — EVIDENZA INSUFFICIENTE.
+
+## Prossimo deliverable richiesto — APK consumer Android, D-094
+
+[F] Robert dispone ora di un telefono Android e chiede, dopo la chiusura del
+lavoro corrente, un APK di prova in versione consumer. Non è richiesta una
+nuova task, una distribuzione store o un APK con controlli sviluppatore.
+
+[F] Preflight read-only: profilo `preview-android` già configurato per APK
+standalone (`developmentClient:false`). La factory nativa non inietta ancora
+il resolver dei file; le sessioni adattive falliscono esplicitamente senza
+pacchetti verificati. La singola traccia nativa richiede un asset incorporato
+(oppure un generatore). Le correzioni FLAC Web non certificano il motore Android.
+
+[I] Prima della build: completare integrazione catalogo/storage e parità audio
+nativa, verificare loop/Play/Pausa/Stop/timer e musica+natura senza interfaccia
+QA; controllare archivio, peso, segreti e quota/costo live. Nessun costo senza
+consenso. Il catalogo pesante resta fuori dal pacchetto base automatico.
+
+[U] Nessuna build avviata e nessun nuovo APK consegnabile. Questa richiesta
+non vale come approvazione della pubblicazione PWA .22 ancora pendente.
+
+## Primo avvio FLAC — D-093, candidato locale PLAYER-REVIEW.22
+
+[F] Rimossa la seconda inizializzazione libFLAC prima della prima finestra,
+senza cambiare i campioni. Verifiche: test RED→GREEN sul worker reale,
+10 test worker PASS e browser con tre render EOF/finestre PCM-identici.
+Regressione completa 618 test/85 suite, typecheck/lint, asset safety e
+config/boundary PASS. Più dettagli in `docs/PWA_REVIEW_LATENCY_CACHE.md`.
+
+[F] Candidato esportato/validato in `dist/pwa-d093`: 184 file/12.427.519 byte,
+zero audio incorporato e zero pattern segreti/path privati rilevati. Primo
+tentativo senza cache pulita respinto; export con `--clear` PASS senza ridurre
+i gate. Altri39 test UI dopo il marker .22 PASS. Processi di prova spenti.
+
+[U] La .21 online non è stata modificata. .22 è soltanto un candidato locale;
+ascolto click, latenza iPhone e pubblicazione privata ancora da verificare o
+autorizzare. Nessun nuovo audio, commit, upload o modifica di servizi.
+
+## Decoder inattivi riusati + Night Birds locale — D-091/D-092
+
+[F] Pausa/seek sulla stessa sorgente non ricrea più il decoder inattivo;
+Stop e operazioni pendenti liberano le risorse. Browser reale su3 file:
+3→1 aperture, PCM identico, render EOF/finestre errore0. Seek successivi
+locali30–97 ms; prestazioni online/iPhone ancora da misurare.
+
+[F] Night Birds integrata con hash file/PCM invariati: 33,680104 s,
+9.699.972 B, solo natura non classificata/manuale. Play/Pausa/Stop e3 ritorni
+EOF→zero osservati nel browser locale; nessuna approvazione percettiva dedotta.
+Field Ambience/Hatha preservati, nessun nuovo byte audio in export consumer.
+
+[F] Consuntivo: 618 test/85 suite, typecheck e lint PASS. Server diagnostico
+e Metro terminati con exit 0; PID assenti e porte 8093/8252 senza listener.
+HEAD invariato, index vuoto; 87 modifiche tracciate e 71 voci non tracciate
+nel worktree complessivo, incluse le modifiche ereditate.
+
+[U] PWA online invariata .21/45 file; queste due modifiche sono locali,
+non committate né pubblicate. Nuovo audio, ascolto iPhone e near-zero globale
+mantengono gate distinti. Prove in `docs/PWA_REVIEW_LATENCY_CACHE.md` e
+`docs/NIGHT_BIRDS_B1_INTEGRATION.md`.
+
+## Nuova texture naturale locale — D-090
+
+[F] `Field Ambience` / `field-recording-01`: WAV consegnato da Editing copiato
+senza modifiche nel catalogo locale ignorato; SHA file/PCM, formato e183 s
+verificati. Natura non classificata, nessuna attività o famiglia Rain/Ocean,
+nessun profilo sessione. Solo ascolto manuale nel QA, da Settings e sottomenu.
+
+[F] 612 test, typecheck/lint e validatori audio/asset/config/boundary PASS.
+Browser locale: Play/Pausa/Stop, seek e riavvio EOF→zero senza arresto osservato.
+Screenshot e dettagli in `docs/FIELD_RECORDING_01_INTEGRATION.md`.
+
+[U] Non pubblicata nella PWA. Classificazione e ascolto umano/iPhone aperti.
+Nessun commit, upload audio o build nativa; la .21 online resta45 registrazioni.
+
+## Misure nel player sviluppatore — D-089
+
+[F] PLAYER-REVIEW.21 online, Sites 32/env6 owner-only. Tutti i 45 file restano accessibili in
+`/loop-review`, separati da playlist e ambiente aggiunto. Il solo pannello
+review espone misure HTTP/cache/apertura/PCM/decoder, senza telemetria né
+nuovi worker/cache. La grafica consumer e i campioni non cambiano.
+
+[F] 609 test, 229 audio, lint/typecheck/Prettier e validatori PASS. Online:
+seek singolo 115 ms, EOF superato in Playing; Hatha90+Rain 215 ms e 3368 ms.
+Il secondo ha 0 richieste HTTP audio e 4 hit: il tempo è nella fase
+worker/decode (somme concorrenti 4894 ms), non nei byte audio dalla rete.
+
+[U] Il clic al ritorno EOF→zero e la latenza iPhone non sono approvati:
+un contatore che avanza non certifica l'ascolto. Prove in
+`docs/PWA_REVIEW_LATENCY_CACHE.md`. Nessun commit del repository app.
+
+## Correzioni sui seek preparati — D-088
+
+[F] PLAYER-REVIEW.20 online nella stessa PWA privata owner-only (Sites 31/env6).
+Corretto il range freddo quando il PCM precedente copre soltanto parte del
+target; una pioggia già offline non impedisce più di preparare la musica online.
+Budget invariati, nessun audio nuovo o commit del repository app.
+
+[F] 606 test, audio 226, test integrato cache→reader→clock compreso EOF,
+lint/typecheck/Prettier e validatori PWA/config/boundary/safety PASS. Browser:
+salto con pioggia offline 280 ms, doppia sorgente online 1006 ms, loop singolo
+154 ms. Dati e controprove in `docs/PWA_REVIEW_LATENCY_CACHE.md`.
+
+[U] Il secondo salto resta circa un secondo: quasi-zero globale NON raggiunto.
+Primo Play freddo, ascolto click su iPhone e gate release separati restano aperti.
+
+## Punti di test preparati — D-087
+
+[F] PLAYER-REVIEW.19 pubblicata nella stessa PWA owner-only (Sites 30/env6).
+Restano accessibili tutti i 45 file separati e i test ultimi 5/15 s; in pausa
+la review prepara un prossimo punto con massimo 8 MiB di byte compressi,
+senza audio nuovo, PCM extra o download integrale. Foreground prioritario.
+
+[F] Jest 601/82 suite, audio 221/20 suite, lint/typecheck/Prettier, validatori
+PWA/config/boundary/safety/catalogo PASS. Worker 17, decoder 8, HTTP 14 PASS.
+Browser online: loop singolo preparato 159 ms, EOF superato senza arresto.
+
+[U] Controprova importante: Hatha 90 + Rain richiede ancora 3615 ms sul primo
+target non preparato e 2011 ms sul successivo dichiarato preparato. Quasi-zero
+per tutte le giunzioni NON raggiunto; causa specifica non ancora isolata.
+Ascolto iPhone dei click e long-run restano gate umani, non provati dal clock.
+Prove, file e confini in `docs/PWA_REVIEW_LATENCY_CACHE.md`. Nessun commit app.
+
+## Loop individuali e controllo dell'ascolto — D-085/D-086
+
+[F] PLAYER-REVIEW.18 pubblicata nella PWA privata: inventario dei 45 file, accesso dai
+pannelli review/Settings, ascolto isolato e salti ultimi 5/15 s. Corretto il
+seek PCM che non riprendeva Playing; Stop interrompe anche un seek bloccato.
+Master e catalogo invariati. Test del loop distinto dalle transizioni Hatha.
+
+[F] Preso in carico l'audit UI Work del 13 settembre: continuità Return/Resume,
+timer con sessione precedente controllabile, guardie Starting e copy di contesto.
+Matrice e limiti in `docs/PWA_INDIVIDUAL_LOOP_AND_UI_REVIEW.md`.
+[F] Lint/typecheck, 587 test, audio208, safety/config/boundary e PWA PASS.
+Browser: loop Hatha due volte e naturale una volta, Return senza reset,
+timer45 con controlli precedente20 visibili, tastiera Space/Enter/frecce.
+Sites29/env6 owner-only verificato, .18 e 45 tracce visibili online. Server
+locale e tab temporanea spenti; nessun emulatore/Metro, nessun commit canonico.
+[U] Nessuna approvazione sonora dedotta: ascolto di ogni loop su iPhone e
+latenza fredda restano aperti, insieme ai gate release separati D-069.
+
+## Reattività Play e salti QA — D-084
+
+[F] PLAYER-REVIEW.17 elimina la doppia ricostruzione sui salti e sui loop
+QA. Il PCM viene preparato direttamente al punto richiesto; le sorgenti future
+non bloccano Ready. Cache per sorgente e indici autenticati riusati, con
+quattro finestre per deck e quattro deck invariati. La pausa conserva le
+finestre già schedulate più vicine alla posizione corrente senza copiarle.
+
+[F] Primo buffer FLAC di 8 s in una richiesta invece di 2+8 s seriali;
+riserva startup 8 s e refill 32 s conservati. Attacco PWA anti-click 80 ms,
+senza cambiare raccordi musicali, fade finale, campioni o derivati lossless.
+Il player QA mostra il tempo effettivo del seek in millisecondi.
+
+[F] Prima prova browser locale: salto freddo 301 ms, ritorno 243 ms,
+stesso punto già pronto 43 ms; clock audio fino a ulteriori 60 ms. Non sono
+misure iPhone né una promessa di zero latenza su rete fredda.
+
+[F] .17 pubblicata sullo stesso Site owner-only (Sites28/env6). Il seek
+FLAC freddo legge gli 8 s dal campione richiesto, senza griglia precedente.
+Prova online finale: 1366/2897 ms su punti nuovi, 1587 ms sul ritorno non più
+in cache, 46 ms ripetendo il target pronto. 562 test e 205 audio PASS.
+
+[U] L'obiettivo quasi-zero NON è chiuso per i target freddi. Prossimo lavoro:
+prefetch esplicito e limitato dei marker QA vicini, da progettare senza
+sottrarre banda al refill né gonfiare la RAM; nessun download completo del
+catalogo. Evidenze in `docs/PWA_REVIEW_COMPLETION_AUDIT.md`. Restano aperti
+ascolto iPhone, long-run e residui dipendenze D-069. Nessun commit canonico o
+nuovo audio.
+
+## Hatha 90 minuti e accesso al player di revisione — D-083
+
+[F] La foto iPhone di Robert conferma Rain/Ocean utilizzabili, ma mostra
+soltanto 30/45/60 e nessun accesso diretto alla playlist. La revisione locale
+PLAYER-REVIEW.15 aggiunge 90 nella pratica Hatha della sola PWA e un link
+`Playlist & development player` che apre la revisione senza avviare audio.
+La barra della sessione corrente esplicita la durata effettiva e apre il suo
+player, senza confonderla con una nuova durata selezionata nella preparazione.
+
+[I] Per costruire 90 minuti con gli otto file già disponibili (77:49.25 lordi),
+due passaggi centrali, uno Flow e uno Deepening, eseguono due iterazioni
+integrali. Otto opere uniche in ordine, sette raccordi 60–300 s, fine esatta
+a 5.400 s. Eccezione di review dichiarata, non nuova musica o approvazione
+editoriale. Le durate 30/45/60 e il planner production non cambiano.
+
+[F] .15 pubblicata nello stesso Site owner-only (Sites26/env6). Lint,
+typecheck, 556 test e audio199 PASS; validatori PWA/config/safety/catalogo e
+HTTP14/Worker17 PASS. Browser locale: entrambi i loop musicali superati dopo
+seek, pausa/ripresa e finale Completed/00:00; non ascolto continuo 90 minuti.
+Prove online e perimetro in `docs/PWA_REVIEW_COMPLETION_AUDIT.md`.
+
+[U] Ascolto iPhone delle due cuciture, long-run e residui dipendenze D-069
+restano da verificare. Nessun commit canonico o nuovo audio.
+
+## Musiche FLAC nella PWA — D-082, .14 pubblicata
+
+[F] Sostituzione privata dei 21 WAV musicali autorizzata da Robert. Derivati
+verificati: 3.653.766.432 → 2.023.381.325 byte, −44,6220%, identità PCM già
+provata. Nessun master modificato o nuovo audio creativo. Mapping PWA .14,
+45 indici autenticati; i 21 nuovi indici vengono richiesti su necessità.
+
+[F] Lint/typecheck e 548 test PASS (audio dedicati 197); Worker privato 17/17, HTTP 14/14 più
+21 HEAD / 42 Range dei derivati, safety/config/boundary PASS. Trasferimento
+privato completato: 21/21, catalogo 45/45 pronto, zero temporanei. Vecchi WAV
+preservati per compatibilità; il catalogo attivo .14 è tutto FLAC / 2.371.806.490 B.
+Dettagli e limiti in `docs/PWA_MUSIC_FLAC_DELIVERY.md`.
+
+[F] .13 online ha avuto un underrun a 01:05: non considerata pronta. .14
+estende il solo refill a 32 s, startup invariato; test di stallo 20 s PASS.
+Sites 25 / env 6 owner-only, import chiuso anche in codice, vecchia chiave
+rifiutata online HTTP 401. Browser .14: musica+Rain oltre 02:32, mute 50→0→50
+con main 80%, seek e superamento del loop 16:16 fino a 16:38 in Playing.
+
+[F] Online .14 Hatha60 + Ocean waves: giunzione musicale completa
+08:01.91–09:42.50 superata, Playing a 10:07. Poi Stop verificato, player
+Ready/60:00 lasciato nella scheda utente; server e schede extra chiusi.
+
+[U] Gate iPhone, long-run e residui dipendenze restano aperti; nessuna
+approvazione sonora o latenza/RAM low-end dedotta da queste prove.
+
+## Raccordi lunghi e natura variabile — D-081, .12 pubblicata
+
+[F] La prova prolungata online di .11 ha rilevato un errore AudioParam a
+07:44 nella pratica Hatha60. Le precedenti prove brevi PASS non certificano
+quindi il ciclo completo. Correzione .12 locale: differenze temporali calcolate
+prima di aggiungere il clock; intervalli di volume contigui senza sovrapposizioni.
+
+[F] Corretto anche il limite di due sole nature: Hatha60 predispone ora sei
+registrazioni distinte della famiglia scelta, distribuite lungo la sessione,
+con cinque raccordi lenti separati dalle giunzioni musicali. Nessun nuovo audio.
+I decoder restano quattro riutilizzati. Prove e limiti:
+`docs/PWA_REVIEW_COMPLETION_AUDIT.md`.
+
+[F] .12 pubblicata nello stesso Site owner-only, versione 21 / env 4.
+Jest 75 suite / 543 test, lint/typecheck/Prettier, 8 worker, 14 HTTP e
+validatori PWA/config/safety PASS. Browser locale: intero primo raccordo
+oltre 07:45.75, con pausa/ripresa a 07:07; seek a 31:20 e superamento del
+raccordo naturale fino a 31:38. Non è una prova di ascolto su iPhone.
+
+[F] Online .12: Hatha60 + Ocean waves (sette musiche intere, sei nature)
+attraversa l'intero raccordo 08:01.91–09:42.50 e prosegue a 10:09;
+seek al terzo cambio naturale, Playing a 31:49 oltre la fine 31:30.
+Mute ambiente 50→0→50 con main 80%. Stop verificato, schede di prova chiuse,
+server locale arrestato e porte libere. Dettaglio e seed nell'audit.
+
+[U] Ascolto iPhone, upload dei 21 FLAC musicali e residui di manutenzione
+dipendenze rimangono distinti e aperti. La PWA è pronta per questo test umano,
+non è una release audio/native certificata.
+
+## FLAC nel player PWA — D-080, revisione .11 pubblicata
+
+[F] Il driver PWA usa ora lo stesso scheduler PCM per musica WAV e natura
+FLAC: massimo quattro sorgenti riutilizzate, niente loop HTML per i 24 FLAC
+approvati. Decoder worker minificato 76.166 byte; 24 indici autenticati per
+520.015 byte. Nessun audio aggiunto o sostituito. PLAYER-REVIEW.10 pubblicata
+privatamente, ma la prova online ha rilevato underrun dopo due secondi:
+NON pronta per la consegna. PLAYER-REVIEW.11 pubblicata sullo stesso Site
+privato: almeno otto secondi già decodificati prima di Ready, senza full
+download. Verifica online .11: musica+Rain oltre il primo loop, mute ambiente
+indipendente, pausa/ripresa; Stop → Ocean waves, seek a 08:00, superato avvio
+raccordo 08:30 fino a 09:01 in Playing senza errori visibili. Audio fermato.
+
+[F] Test: 74 suite / 526 test, 14 HTTP, 8 worker; lint, typecheck e Prettier
+PASS. Browser decoder minificato: 1.728.000 campioni identici su tre file.
+Export PWA .11: 162 file / 8.501.477 byte, zero audio, indici/worker e pacchetto
+licenze/sorgente verificati. Dettaglio e residui in
+`docs/PWA_FLAC_PLAYER_INTEGRATION.md`.
+
+[U] Doctor 19/20 e install-check segnalano le dieci patch Expo già note;
+security audit resta FAIL sui tre advisory joi/js-yaml D-069. Nessun gate
+allentato, nessun aggiornamento generalizzato. Ascolto iPhone, background e
+RAM su telefoni meno potenti restano NON DETERMINATO — EVIDENZA INSUFFICIENTE.
+I 21 nuovi FLAC musicali restano esterni, non caricati sul servizio.
+
+## Clock e lettore FLAC — integrazione locale D-079
+
+[F] Aggiunto lettore indicizzato a finestre dietro lo scheduler PCM, ancora
+iniettato soltanto nel laboratorio. Browser: tre file / 1.728.000 campioni
+confrontati ai loop e alle giunzioni, errore massimo zero. Corretti seek superati,
+precaricamento vicino ai confini, anchor di avvio/ripresa e preroll durante
+preparazione. Prove e limiti in `docs/FLAC_CLOCK_INTEGRATION.md`.
+
+[F] Run finale lint/typecheck, 73 suite / 516 test, otto regressioni render WAV
+PASS. Export locale finale 122 file / 7.764.933 byte senza audio, validatore
+PWA e 13 test HTTP PASS; nessuna pubblicazione. Pausa durante preparazione
+annulla anche un avvio ancora pendente. Server diagnostici e schede chiusi.
+
+[U] NON pubblicato: PLAYER-REVIEW.9 rimane online. Restano adapter/packaging
+FLAC, metadata autenticati, vincolo revisione HTTP, anchor delle tracce successive
+e gate iPhone. Nessun nuovo audio, dipendenza nel progetto, commit o build cloud.
+Goal ancora aperto: questa prova locale non chiude la stabilità audio della PWA.
+
+## Decoder lossless — prova locale D-078
+
+[F] 45 FLAC / 2.371.806.490 byte verificati in laboratorio temporaneo:
+identità PCM completa con MD5 sorgente, 225 finestre deterministiche,
+4.500 reset alternati. Per 21 musiche, 105 finestre identiche anche al WAV.
+Browser worker ESM su tre file: 15/15 finestre, solo Range finiti; report
+rafforzato con controllo di righe/hash/richieste e test negativi.
+
+[F] Nessun audio modificato/copiato/pubblicato, nessuna dipendenza aggiunta
+all'app. PLAYER-REVIEW.9 invariata. Nuovi strumenti di verifica e protocollo
+in `docs/FLAC_WINDOW_DECODER_SPIKE.md`, con misure e limiti espliciti.
+[U] Non è ancora il lettore dell'app: packaging/licenze, integrazione del
+clock, cache/abort, bundle finale e loop iPhone restano da verificare.
+
+## Correzione del playback musica+natura — D-077
+
+[F] PLAYER-REVIEW.9 pubblicata privatamente: l'aggiunta di un FLAC naturale non disattiva
+più il caricamento a finestre della musica WAV. Pool dedicati, massimo quattro
+decoder riutilizzati; preload della musica successiva indipendente da quello
+naturale. Corretto anche il riuso di una conferma Play dopo cambio posizione:
+ora viene rifiutata con cleanup, non produce un falso stato Playing silenzioso.
+
+[F] 72 suite / 502 test, lint/typecheck/Prettier, PWA/asset/config/boundary,
+13 HTTP e 12 Worker PASS. Revisione indipendente senza ulteriori P0/P1.
+Browser locale: musica+Rain, Hatha60+onde, pause/seek/Play e mute/volume
+indipendente. Traccia reale: 45 richieste WAV tutte Range finito/206, max
+2.304.000 byte (8 s), anche quando sono presenti FLAC. Server locale spento.
+Sites 18 / env 4 owner-only, shell 122 file / 7.761.029 byte senza audio;
+86 file testuali scansionati senza pattern di segreti/path RF. HEAD canonico
+`6549f01` invariato e index vuoto. Prove e identificativi completi in D-077.
+[F] Anche online: Home → Meditation → Rain → Play; PLAYER-REVIEW.9 e
+punti di loop/giunzione verificati, screenshot setup ispezionato. Audio fermato.
+
+[U] Non costituisce approvazione sonora: loop FLAC naturali, iPhone/low-end
+e adozione dei nuovi FLAC musicali restano aperti. Nessun nuovo audio,
+dipendenza, commit app, build nativa o costo; residui D-069 invariati.
+
+## Ambiente naturale nel normale avvio — D-076
+
+[F] Correzione di PLAYER-REVIEW.8: Home → qualsiasi delle sei attività ora
+mostra Off / Rain / Ocean waves PRIMA di Play. D-075 lo esponeva nei player
+e in Hatha completo, ma non nel normale setup: il percorso era incompleto.
+Default Off, stessa musica quando cambiano ambiente/durata, nessun titolo
+musicale esposto. Il player conserva volume/mute ambiente indipendenti.
+
+[F] Solo la radice PWA inietta il programma musica+natura. Nessun adapter
+nativo fittizio. Errori di preparazione/factory bloccano Play senza fallback;
+le preparazioni precedenti sono cancellate. Durante Starting sono bloccati
+sia ambiente sia durata. Nessun nuovo audio o modifica del motore.
+
+[F] PLAYER-REVIEW.8 pubblicata owner-only (Sites 17 / env 4). Tutte le sei
+attività verificate dalla Home nel browser locale; online Meditation → Rain
+→ Play e mute ambiente 50→0% con main invariato a 80%. Screenshot online
+del setup pronto ispezionato. 71 suite / 496 test, lint/typecheck/Prettier,
+13 HTTP, 12 Worker, validatori asset/config/PWA/boundary PASS. Shell 122 file,
+7.759.665 byte, zero audio; nessun nuovo upload audio. HEAD canonico `6549f01`
+invariato, nessun file staged.
+
+[F] La prima riapertura della scheda online tratteneva PLAYER-REVIEW.7.
+La nuova apertura `/?review=8` ha caricato PLAYER-REVIEW.8, identificata
+nella Development review; nessuna cancellazione di dati utente.
+[F] Successiva apertura della Home senza query conferma ancora il setup
+aggiornato. Playback di prova fermato; anteprima locale chiusa, processo
+dedicato terminato e porta 8218 verificata libera. Nessun emulatore/Metro avviato.
+[U] Nessuna nuova approvazione sonora iPhone dedotta dai test locali.
+
+## Ripristino review completa e ambiente opzionale — D-075
+
+[F] PLAYER-REVIEW.7 locale: nel player musicale PWA e in Hatha completo è
+disponibile Off / Rain / Ocean waves, spento per default, con volume e mute
+ambiente indipendenti dal volume principale. Si sceglie prima di Play o dopo
+Stop, mai con cambio nascosto durante una sessione. La musica singola continua
+a essere UNA registrazione in loop; Hatha resta una sequenza di opere intere.
+
+[F] Development review contiene inventario reale delle sorgenti, entry/exit,
+ogni punto di loop calcolato dai frame, tutti gli inizi/fini di giunzione,
+seek, salto fra punti, audition outgoing/incoming/both e finestre ±30/60 s.
+Nessun loop musicale inventato nel ciclo Hatha, che usa file interi una volta.
+Titoli e file tecnici restano soltanto nella review, non nella UI consumer.
+
+[F] Browser locale: musica+Rain in Play, mute ambiente 50→0% senza cambiare
+main 80%; salto loop a 02:35 e avanzamento oltre 02:50. Hatha 60 con otto
+musiche + due onde raggiunge Play; pausa e salto al secondo cambio 12:22.75
+preservano Paused. Questa prova funzionale NON è approvazione sonora iPhone.
+
+[F] Confronto OfflineAudioContext trova una discontinuità del caricatore WAV
+sulla griglia 44,1 kHz. La PWA ora richiede il clock 48 kHz dei file e converte
+solo l'uscita continua verso il dispositivo. Un contesto incompatibile fallisce
+esplicitamente. Nessun PCM/master modificato. Rapporto e limiti in D-075.
+
+[F] PLAYER-REVIEW.7 pubblicata owner-only, Sites 16 / env 4; 71 suite / 485
+test PASS, lint/typecheck, 13 HTTP, 12 Worker, asset/config/PWA/boundary PASS.
+Audit audio accelerato corretto: 8/8 PASS, errore massimo 1,82e−12.
+Shell 122 file / 7.744.564 byte, zero audio; catalogo remoto invariato.
+Browser remoto: musica+Rain Ready/Play e review nuova presenti. Server locali
+8217/8250 spenti, HEAD canonico `6549f01` invariato e index vuoto.
+
+[U] I FLAC musicali
+locali NON sono ancora integrati/uploadati; qualità loop iPhone e FLAC naturali
+restano da ascoltare. Non dichiarare tutti i problemi audio risolti.
+
+## Ascolto immediato, titoli fuori dal percorso consumer — D-074
+
+[F] Correzione di prodotto richiesta da Robert: attività → Play; timer
+facoltativo. Il sistema sceglie una sola opera musicale autonoma adatta e la
+mantiene in loop. Scelta una volta per visita, invariata durante cambio durata,
+pausa o retry; evita la registrazione attiva precedente se esistono alternative.
+Nessun titolo di brano nella pagina attività, player o barra della sessione.
+La scelta manuale resta in Settings → Listening preferences → Choose a
+recording manually. Tab Sounds rimossa, artwork impressionisti invariati.
+
+[F] Hatha completo resta distinto: Yoga → Complete Hatha practice, oppure tab
+Yoga. Solo 30/45/60 minuti, sequenza di file interi D-073 e non un loop singolo
+mascherato. I controlli di sviluppo sono presenti nel player PWA ma chiusi.
+Questa direzione supera D-073 per il comportamento quotidiano; non elimina
+sequencer, audio o strumenti QA. Nessuna modifica a motore/master/delivery.
+
+[F] QUIET-REVIEW.6 pubblicata privatamente, Sites 15 / env 4. 70 suite /
+472 test, lint/typecheck/Prettier PASS; validatore PWA, asset safety/config,
+confine QA/PWA, 13 test HTTP e 12 Worker PASS. Shell: 122 file / 7.659.099
+byte, zero audio. Simulazione archivio: 157 file / 160.013.098 byte, soli
+tre WAV ATP01, nessun segreto/catalogo consumer. Nessuna build o upload audio.
+
+[F] Tre verifiche: test di selezione/regressione; export e perimetro;
+browser reale locale e privato. Verificati Play/Pausa/Stop, barra senza titolo,
+sottomenu manuale, Hatha completo e review chiusa. Il test browser ha trovato
+e corretto il cursore accessibilità che prima muoveva soltanto la preview:
+ora salto effettivo a 15:00 durante Play e 10:00 in pausa. Audio fermato,
+server locali 8201/8216 spenti. HEAD canonico invariato `6549f01`, index vuoto.
+
+[U] Loop udibile iPhone, latenza low-end e nuovi FLAC restano gate separati;
+NON DETERMINATO — EVIDENZA INSUFFICIENTE. Nessun commit canonico autorizzato.
+Residui Doctor/security D-069 non risolti né riclassificati come verdi.
+
+## Correzione session-first e loop fallito su iPhone — D-073
+
+[F] Le due foto di Robert confermano MUSIC-REVIEW.4 sul telefono: il problema
+non viene attribuito a una vecchia versione. Loop respinto: glitch forte e
+interruzione udibili. D-072 non è accettata. «Listen to your music» rimosso;
+Home funzione-first, titoli e singoli file dentro disclosure di review.
+
+[F] SESSION-REVIEW.5 locale: preparazione limitata alla route in primo piano,
+senza Ready riutilizzato dopo un cambio pagina. Caricatore WAV PCM24/48k stereo
+PWA a finestre (2 s iniziali, poi 8 s), Range rigoroso e nodi programmati sul
+clock audio; non decodifica l'intero WAV in RAM. Non è un decoder FLAC streaming.
+Nessun master modificato; FLAC naturali e copie offline blob mantengono il
+percorso precedente. Non dichiarare il glitch iPhone risolto da questi test.
+
+[F] Yoga Music nella sola review crea una sequenza di file Hatha interi, in
+ordine strutturale, con tutte le quattro fasi: 30/45/60 minuti esatti, cambi
+60–300 s, nessuna ripetizione interna né taglio nel mezzo. È una bozza tecnica
+di ascolto, NON un'approvazione armonica o editoriale. 20/90 minuti falliscono
+esplicitamente senza simulare una playlist con un loop singolo. Gli altri
+abbinamenti musicali consumer restano non approvati. Planner release invariato.
+
+[F] 21 derivati FLAC locali: 3.653.766.432 → 2.023.381.325 byte, −44,62%; PCM
+decodificato identico al sorgente. Rapporto per file e hash in
+`docs/SESSION_REVIEW_5_LOSSLESS_REPORT.json`. NON integrati o pubblicati:
+compatibilità/streaming iPhone da provare prima di cambiare la delivery.
+Il catalogo completo previsto sarebbe ancora 2.371.806.490 byte.
+
+[F] Controlli locali: 68 suite / 463 test, lint e typecheck PASS; 13 test HTTP,
+asset safety, config e confine QA/PWA PASS. Browser: sequenza Yoga a quattro
+brani, salto al primo cambio da 178,25 s; Hatha 01 dal secondo 450,75 al
+successivo secondo 10 senza errore runtime. Countdown e assenza errori NON
+certificano continuità udibile. Ascolto iPhone/low-end/background ancora aperto.
+
+[F] SESSION-REVIEW.5 pubblicata privatamente (Sites 13 / env 4), verificati
+Home, Yoga 30, quattro opere, Start, seek e Stop nel browser autenticato.
+Rapporto della consegna parziale in D-073: il test iPhone deve essere ripetuto.
+Nessun commit
+canonico, EAS o nuova importazione audio autorizzata da questa correzione.
+Residui Doctor/security D-069 non risolti né riclassificati come verdi.
+
+## Musiche al centro e accesso diretto — D-072
+
+[F] Nuovo riscontro negativo di Robert: la PWA gli appare invariata e sente
+soltanto onde. La consegna D-071 NON è accettata; non si presume un errore
+dell'utente o si trasforma il countdown browser in prova d'ascolto.
+
+[F] MUSIC-REVIEW.4: Music è ora proposta iniziale per tutte le categorie con
+opere musicali disponibili. Onde/pioggia restano scelte esplicite; la vecchia
+preferenza iniziale naturale è superata dal nuovo feedback. Home contiene
+«Listen to your music» e identità di revisione. `/music` è un accesso diretto
+alle 21 opere musicali (8 Hatha + 13 precedenti), con la stessa UI e lo stesso
+player: nessuna traccia naturale/generatore nella lista. Non richiede il
+percorso di aggiornamento offline D-071. Pannello review con nome WAV esatto.
+«Play your last session» conserva la cronologia ma esplicita Rain/Ocean waves.
+Anche le proposte di brani nelle categorie danno priorità alla musica, senza
+alterare il mapping editoriale o nascondere gli altri suoni disponibili.
+
+[F] Riprodotto ritorno alla Home vecchia dopo ingresso nella pagina nuova:
+la preview su questo hostname privato passa a shell online-first, ritirando
+la sola registrazione worker root, senza cancellare dati o riavviare altri
+client. Localhost/altri host invariati. Il primo accesso diretto `/music`
+deve quindi precedere la verifica di riapertura della vecchia Home salvata.
+
+[F] Pubblicata privatamente MUSIC-REVIEW.4, Sites 12 / env 4. Browser
+integrato autenticato: riapertura documentale Home nuova, link musica,
+21 opere su `/music`; Meditation pre-seleziona Music e propone Celestial
+Current/Distant Garden. Air Between Hands: file corretto, Play, seek +30 s
+completato, Stop; pannello sviluppo presente, nessun errore console osservato.
+Non è una prova di udibilità iPhone. 65 suite / 445 test, lint/typecheck,
+13 test HTTP, 12 Worker, PWA/asset/config/boundary PASS. Nessun nuovo audio.
+Server locale 8198 e audio di prova spenti; browser lasciato su `/music`.
+Checkout canonico non staged e non committato. Residui tooling D-069 invariati.
+
+[U] Versione realmente visualizzata e udibilità sul telefono da identificare
+con il riscontro/screenshot chiesto a Robert. Nessun abbinamento Hatha nuovo,
+nessuna modifica audio, approvazione musicale, commit canonico o build nativa.
+
+## Accesso alle musiche e aggiornamento della copia installata — D-071
+
+[F] Robert non trova/sente le musiche nuove e contesta l'indicazione «sessioni
+natura», che non identifica un comando dell'app. Riprodotti due problemi UI:
+Yoga proponeva Ocean waves come Start e nascondeva sei Hatha; il browser con
+vecchio service worker continuava a mostrare il vecchio catalogo dopo export.
+Ora Music / Ocean waves / Rain sono scelte esplicite, Yoga propone Hatha 01,
+gli otto Hatha sono visibili senza disclosure e Music è prima in Sounds.
+
+[F] `/update.html` offre un aggiornamento volontario e porta a Yoga. Non
+cancella audio/impostazioni e rifiuta l'attivazione se esistono altre finestre
+dell'app. Non forza reload o takeover durante l'ascolto. HATHA-REVIEW.3
+pubblicata privatamente (Sites 10, env 4); nessun nuovo byte audio o commit
+canonico. 438/438 test, lint/typecheck, PWA/asset/config e archivio simulato
+PASS. Browser locale: aggiornamento bloccato con altra finestra, poi
+riuscito; Start Yoga → Hatha 01, seek; Relax → Rain con comandi transizione.
+[F] Nel browser remoto l'installazione della shell offline termina invece
+`redundant`. La pagina offre quindi «Open latest online version»: secondo
+click volontario, rilascio della sola registrazione worker di questa origine,
+senza cancellare cache, audio o impostazioni e senza ricaricare altri client.
+[U] Causa del fallimento del precache privato non determinata; non si dichiara
+la disponibilità offline della PWA privata.
+[F] Recupero online verificato anche sul Site: Yoga nuova, otto Hatha, Start
+su Hatha 01 e controlli sviluppo. Audio fermato, server locali spenti.
+[U] La mancata udibilità su iPhone non è riprodotta: questo intervento corregge
+accesso/selezione/copia vecchia, non certifica l'uscita sonora del telefono.
+Le transizioni tra Hatha restano da revisionare, senza sostituzioni con onde.
+
+## PWA di review con controlli nel player — D-070
+
+[F] Richiesta aggiuntiva di Robert: stessa estetica consumer e pannello
+DEVELOPMENT REVIEW dentro il player. Barra seek, coda file/loop, salti alle
+transizioni, finestre ±30/60 s, uscente/entrante/entrambi e A/B durata/curva.
+Codice confinato a PWA privata, escluso da EAS/native. 422/422 test, lint e
+typecheck PASS; browser verificato, nessun audio lasciato in Play.
+Revisione finale HATHA-REVIEW.2 pubblicata sul medesimo Site privato (versione
+8, env 4). Browser remoto autenticato: revisione verificata in Settings,
+otto titoli visibili in Yoga, Space Unfolding in Play con countdown e pannello
+review, nessun errore console. Audio poi fermato. Si attende il test iPhone.
+
+## Respiro Hatha 1 — otto opere in review (D-069)
+
+[F] Integrati gli otto WAV correnti autorizzati, titoli inglesi e ordine interno
+1–8, ruoli ricavati dalla timeline pertinente Respiro (non Centro comune).
+Tutti autonomi e in loop, Yoga / Standalone works; sorgenti intatte, gain 0 dB,
+PCM24 stereo 48 kHz e SHA-256 verificati. 1.344.744.700 byte aggiunti soltanto
+al catalogo ignorato. Nessun commit canonico, push GitHub o build.
+
+[F] 414/414 test, lint/typecheck, 13 test HTTP e 12 Worker PASS. Otto player
+provati nel browser con Play/Pausa/Stop. Gli export iOS/Android hanno soltanto
+i tre ATP01, nessun nuovo audio. Fresh Doctor 19/20 e audit dipendenze FAIL
+per patch/advisory tooling: residui documentati, non allentati.
+
+[F] L'utente ha richiesto anche «quando finisci, pwa»: aggiornamento privato
+autorizzato sullo stesso link; prima HATHA-REVIEW.1, poi HATHA-REVIEW.2 con i
+controlli richiesti. Otto upload verificati SHA/HEAD/Range, 45 file totali
+pronti; import temporaneo richiuso e chiavi rimosse. Nessun acquisto.
+[U] Sessioni Hatha evolventi non abilitate: mancano finestre e abbinamenti sui
+WAV finali. Ascolto iPhone dei nuovi file non certificato. Dettagli/prove:
+`docs/HATHA_1_INTEGRATION.md`.
 
 ## Checkpoint locale autorizzato — D-068
 

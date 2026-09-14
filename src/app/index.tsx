@@ -9,8 +9,19 @@ import { CONSUMER_OUTCOMES } from "@/content/productShell";
 import { editorial } from "@/design/editorialTheme";
 import { RITUALS_HOME_BACKGROUND } from "@/design/shellArtwork";
 import { fonts, spacing } from "@/design/theme";
+import { platformReviewProgramFactory } from "@/domain/sessions/platformSessionFactories";
+import type {
+  CreateAdaptiveSessionInput,
+  AdaptiveSessionProgram,
+} from "@/domain/sessions/types";
 
-export default function HomeScreen() {
+export default function HomeScreen({
+  reviewProgramFactory = platformReviewProgramFactory,
+}: {
+  reviewProgramFactory?: (
+    input: CreateAdaptiveSessionInput,
+  ) => AdaptiveSessionProgram;
+} = {}) {
   const router = useRouter();
 
   return (
@@ -29,10 +40,10 @@ export default function HomeScreen() {
         What do you need right now?
       </Text>
       <Text style={styles.promise}>
-        Choose your moment and how long you have.
+        Choose your moment. Press Play. Leave the phone behind.
       </Text>
 
-      <LastListeningAction />
+      <LastListeningAction reviewProgramFactory={reviewProgramFactory} />
 
       <View
         accessibilityLabel="Choose your moment"

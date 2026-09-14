@@ -1,0 +1,335 @@
+{
+  "schemaVersion": 1,
+  "id": "android-offline-catalog-20260913",
+  "files": [
+    {
+      "workId": "mineral-drift",
+      "filename": "SOUNDSCAPE_PIANO_MASSAGE_001_48K24_LOOP.flac",
+      "sha256": "fc80466d6245df7989e386288f580e3cf45fa29ad65fa2720170d86ac156d01c",
+      "bytes": 207949157,
+      "frames": 56640000
+    },
+    {
+      "workId": "astral-thread",
+      "filename": "SOUNDSCAPE_STAR_GENERATOR_001_EMINOR_48K24_LOOP.flac",
+      "sha256": "ccd0eb85fd71cc8465473360efad5ca2fa62385d44d97e88ebabf841cb0a0274",
+      "bytes": 28751961,
+      "frames": 8160000
+    },
+    {
+      "workId": "celestial-current",
+      "filename": "SOUNDSCAPE_STAR_GENERATOR_002_EMINOR_48K24_LOOP.flac",
+      "sha256": "784679cf2c76f4cb37aca0bd8e8b9e6a4d6bf73a12a8ccd5cb16b817b058aff4",
+      "bytes": 28914365,
+      "frames": 8160000
+    },
+    {
+      "workId": "quiet-field",
+      "filename": "SOUNDSCAPE_ZEN_FIELD_WAVES_001_EMINOR_48K24_LOOP.flac",
+      "sha256": "48363d5e81d16c63ea82f095a1d8479fe197e6f1af45ee4c154575952cd620d7",
+      "bytes": 25220845,
+      "frames": 8160380
+    },
+    {
+      "workId": "cedar-current",
+      "filename": "SOUNDSCAPE_ZEN_GENERATOR_002_EMINOR_48K24_LOOP.flac",
+      "sha256": "e51b0b7dfa9962a31597885398cc98c26c5c3230f0c13f6d23181aa91ebb8652",
+      "bytes": 24875666,
+      "frames": 8160000
+    },
+    {
+      "workId": "moonlit-veil",
+      "filename": "SOUNDSCAPE_ZEN_DREAM_003_PAD_48K24_LOOP.flac",
+      "sha256": "005e7c9b06c27810cbcad637c211d15b922d9174c598ed11340fc8659c001bdc",
+      "bytes": 69967075,
+      "frames": 21681920
+    },
+    {
+      "workId": "moonlit-keys",
+      "filename": "SOUNDSCAPE_ZEN_DREAM_003_PIANO_48K24_LOOP.flac",
+      "sha256": "22194704caa34e47b96e71a0dcc714d190962dd027684ff7331b38b6018c45ab",
+      "bytes": 67923646,
+      "frames": 21681920
+    },
+    {
+      "workId": "luminous-grain",
+      "filename": "SOUNDSCAPE_ZEN_GENERATOR_003_TEXTURE_CMAJ_48K24_LOOP.flac",
+      "sha256": "0cc934fa3f8dd0d628bb7ed166f29b9fc6a5f25902bbb4519b65befa32845eb3",
+      "bytes": 73786934,
+      "frames": 21696000
+    },
+    {
+      "workId": "luminous-steps",
+      "filename": "SOUNDSCAPE_ZEN_GENERATOR_003_PIANO_CMAJ_48K24_LOOP.flac",
+      "sha256": "0e4343b8536201a5318b2dba27868e07a638dc84065880382b3c3ceb32e9b1d8",
+      "bytes": 65467911,
+      "frames": 21696000
+    },
+    {
+      "workId": "distant-garden",
+      "filename": "SOUNDSCAPE_ZEN_GENERATOR_004_PAD_CMAJ_48K24_LOOP.flac",
+      "sha256": "8597dc842244ca796845262148459af17fcd259590af7d3773381ab2ed2a0199",
+      "bytes": 150869422,
+      "frames": 46848320
+    },
+    {
+      "workId": "distant-bloom",
+      "filename": "SOUNDSCAPE_ZEN_GENERATOR_004_PIANO_CMAJ_48K24_LOOP.flac",
+      "sha256": "56ba3adc283f774b7948375217407cc0e6ef60e57b9f40fc7cd5779b4e5108bd",
+      "bytes": 147267572,
+      "frames": 46848320
+    },
+    {
+      "workId": "aquarian-drift",
+      "filename": "SOUNDSCAPE_ZEN_GENERATOR_005_PAD_48K24_LOOP.flac",
+      "sha256": "b6e933633104ed72792429a99aa171ffc6664c48534fad4042eee70ed61dd36f",
+      "bytes": 186924668,
+      "frames": 57552000
+    },
+    {
+      "workId": "aquarian-echo",
+      "filename": "SOUNDSCAPE_ZEN_GENERATOR_005_PIANO_48K24_LOOP.flac",
+      "sha256": "7a85f0b0bf941ef465e6d51b459dff545a77bcdecb2afe6f2d879a377eec6da9",
+      "bytes": 195138751,
+      "frames": 57552000
+    },
+    {
+      "workId": "field-rain-001-silver-canopy",
+      "filename": "FIELD_RAIN_001_SILVER_CANOPY_48K24_LOOP.flac",
+      "sha256": "b2e4c17c8e307152039e9133b5b9021c1a07f6660023c21d07d72a0d92ea64db",
+      "bytes": 11332198,
+      "frames": 2184000
+    },
+    {
+      "workId": "field-rain-002-soft-weather",
+      "filename": "FIELD_RAIN_002_SOFT_WEATHER_48K24_LOOP.flac",
+      "sha256": "9cb07fd79e1e3070749071c3faea0c6465b2d7f883d3d0c0e0cbc1e990f82a3b",
+      "bytes": 6932884,
+      "frames": 1464000
+    },
+    {
+      "workId": "field-rain-003-deep-rain",
+      "filename": "FIELD_RAIN_003_DEEP_RAIN_48K24_LOOP.flac",
+      "sha256": "e99f5e1fafd8753ff8ef99844345ea7fcf13285611f29c1de6619ec89976e630",
+      "bytes": 4986863,
+      "frames": 960000
+    },
+    {
+      "workId": "field-rain-004-fine-rain",
+      "filename": "FIELD_RAIN_004_FINE_RAIN_48K24_LOOP.flac",
+      "sha256": "539a9e4c88bedb111b0530fbfc42cee7eeb7086eddd7fc29f408ce454063fed5",
+      "bytes": 9982688,
+      "frames": 2112000
+    },
+    {
+      "workId": "field-rain-005-misted-garden",
+      "filename": "FIELD_RAIN_005_MISTED_GARDEN_48K24_LOOP.flac",
+      "sha256": "0c53ea7b070a029033c07a7a51aa76029f35afb88857f17fbe941c398bb915a1",
+      "bytes": 10802865,
+      "frames": 2160000
+    },
+    {
+      "workId": "field-rain-006-quiet-weather",
+      "filename": "FIELD_RAIN_006_QUIET_WEATHER_48K24_LOOP.flac",
+      "sha256": "964648f934d65079b3b1334de6b17b615c27a4eb816a8b501361499e2cb7c347",
+      "bytes": 4665546,
+      "frames": 984000
+    },
+    {
+      "workId": "field-rain-007-rain-veil",
+      "filename": "FIELD_RAIN_007_RAIN_VEIL_48K24_LOOP.flac",
+      "sha256": "ea7ecf311822c57b7e8b7e5a65e704c3fa2d0d65b5a1070f49fadee978a850bb",
+      "bytes": 10561813,
+      "frames": 2112000
+    },
+    {
+      "workId": "field-rain-008-sheltered-rain",
+      "filename": "FIELD_RAIN_008_SHELTERED_RAIN_48K24_LOOP.flac",
+      "sha256": "1c4c65f60bac8bf052bc01b4f52742553777038ae67240e4a1f8100b577c735b",
+      "bytes": 5024158,
+      "frames": 1056000
+    },
+    {
+      "workId": "field-rain-009-distant-shower",
+      "filename": "FIELD_RAIN_009_DISTANT_SHOWER_48K24_LOOP.flac",
+      "sha256": "16f989baef88004d6a90c8a4955c0bec0f5d7434b1d183e8b382c6cfd93b3eff",
+      "bytes": 9995858,
+      "frames": 2064000
+    },
+    {
+      "workId": "field-rain-010-low-rain",
+      "filename": "FIELD_RAIN_010_LOW_RAIN_48K24_LOOP.flac",
+      "sha256": "88ca800a745fdb1433de9bafb2c7da33d0974bb60972033110611a3950b7eef3",
+      "bytes": 2893261,
+      "frames": 720000
+    },
+    {
+      "workId": "field-rain-011-rain-receding",
+      "filename": "FIELD_RAIN_011_RAIN_RECEDING_48K24_LOOP.flac",
+      "sha256": "bac948d5d0719c78b1c3507380267f926f59a12cc427db9bf1c9cc3efecc1f42",
+      "bytes": 4745722,
+      "frames": 1152000
+    },
+    {
+      "workId": "field-stream-001-stone-current",
+      "filename": "FIELD_STREAM_001_STONE_CURRENT_48K24_LOOP.flac",
+      "sha256": "37305d91b0e6991ebebc69b19f8f912ad55d504bef99e750f85d764b7c05b6aa",
+      "bytes": 11362869,
+      "frames": 2448000
+    },
+    {
+      "workId": "field-stream-002-moss-current",
+      "filename": "FIELD_STREAM_002_MOSS_CURRENT_48K24_LOOP.flac",
+      "sha256": "7b05acaf1e40aa9a3e4bf87c57881b9512c8019b8dcadbdd333ed1f66eee05e9",
+      "bytes": 10924056,
+      "frames": 2352000
+    },
+    {
+      "workId": "field-stream-003-hidden-water",
+      "filename": "FIELD_STREAM_003_HIDDEN_WATER_48K24_LOOP.flac",
+      "sha256": "5b97b6e4d9d2c614338296ac6e3410790ea1d055cefdb12798638129bade8d6b",
+      "bytes": 12944975,
+      "frames": 2736000
+    },
+    {
+      "workId": "field-stream-004-clear-stream",
+      "filename": "FIELD_STREAM_004_CLEAR_STREAM_48K24_LOOP.flac",
+      "sha256": "bd5e15f87c5b5522aa1504ff2660305eac441e072cad4739d69f9315b8db655e",
+      "bytes": 15086307,
+      "frames": 3312000
+    },
+    {
+      "workId": "field-stream-005-cedar-stream",
+      "filename": "FIELD_STREAM_005_CEDAR_STREAM_48K24_LOOP.flac",
+      "sha256": "708c4433c2514cb0aa809e5c6d5e13c59d02410896c86b52349a598cbf5a1f1c",
+      "bytes": 13034831,
+      "frames": 2736000
+    },
+    {
+      "workId": "field-sea-001-tidal-breath",
+      "filename": "FIELD_SEA_001_TIDAL_BREATH_48K24_LOOP.flac",
+      "sha256": "ff21967bb9bd7271522a69b3ca94ee03da958129f562cb94628f126489b9282b",
+      "bytes": 25690927,
+      "frames": 7584000
+    },
+    {
+      "workId": "field-sea-002-moon-shore",
+      "filename": "FIELD_SEA_002_MOON_SHORE_48K24_LOOP.flac",
+      "sha256": "55e1f47493ab962b81416a1a891c4b57241ff0aeb6ccc6ec23fad8de052b1a1f",
+      "bytes": 30783723,
+      "frames": 7776000
+    },
+    {
+      "workId": "field-sea-003-open-tide",
+      "filename": "FIELD_SEA_003_OPEN_TIDE_48K24_LOOP.flac",
+      "sha256": "3e1474bbf664a80b0f5e298a3673ceb77d2d56fff9365ba822796df2ce95a5bb",
+      "bytes": 26805900,
+      "frames": 7104000
+    },
+    {
+      "workId": "field-sea-004-night-shore",
+      "filename": "FIELD_SEA_004_NIGHT_SHORE_48K24_LOOP.flac",
+      "sha256": "f4cca6b34e6c55f440f69fe7bc79368edd425944ee623e0718b15666df965067",
+      "bytes": 31578010,
+      "frames": 7488000
+    },
+    {
+      "workId": "field-sea-005-pearl-tide",
+      "filename": "FIELD_SEA_005_PEARL_TIDE_48K24_LOOP.flac",
+      "sha256": "3ffa4826edb449a78225282f1a2e64430aeadaa38ca014c08b2083cca554d288",
+      "bytes": 30675903,
+      "frames": 7488000
+    },
+    {
+      "workId": "field-sea-006-distant-surf",
+      "filename": "FIELD_SEA_006_DISTANT_SURF_48K24_LOOP.flac",
+      "sha256": "ec3f9343ca2afe1b11fa253d9f27330f249ef678f75ee5e4773b8068549fd8f4",
+      "bytes": 18847755,
+      "frames": 4944000
+    },
+    {
+      "workId": "field-sea-007-blue-interval",
+      "filename": "FIELD_SEA_007_BLUE_INTERVAL_48K24_LOOP.flac",
+      "sha256": "5336b26544a60a7917303b841e24f29f1e7867d771114a6fc9f7d3fc408b58f9",
+      "bytes": 16728723,
+      "frames": 3984000
+    },
+    {
+      "workId": "esoteric-air-001-second-element",
+      "filename": "ESOTERIC_AIR_001_SECOND_ELEMENT_48K24_LOOP.flac",
+      "sha256": "78622a42642143f6bb9e18a923b54bcd8b4ce1dfa704b2d84fd1dd8a07dbea1b",
+      "bytes": 22037330,
+      "frames": 4992000
+    },
+    {
+      "workId": "respiro-hatha-1-01",
+      "filename": "01_soglia_del_respiro_LOOP_48K24.flac",
+      "sha256": "ec941a5010790587504d80aff21122efdff0307fe59f380692b00331f9254dc0",
+      "bytes": 76206653,
+      "frames": 22356000
+    },
+    {
+      "workId": "respiro-hatha-1-02",
+      "filename": "02_aria_tra_le_mani_LOOP_48K24.flac",
+      "sha256": "ea39c9c286ecdaf1d10ac85885576857d9e1a8506b62f19148b142ef38424d58",
+      "bytes": 93519303,
+      "frames": 27960000
+    },
+    {
+      "workId": "respiro-hatha-1-03",
+      "filename": "03_onda_e_appoggio_LOOP_48K24.flac",
+      "sha256": "c0216c897af83e18150fa6bf07fcd8b65fd8a6e662797d1e32c3e17d8dd370c4",
+      "bytes": 127641991,
+      "frames": 39540000
+    },
+    {
+      "workId": "respiro-hatha-1-04",
+      "filename": "04_ampiezza_quieta_LOOP_48K24.flac",
+      "sha256": "2966066183b4a9015394f9ce89b2e1327bba45937480453c05f8128bf44a86ea",
+      "bytes": 119588897,
+      "frames": 39540000
+    },
+    {
+      "workId": "respiro-hatha-1-05",
+      "filename": "05_terra_mobile_LOOP_48K24.flac",
+      "sha256": "c1e223caa8446e2d15cf97c045007934af6015872158a803762a9051492a69fd",
+      "bytes": 118442374,
+      "frames": 33492000
+    },
+    {
+      "workId": "respiro-hatha-1-06",
+      "filename": "06_lungo_espiro_LOOP_48K24.flac",
+      "sha256": "d0aef061e274028cb5d1d8bfe09ed0fb13de414db6f916447c5bf3f94ec1e0c1",
+      "bytes": 97158109,
+      "frames": 28080000
+    },
+    {
+      "workId": "respiro-hatha-1-07",
+      "filename": "07_spazio_che_resta_LOOP_48K24.flac",
+      "sha256": "d69380e14a82bfdfd783b5cc005e9c61faa4198d92c7b16530c850c4a45d3caa",
+      "bytes": 79177382,
+      "frames": 22080000
+    },
+    {
+      "workId": "respiro-hatha-1-08",
+      "filename": "08_riaprire_lo_spazio_LOOP_48K24.flac",
+      "sha256": "b1a968a1332543237d46aed751b6fb803cb98ebffbe4345e912f347fc609d54f",
+      "bytes": 38588643,
+      "frames": 11076000
+    },
+    {
+      "workId": "field-recording-01",
+      "filename": "field_recording_01_LOOP_48K24.wav",
+      "sha256": "551587af8c2c39a8048c0627c0b1344226786bf56b3b16b8a6ddb2c9c763ca58",
+      "bytes": 52704102,
+      "frames": 8784000
+    },
+    {
+      "workId": "night-birds-b1",
+      "filename": "night_birds_b1_LOOP_48K24.wav",
+      "sha256": "311791d39d7d4ad52420f5456b233e9f74e96f9f0f662fd273466b77c2ca253b",
+      "bytes": 9699972,
+      "frames": 1616645
+    }
+  ]
+}

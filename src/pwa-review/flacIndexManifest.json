@@ -1,0 +1,428 @@
+{
+  "version": 1,
+  "files": [
+    {
+      "filename": "FIELD_RAIN_001_SILVER_CANOPY_48K24_LOOP.flac",
+      "sourceSha256": "b2e4c17c8e307152039e9133b5b9021c1a07f6660023c21d07d72a0d92ea64db",
+      "bytes": 11332198,
+      "totalFrames": 2184000,
+      "indexSha256": "907d0275e20529a10723fbcabd8a1bc4ff2f4562a52c142dfb351b3ef16559e2",
+      "indexBytes": 13674
+    },
+    {
+      "filename": "FIELD_RAIN_002_SOFT_WEATHER_48K24_LOOP.flac",
+      "sourceSha256": "9cb07fd79e1e3070749071c3faea0c6465b2d7f883d3d0c0e0cbc1e990f82a3b",
+      "bytes": 6932884,
+      "totalFrames": 1464000,
+      "indexSha256": "2a9e5509b2a5e3601dfdc2b637824c3f184a3537201f742d730a749fa66d9bea",
+      "indexBytes": 9087
+    },
+    {
+      "filename": "FIELD_RAIN_003_DEEP_RAIN_48K24_LOOP.flac",
+      "sourceSha256": "e99f5e1fafd8753ff8ef99844345ea7fcf13285611f29c1de6619ec89976e630",
+      "bytes": 4986863,
+      "totalFrames": 960000,
+      "indexSha256": "c6c35580b5bfee5692129c9ce21390b29b80b38898ddf3eb0fe054cfcf6f2d56",
+      "indexBytes": 5935
+    },
+    {
+      "filename": "FIELD_RAIN_004_FINE_RAIN_48K24_LOOP.flac",
+      "sourceSha256": "539a9e4c88bedb111b0530fbfc42cee7eeb7086eddd7fc29f408ce454063fed5",
+      "bytes": 9982688,
+      "totalFrames": 2112000,
+      "indexSha256": "6eedf80dfbf7512808e6a692f5a2a316139fed24cbc3a77673b56a692563a855",
+      "indexBytes": 13172
+    },
+    {
+      "filename": "FIELD_RAIN_005_MISTED_GARDEN_48K24_LOOP.flac",
+      "sourceSha256": "0c53ea7b070a029033c07a7a51aa76029f35afb88857f17fbe941c398bb915a1",
+      "bytes": 10802865,
+      "totalFrames": 2160000,
+      "indexSha256": "5bdfbb5333be436fe5ac6110db66586b76d47c60febc6cc94cfcab6e79f2728e",
+      "indexBytes": 13506
+    },
+    {
+      "filename": "FIELD_RAIN_006_QUIET_WEATHER_48K24_LOOP.flac",
+      "sourceSha256": "964648f934d65079b3b1334de6b17b615c27a4eb816a8b501361499e2cb7c347",
+      "bytes": 4665546,
+      "totalFrames": 984000,
+      "indexSha256": "e759a635944a54768dc1cd761cadf8bebca8700bea4aff9a38c445d0e3ff1611",
+      "indexBytes": 6075
+    },
+    {
+      "filename": "FIELD_RAIN_007_RAIN_VEIL_48K24_LOOP.flac",
+      "sourceSha256": "ea7ecf311822c57b7e8b7e5a65e704c3fa2d0d65b5a1070f49fadee978a850bb",
+      "bytes": 10561813,
+      "totalFrames": 2112000,
+      "indexSha256": "bb176a5fd90be30a5f6e697bc39b7746a4075074a7e7b16f366201b0e3ac86b7",
+      "indexBytes": 13202
+    },
+    {
+      "filename": "FIELD_RAIN_008_SHELTERED_RAIN_48K24_LOOP.flac",
+      "sourceSha256": "1c4c65f60bac8bf052bc01b4f52742553777038ae67240e4a1f8100b577c735b",
+      "bytes": 5024158,
+      "totalFrames": 1056000,
+      "indexSha256": "b39a6b11b984a7dfbb70e498d2b7210b6ebe18ebf4851c2d852d20ab0a185204",
+      "indexBytes": 6535
+    },
+    {
+      "filename": "FIELD_RAIN_009_DISTANT_SHOWER_48K24_LOOP.flac",
+      "sourceSha256": "16f989baef88004d6a90c8a4955c0bec0f5d7434b1d183e8b382c6cfd93b3eff",
+      "bytes": 9995858,
+      "totalFrames": 2064000,
+      "indexSha256": "7550e95ccfc7bb5392c8d49c021ac29a954fd15b3d42a2a6e814b440825caa8a",
+      "indexBytes": 12860
+    },
+    {
+      "filename": "FIELD_RAIN_010_LOW_RAIN_48K24_LOOP.flac",
+      "sourceSha256": "88ca800a745fdb1433de9bafb2c7da33d0974bb60972033110611a3950b7eef3",
+      "bytes": 2893261,
+      "totalFrames": 720000,
+      "indexSha256": "eb313aaaebd367ed0a8dbd94159bd0783655430762c761082d29cee8a75b7b2a",
+      "indexBytes": 4465
+    },
+    {
+      "filename": "FIELD_RAIN_011_RAIN_RECEDING_48K24_LOOP.flac",
+      "sourceSha256": "bac948d5d0719c78b1c3507380267f926f59a12cc427db9bf1c9cc3efecc1f42",
+      "bytes": 4745722,
+      "totalFrames": 1152000,
+      "indexSha256": "05755cf8bb56ec5a4336f3d6d6e3dad1a35d96f1a274c1dc721ab03510827b87",
+      "indexBytes": 7109
+    },
+    {
+      "filename": "FIELD_STREAM_001_STONE_CURRENT_48K24_LOOP.flac",
+      "sourceSha256": "37305d91b0e6991ebebc69b19f8f912ad55d504bef99e750f85d764b7c05b6aa",
+      "bytes": 11362869,
+      "totalFrames": 2448000,
+      "indexSha256": "bef29254f7d19c376b6c94548753d930e92e2696b14b55689c9143a7bf713a34",
+      "indexBytes": 15360
+    },
+    {
+      "filename": "FIELD_STREAM_002_MOSS_CURRENT_48K24_LOOP.flac",
+      "sourceSha256": "7b05acaf1e40aa9a3e4bf87c57881b9512c8019b8dcadbdd333ed1f66eee05e9",
+      "bytes": 10924056,
+      "totalFrames": 2352000,
+      "indexSha256": "ad36d78d6955c78e9a710f583b27bd4d60ccd396430182135fb9ad2e9d90a6f3",
+      "indexBytes": 14728
+    },
+    {
+      "filename": "FIELD_STREAM_003_HIDDEN_WATER_48K24_LOOP.flac",
+      "sourceSha256": "5b97b6e4d9d2c614338296ac6e3410790ea1d055cefdb12798638129bade8d6b",
+      "bytes": 12944975,
+      "totalFrames": 2736000,
+      "indexSha256": "92c978de3be113e36f87ca4af3aeaef861d74ad60780e4908ca883a9f36efcde",
+      "indexBytes": 17228
+    },
+    {
+      "filename": "FIELD_STREAM_004_CLEAR_STREAM_48K24_LOOP.flac",
+      "sourceSha256": "bd5e15f87c5b5522aa1504ff2660305eac441e072cad4739d69f9315b8db655e",
+      "bytes": 15086307,
+      "totalFrames": 3312000,
+      "indexSha256": "edbb5f25e50cbe007b1bdbc9101e5b37b3e29ef9bd47d64d27ec304b3ba0d14c",
+      "indexBytes": 20959
+    },
+    {
+      "filename": "FIELD_STREAM_005_CEDAR_STREAM_48K24_LOOP.flac",
+      "sourceSha256": "708c4433c2514cb0aa809e5c6d5e13c59d02410896c86b52349a598cbf5a1f1c",
+      "bytes": 13034831,
+      "totalFrames": 2736000,
+      "indexSha256": "72019682f628df04f55fe92b357645702c03135a2b213a4c1e3131e534e5b034",
+      "indexBytes": 17232
+    },
+    {
+      "filename": "FIELD_SEA_001_TIDAL_BREATH_48K24_LOOP.flac",
+      "sourceSha256": "ff21967bb9bd7271522a69b3ca94ee03da958129f562cb94628f126489b9282b",
+      "bytes": 25690927,
+      "totalFrames": 7584000,
+      "indexSha256": "9c140ab9466d65e5d34507431d7cda8dc576da4e14c99840a226e89ea5afe16f",
+      "indexBytes": 48603
+    },
+    {
+      "filename": "FIELD_SEA_002_MOON_SHORE_48K24_LOOP.flac",
+      "sourceSha256": "55e1f47493ab962b81416a1a891c4b57241ff0aeb6ccc6ec23fad8de052b1a1f",
+      "bytes": 30783723,
+      "totalFrames": 7776000,
+      "indexSha256": "a331da4f3f0c206b34ffdbd9bedb39cb6cfe3fb39e1c4dfe39420e07647aa28f",
+      "indexBytes": 49950
+    },
+    {
+      "filename": "FIELD_SEA_003_OPEN_TIDE_48K24_LOOP.flac",
+      "sourceSha256": "3e1474bbf664a80b0f5e298a3673ceb77d2d56fff9365ba822796df2ce95a5bb",
+      "bytes": 26805900,
+      "totalFrames": 7104000,
+      "indexSha256": "7301b3f2d0cf508407cc997e684a17132d3bf97202ded4c33e37572c02b265f7",
+      "indexBytes": 45527
+    },
+    {
+      "filename": "FIELD_SEA_004_NIGHT_SHORE_48K24_LOOP.flac",
+      "sourceSha256": "f4cca6b34e6c55f440f69fe7bc79368edd425944ee623e0718b15666df965067",
+      "bytes": 31578010,
+      "totalFrames": 7488000,
+      "indexSha256": "76d59e4f38e56573154a3767e243d5cea80591b499548c4999c391ac612bf674",
+      "indexBytes": 48071
+    },
+    {
+      "filename": "FIELD_SEA_005_PEARL_TIDE_48K24_LOOP.flac",
+      "sourceSha256": "3ffa4826edb449a78225282f1a2e64430aeadaa38ca014c08b2083cca554d288",
+      "bytes": 30675903,
+      "totalFrames": 7488000,
+      "indexSha256": "07afb3b488bec2fc5bd75a69e990205acc001b6c2714aedb2a5d678746cc86d5",
+      "indexBytes": 48067
+    },
+    {
+      "filename": "FIELD_SEA_006_DISTANT_SURF_48K24_LOOP.flac",
+      "sourceSha256": "ec3f9343ca2afe1b11fa253d9f27330f249ef678f75ee5e4773b8068549fd8f4",
+      "bytes": 18847755,
+      "totalFrames": 4944000,
+      "indexSha256": "a9c532d344f3141929698efbd436be43662544f29032a72705a2d8a5f1bf823b",
+      "indexBytes": 31481
+    },
+    {
+      "filename": "FIELD_SEA_007_BLUE_INTERVAL_48K24_LOOP.flac",
+      "sourceSha256": "5336b26544a60a7917303b841e24f29f1e7867d771114a6fc9f7d3fc408b58f9",
+      "bytes": 16728723,
+      "totalFrames": 3984000,
+      "indexSha256": "80049ce5669f2248bfdcb95826f405b3db04b2570f0fa47ac3cd416664483ff8",
+      "indexBytes": 25295
+    },
+    {
+      "filename": "ESOTERIC_AIR_001_SECOND_ELEMENT_48K24_LOOP.flac",
+      "sourceSha256": "78622a42642143f6bb9e18a923b54bcd8b4ce1dfa704b2d84fd1dd8a07dbea1b",
+      "bytes": 22037330,
+      "totalFrames": 4992000,
+      "indexSha256": "c7a53ca891cdceac4b3acdc60403b3cfcc93ab050073ded2dccfe987ca916f49",
+      "indexBytes": 31894
+    },
+    {
+      "filename": "01_soglia_del_respiro_LOOP_48K24.flac",
+      "sourceSha256": "ec941a5010790587504d80aff21122efdff0307fe59f380692b00331f9254dc0",
+      "bytes": 76206653,
+      "totalFrames": 22356000,
+      "indexSha256": "911eec2342f2dc63ced916cf865e07e3861e299f26eda755e587c94bbd694d29",
+      "indexBytes": 147449,
+      "sourceFilename": "01_soglia_del_respiro_LOOP_48K24.wav",
+      "sourceWavSha256": "3714eb9736263d29e8cbfdc6857bcf64442f9776aae9377a7c93c70f46e51e49",
+      "onDemand": true
+    },
+    {
+      "filename": "02_aria_tra_le_mani_LOOP_48K24.flac",
+      "sourceSha256": "ea39c9c286ecdaf1d10ac85885576857d9e1a8506b62f19148b142ef38424d58",
+      "bytes": 93519303,
+      "totalFrames": 27960000,
+      "indexSha256": "977e88fda68870d7633ada25e1f1f2a1a7640f4fd3d4eccb2d6f33bf0c94804b",
+      "indexBytes": 185131,
+      "sourceFilename": "02_aria_tra_le_mani_LOOP_48K24.wav",
+      "sourceWavSha256": "16f27071f7a0b6bdf97cf923acc625d1935d070f860b37e97862282bc59ceaac",
+      "onDemand": true
+    },
+    {
+      "filename": "03_onda_e_appoggio_LOOP_48K24.flac",
+      "sourceSha256": "c0216c897af83e18150fa6bf07fcd8b65fd8a6e662797d1e32c3e17d8dd370c4",
+      "bytes": 127641991,
+      "totalFrames": 39540000,
+      "indexSha256": "5b8c469097e2e70881fa10e03cfbab01bc3ad731a23cadb208e461775085b309",
+      "indexBytes": 264865,
+      "sourceFilename": "03_onda_e_appoggio_LOOP_48K24.wav",
+      "sourceWavSha256": "11dd22198bd92d6691ba0bd2a64045657822e026f20f5fea614e57bda1c1588c",
+      "onDemand": true
+    },
+    {
+      "filename": "04_ampiezza_quieta_LOOP_48K24.flac",
+      "sourceSha256": "2966066183b4a9015394f9ce89b2e1327bba45937480453c05f8128bf44a86ea",
+      "bytes": 119588897,
+      "totalFrames": 39540000,
+      "indexSha256": "de2089319beda03824a840052160159cc0657cb5fb85fbee40f98b43deab8d89",
+      "indexBytes": 264357,
+      "sourceFilename": "04_ampiezza_quieta_LOOP_48K24.wav",
+      "sourceWavSha256": "bf4618c89583845c4a484770eb80e621a92bd92cafe950bad396f52bfc9d0ff1",
+      "onDemand": true
+    },
+    {
+      "filename": "05_terra_mobile_LOOP_48K24.flac",
+      "sourceSha256": "c1e223caa8446e2d15cf97c045007934af6015872158a803762a9051492a69fd",
+      "bytes": 118442374,
+      "totalFrames": 33492000,
+      "indexSha256": "c4a6fc67b2ca4f34612e09cce94058ba0d984d2044fc95fd309bed17820c28e0",
+      "indexBytes": 223541,
+      "sourceFilename": "05_terra_mobile_LOOP_48K24.wav",
+      "sourceWavSha256": "a18b6e8d85d326a893099a5ec7cc9156db00491007dc2c94c2bd9b8b0c3d699b",
+      "onDemand": true
+    },
+    {
+      "filename": "06_lungo_espiro_LOOP_48K24.flac",
+      "sourceSha256": "d0aef061e274028cb5d1d8bfe09ed0fb13de414db6f916447c5bf3f94ec1e0c1",
+      "bytes": 97158109,
+      "totalFrames": 28080000,
+      "indexSha256": "dc1ab4af92f51dcb936e5309d2c9b4f4c3bd58218271016a9b2633ee4df76e26",
+      "indexBytes": 185926,
+      "sourceFilename": "06_lungo_espiro_LOOP_48K24.wav",
+      "sourceWavSha256": "8c3fb52c0f94900f0d6d684113666f7ef15fee85ab74592b90e39cab3b32fb42",
+      "onDemand": true
+    },
+    {
+      "filename": "07_spazio_che_resta_LOOP_48K24.flac",
+      "sourceSha256": "d69380e14a82bfdfd783b5cc005e9c61faa4198d92c7b16530c850c4a45d3caa",
+      "bytes": 79177382,
+      "totalFrames": 22080000,
+      "indexSha256": "453dfbf7733b80b8d17c91a1db43f89c0f1637041cb6f47cadf6af3eeefc7ac9",
+      "indexBytes": 145620,
+      "sourceFilename": "07_spazio_che_resta_LOOP_48K24.wav",
+      "sourceWavSha256": "21a350449143f797eb659da0964c747b847efbd987c3cd450a706f9bbfac81db",
+      "onDemand": true
+    },
+    {
+      "filename": "08_riaprire_lo_spazio_LOOP_48K24.flac",
+      "sourceSha256": "b1a968a1332543237d46aed751b6fb803cb98ebffbe4345e912f347fc609d54f",
+      "bytes": 38588643,
+      "totalFrames": 11076000,
+      "indexSha256": "668eea4da63f7fa89432c3eab8faad3edd4b9be0709cdaab6a5ab0617c77847c",
+      "indexBytes": 71568,
+      "sourceFilename": "08_riaprire_lo_spazio_LOOP_48K24.wav",
+      "sourceWavSha256": "47cfdaa456cad4e959b0bed2c0b9404094b055c11757f85d00d41685d60ef61a",
+      "onDemand": true
+    },
+    {
+      "filename": "SOUNDSCAPE_PIANO_MASSAGE_001_48K24_LOOP.flac",
+      "sourceSha256": "fc80466d6245df7989e386288f580e3cf45fa29ad65fa2720170d86ac156d01c",
+      "bytes": 207949157,
+      "totalFrames": 56640000,
+      "indexSha256": "ecd9307e10ffcc7954d0010c100e65fba0c33118e6867eeb313a3a120f5320f8",
+      "indexBytes": 384526,
+      "sourceFilename": "SOUNDSCAPE_PIANO_MASSAGE_001_48K24_LOOP.wav",
+      "sourceWavSha256": "ca1b70f39d4f2168d527f6c636a58de92b6173645358ec2236f5c0c1689f0ffc",
+      "onDemand": true
+    },
+    {
+      "filename": "SOUNDSCAPE_STAR_GENERATOR_001_EMINOR_48K24_LOOP.flac",
+      "sourceSha256": "ccd0eb85fd71cc8465473360efad5ca2fa62385d44d97e88ebabf841cb0a0274",
+      "bytes": 28751961,
+      "totalFrames": 8160000,
+      "indexSha256": "cc3d9b417886a71e412074db3dd658b798d1dd9aaf7565caba480e0b3a4993f9",
+      "indexBytes": 52372,
+      "sourceFilename": "SOUNDSCAPE_STAR_GENERATOR_001_EMINOR_48K24_LOOP.wav",
+      "sourceWavSha256": "32597db81069be7ac6f2a5884de8a16fc2aba83de3af6e121195571e5ff97952",
+      "onDemand": true
+    },
+    {
+      "filename": "SOUNDSCAPE_STAR_GENERATOR_002_EMINOR_48K24_LOOP.flac",
+      "sourceSha256": "784679cf2c76f4cb37aca0bd8e8b9e6a4d6bf73a12a8ccd5cb16b817b058aff4",
+      "bytes": 28914365,
+      "totalFrames": 8160000,
+      "indexSha256": "c9eae3201ab76e4190647b2c503dd785c804da942dcb6ea74b5f88f462de8b6b",
+      "indexBytes": 52373,
+      "sourceFilename": "SOUNDSCAPE_STAR_GENERATOR_002_EMINOR_48K24_LOOP.wav",
+      "sourceWavSha256": "2cdfa8215b4ccbf83ca1f3a52ff6466ddbaf5a7d45de6327de95ef11ed6375cb",
+      "onDemand": true
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_DREAM_003_PAD_48K24_LOOP.flac",
+      "sourceSha256": "005e7c9b06c27810cbcad637c211d15b922d9174c598ed11340fc8659c001bdc",
+      "bytes": 69967075,
+      "totalFrames": 21681920,
+      "indexSha256": "f4707ddc3b922c26cd11427bdf0d591a4777ecc62c3bd07bd049470104659281",
+      "indexBytes": 142893,
+      "sourceFilename": "SOUNDSCAPE_ZEN_DREAM_003_PAD_48K24_LOOP.wav",
+      "sourceWavSha256": "964ba0245cad509b07fefa4e2c67470e8a2d47c45fa98160913961bd50f8ef7f",
+      "onDemand": true
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_DREAM_003_PIANO_48K24_LOOP.flac",
+      "sourceSha256": "22194704caa34e47b96e71a0dcc714d190962dd027684ff7331b38b6018c45ab",
+      "bytes": 67923646,
+      "totalFrames": 21681920,
+      "indexSha256": "fd01e3c69f5dcbed5b107e2119c8ee32e35bd679c2e7d96c1f6e55d5d73bb346",
+      "indexBytes": 142870,
+      "sourceFilename": "SOUNDSCAPE_ZEN_DREAM_003_PIANO_48K24_LOOP.wav",
+      "sourceWavSha256": "f67bf59b9885cc0f117a801e4a1b9077da0ce9de504fa423d6c802835420af1e",
+      "onDemand": true
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_FIELD_WAVES_001_EMINOR_48K24_LOOP.flac",
+      "sourceSha256": "48363d5e81d16c63ea82f095a1d8479fe197e6f1af45ee4c154575952cd620d7",
+      "bytes": 25220845,
+      "totalFrames": 8160380,
+      "indexSha256": "267386102ffc855667309d8344bda789c58e63684a795664aa5e6f40bd549885",
+      "indexBytes": 52280,
+      "sourceFilename": "SOUNDSCAPE_ZEN_FIELD_WAVES_001_EMINOR_48K24_LOOP.wav",
+      "sourceWavSha256": "857e2b2ebf68ae4fc8968229d5c059cfb6918d600db81841eabe505328abd250",
+      "onDemand": true
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_GENERATOR_002_EMINOR_48K24_LOOP.flac",
+      "sourceSha256": "e51b0b7dfa9962a31597885398cc98c26c5c3230f0c13f6d23181aa91ebb8652",
+      "bytes": 24875666,
+      "totalFrames": 8160000,
+      "indexSha256": "76364479ff3e55d8138628aadcce853325dd159e1356df4aa0fee85c5305e1d7",
+      "indexBytes": 52264,
+      "sourceFilename": "SOUNDSCAPE_ZEN_GENERATOR_002_EMINOR_48K24_LOOP.wav",
+      "sourceWavSha256": "8f35c4f8dad2b9385eccb9e14be0072a9e13dc7ee63bf6fda1699c6ebd1ea65b",
+      "onDemand": true
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_GENERATOR_003_PIANO_CMAJ_48K24_LOOP.flac",
+      "sourceSha256": "0e4343b8536201a5318b2dba27868e07a638dc84065880382b3c3ceb32e9b1d8",
+      "bytes": 65467911,
+      "totalFrames": 21696000,
+      "indexSha256": "c6e76bafa4c48d86cd6f83d6082340e0d2d39d1acd813a9ff2a8a569d8dcfde4",
+      "indexBytes": 142939,
+      "sourceFilename": "SOUNDSCAPE_ZEN_GENERATOR_003_PIANO_CMAJ_48K24_LOOP.wav",
+      "sourceWavSha256": "122c884735eba9edcb588a5c2afa1f7265b59755964e8c4b7a839d906f474f68",
+      "onDemand": true
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_GENERATOR_003_TEXTURE_CMAJ_48K24_LOOP.flac",
+      "sourceSha256": "0cc934fa3f8dd0d628bb7ed166f29b9fc6a5f25902bbb4519b65befa32845eb3",
+      "bytes": 73786934,
+      "totalFrames": 21696000,
+      "indexSha256": "0886f9857179d4d2968ee38f78ecf0d750d2c4a95e41068c600fe02d1326b208",
+      "indexBytes": 143028,
+      "sourceFilename": "SOUNDSCAPE_ZEN_GENERATOR_003_TEXTURE_CMAJ_48K24_LOOP.wav",
+      "sourceWavSha256": "4fe164b6cef9a650a80fc4bb9fd05a76036e679341919245a1c8fe24fb5feedb",
+      "onDemand": true
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_GENERATOR_004_PAD_CMAJ_48K24_LOOP.flac",
+      "sourceSha256": "8597dc842244ca796845262148459af17fcd259590af7d3773381ab2ed2a0199",
+      "bytes": 150869422,
+      "totalFrames": 46848320,
+      "indexSha256": "777fee1571fc30cd3580ee521ae2fab8cd9a713d71a4fec870746f58afbd2265",
+      "indexBytes": 315633,
+      "sourceFilename": "SOUNDSCAPE_ZEN_GENERATOR_004_PAD_CMAJ_48K24_LOOP.wav",
+      "sourceWavSha256": "7b29675c68fb1dac50463415d083c12cce8a813ab4439397c14c220b021f5b1f",
+      "onDemand": true
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_GENERATOR_004_PIANO_CMAJ_48K24_LOOP.flac",
+      "sourceSha256": "56ba3adc283f774b7948375217407cc0e6ef60e57b9f40fc7cd5779b4e5108bd",
+      "bytes": 147267572,
+      "totalFrames": 46848320,
+      "indexSha256": "c1c3e4268bb105c322da00b135c26e1eb950cdb22b438377c30106bc7ea1250d",
+      "indexBytes": 315427,
+      "sourceFilename": "SOUNDSCAPE_ZEN_GENERATOR_004_PIANO_CMAJ_48K24_LOOP.wav",
+      "sourceWavSha256": "c24eaf43946960733ea4cd16e5d2b440b8c1a520839573b6689c763a46055a16",
+      "onDemand": true
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_GENERATOR_005_PAD_48K24_LOOP.flac",
+      "sourceSha256": "b6e933633104ed72792429a99aa171ffc6664c48534fad4042eee70ed61dd36f",
+      "bytes": 186924668,
+      "totalFrames": 57552000,
+      "indexSha256": "6c947643b16f0496f74d3da70c4304d24465d3546f743b6d5f2685002d19dcd0",
+      "indexBytes": 390020,
+      "sourceFilename": "SOUNDSCAPE_ZEN_GENERATOR_005_PAD_48K24_LOOP.wav",
+      "sourceWavSha256": "b1ab2f7e2ee94589cb2e8efee7c6c5b82b01ddeb899cdd1a7f79334f5dd78879",
+      "onDemand": true
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_GENERATOR_005_PIANO_48K24_LOOP.flac",
+      "sourceSha256": "7a85f0b0bf941ef465e6d51b459dff545a77bcdecb2afe6f2d879a377eec6da9",
+      "bytes": 195138751,
+      "totalFrames": 57552000,
+      "indexSha256": "c62f4d4e33e058b0675c059860ee90bd55b475cda80e328653c9681c7728dcae",
+      "indexBytes": 390340,
+      "sourceFilename": "SOUNDSCAPE_ZEN_GENERATOR_005_PIANO_48K24_LOOP.wav",
+      "sourceWavSha256": "30d3b5358ea70502137f0cfc07304be990daa5e0e73880d99c8274d471ad826e",
+      "onDemand": true
+    }
+  ]
+}

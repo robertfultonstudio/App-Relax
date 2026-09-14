@@ -212,6 +212,12 @@ export class AudioSessionController implements AudioEngine {
 
   private attachRemoteCommandHandlers(): void {
     this.driver.setRemoteCommandHandlers({
+      error: (error) => {
+        void this.enqueue(async () => {
+          await this.pauseInternal(false);
+          this.patch({ error: errorMessage(error) });
+        });
+      },
       play: () => void this.play(),
       pause: () => void this.pause(),
       stop: () => void this.stop(),
@@ -239,6 +245,7 @@ export class AudioSessionController implements AudioEngine {
   }
 
   getSnapshot = (): SessionSnapshot => this.snapshot;
+  getReviewReadMetrics = () => this.driver.getReviewReadMetrics?.() ?? null;
 
   getConsumerSelection = (): ConsumerSelection | null => this.selection;
   getListeningRun = (): number => this.listeningRun;
@@ -389,22 +396,17 @@ export class AudioSessionController implements AudioEngine {
     return operation;
   }
 
-  private async confirmPlayback(operation: Promise<void>): Promise<void> {
+  private async confirmPlayback(
+    operation: Promise<void>,
+    timeoutMessage = "The sound did not start. Check your connection and retry.",
+  ): Promise<void> {
     let timeout: ReturnType<typeof setTimeout> | undefined;
     try {
       await Promise.race([
         operation,
         new Promise<never>((_, reject) => {
           this.cancelOperation = () => reject(new PlaybackCancelledError());
-          timeout = setTimeout(
-            () =>
-              reject(
-                new Error(
-                  "The sound did not start. Check your connection and retry.",
-                ),
-              ),
-            15000,
-          );
+          timeout = setTimeout(() => reject(new Error(timeoutMessage)), 15000);
         }),
       ]);
     } finally {
@@ -638,15 +640,22 @@ export class AudioSessionController implements AudioEngine {
         throw new Error("File position is outside the source.");
       }
       try {
-        await this.driver.seekSingleTrack(positionSeconds);
+        await this.confirmPlayback(
+          this.driver.seekSingleTrack(positionSeconds),
+          "The file position could not be loaded. Check your connection and retry.",
+        );
       } catch (error) {
+        if (error instanceof PlaybackCancelledError) throw error;
         await this.failClosedSeek(error);
         throw error;
       }
     });
   }
 
-  seekAdaptiveSession(positionSeconds: number): Promise<void> {
+  seekAdaptiveSession(
+    positionSeconds: number,
+    clearAudition = false,
+  ): Promise<void> {
     return this.enqueue(async () => {
       const program = this.currentAdaptiveProgram;
       if (!program) throw new Error("No adaptive session is loaded.");
@@ -658,7 +667,7 @@ export class AudioSessionController implements AudioEngine {
         throw new Error("Session position is outside the plan.");
       }
       try {
-        await this.driver.seekAdaptiveSession(positionSeconds);
+        await this.driver.seekAdaptiveSession(positionSeconds, clearAudition);
       } catch (error) {
         await this.failClosedSeek(error);
         throw error;
@@ -678,7 +687,35 @@ export class AudioSessionController implements AudioEngine {
   configureAdaptiveAudition(
     audition: TransitionAudition | null,
   ): Promise<void> {
-    return this.enqueue(() => this.driver.configureAdaptiveAudition(audition));
+    return this.enqueue(async () => {
+      // A review panel can unmount after another selection became current.
+      // Its cleanup must not stop the replacement single-track session.
+      if (!this.currentAdaptiveProgram) {
+        if (audition === null) return;
+        throw new Error("No adaptive session is loaded.");
+      }
+      try {
+        await this.driver.configureAdaptiveAudition(audition);
+      } catch (error) {
+        await this.failClosedSeek(error);
+        throw error;
+      }
+      // configureAudition already moves the driver. Synchronize the absolute
+      // timer here instead of requiring a second seek/rebuild from the UI.
+      if (audition && this.currentAdaptiveProgram) {
+        const remainingMs =
+          (this.currentAdaptiveProgram.plan.totalDurationSeconds -
+            audition.startSeconds) *
+          1000;
+        this.patch({
+          remainingMs,
+          deadlineMs:
+            this.snapshot.status === "playing"
+              ? this.runtime.now() + remainingMs
+              : null,
+        });
+      }
+    });
   }
 
   setNatureMixLevel(level: NatureMixLevel, fadeMs = 1200): Promise<void> {
@@ -958,8 +995,49 @@ export class AudioSessionController implements AudioEngine {
     });
   }
 
+  private reviewPreparation: AbortController | null = null;
+  /** Admit only after foreground commands settle; never hold their queue while fetching. */
+  prepareReviewSeek(
+    positionSeconds: number,
+    signal: AbortSignal,
+  ): Promise<boolean> {
+    let preparation = Promise.resolve(false);
+    return this.enqueue(async () => {
+      const duration =
+        this.currentAdaptiveProgram?.plan.totalDurationSeconds ??
+        this.currentProgram?.work.durationSeconds ??
+        0;
+      if (
+        signal.aborted ||
+        this.snapshot.status !== "paused" ||
+        !Number.isFinite(positionSeconds) ||
+        positionSeconds < 0 ||
+        positionSeconds >= duration ||
+        !this.driver.prepareReviewSeek
+      )
+        return;
+      const pending = new AbortController();
+      this.reviewPreparation = pending;
+      const abort = () => pending.abort();
+      signal.addEventListener("abort", abort, { once: true });
+      preparation = this.driver
+        .prepareReviewSeek(positionSeconds, pending.signal)
+        .then((ready) => ready && !pending.signal.aborted)
+        .finally(() => {
+          signal.removeEventListener("abort", abort);
+          if (this.reviewPreparation === pending) this.reviewPreparation = null;
+        });
+      void preparation.catch(() => undefined);
+    }).then(() => preparation);
+  }
+
   private enqueue(operation: () => Promise<void>): Promise<void> {
-    const next = this.commandChain.then(operation, operation);
+    this.reviewPreparation?.abort();
+    const foreground = () => {
+      this.reviewPreparation?.abort();
+      return operation();
+    };
+    const next = this.commandChain.then(foreground, foreground);
     this.commandChain = next.catch(() => undefined);
     return next;
   }

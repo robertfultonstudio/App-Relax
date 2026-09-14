@@ -14,12 +14,12 @@ import {
 } from "@/domain/audio/consumerTypes";
 
 describe("M4 autonomous consumer catalog", () => {
-  it("registers 40 file works and 8 autonomous noise generators", () => {
-    expect(CONSUMER_AUDIO_WORKS).toHaveLength(48);
-    expect(new Set(CONSUMER_AUDIO_WORKS.map((work) => work.id)).size).toBe(48);
+  it("registers 49 file works including one local unclassified texture and 8 autonomous noise generators", () => {
+    expect(CONSUMER_AUDIO_WORKS).toHaveLength(58);
+    expect(new Set(CONSUMER_AUDIO_WORKS.map((work) => work.id)).size).toBe(58);
     expect(
       new Set(CONSUMER_AUDIO_WORKS.map((work) => work.assetKey)).size,
-    ).toBe(48);
+    ).toBe(58);
     expect(
       CONSUMER_AUDIO_WORKS.every(
         (work) => createSingleTrackProgram(work).kind === "single-track",

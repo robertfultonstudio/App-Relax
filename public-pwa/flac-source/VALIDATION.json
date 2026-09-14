@@ -1,0 +1,21 @@
+{
+  "status": "PASS",
+  "scope": "static FLAC worker source-and-notice package",
+  "versions": {
+    "@wasm-audio-decoders/flac": "0.2.11",
+    "codec-parser": "2.5.0",
+    "esbuild": "0.28.2"
+  },
+  "codecParserSource": {
+    "path": "source/codec-parser-2.5.0.tgz",
+    "sha256": "37cfcc258a77800d370b841e33cf19a18a3be6a990c0d1332ea3e01cb4ac4272",
+    "archiveMembers": 35,
+    "regularFiles": 35,
+    "unpackedFileBytes": 156571,
+    "symlinks": 0,
+    "unsafePaths": 0,
+    "audioExtensionsOrMimeTypes": 0
+  },
+  "licenseFiles": 6,
+  "legalConclusion": false
+}

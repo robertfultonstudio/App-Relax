@@ -7,16 +7,123 @@ import {
 } from "@testing-library/react-native";
 import { AdaptiveSessionSetup } from "@/components/AdaptiveSessionSetup";
 import { PlaybackCancelledError } from "@/audio/AudioSessionController";
+import { createWholeFileReviewProgram } from "@/pwa-review/createWholeFileReviewProgram";
 import { createConsumerAudioMock, deferred } from "./helpers/consumerAudioMock";
 
 const mockPush = jest.fn();
 let mockAudio = createConsumerAudioMock();
-jest.mock("expo-router", () => ({ useRouter: () => ({ push: mockPush }) }));
+jest.mock("expo-router", () => ({
+  useRouter: () => ({ push: mockPush }),
+  useFocusEffect: (callback: () => void) => {
+    const { useEffect } = jest.requireActual("react");
+    useEffect(callback, [callback]);
+  },
+}));
 jest.mock("@/audio/AudioProvider", () => ({
   useAudioSession: () => mockAudio,
 }));
+jest.mock("@/domain/sessions/playbackAvailability", () => ({
+  isNativeCatalogPreview: () => false,
+  isAdaptivePlaybackAvailable: () => true,
+  isPwaWebSurface: () => false,
+}));
 
 describe("prepared consumer session setup", () => {
+  it.each(["success", "cancel"])(
+    "UI04 locks Hatha duration and review navigation during Starting, releases on %s",
+    async (result) => {
+      const pending = deferred();
+      mockAudio.controller.startSelectionFromUserGesture.mockReturnValueOnce(
+        pending.promise,
+      );
+      const onDurationChange = jest.fn();
+      const screen = await render(
+        <AdaptiveSessionSetup
+          outcome="yoga"
+          completePractice
+          reviewProgramFactory={createWholeFileReviewProgram}
+          onDurationChange={onDurationChange}
+        />,
+      );
+      await waitFor(() =>
+        expect(screen.getByTestId("start-adaptive-session")).toBeEnabled(),
+      );
+      const preparations =
+        mockAudio.controller.prepareSelection.mock.calls.length;
+      await fireEvent.press(screen.getByTestId("start-adaptive-session"));
+      expect(screen.getByTestId("duration-45")).toBeDisabled();
+      expect(
+        screen.getByTestId("open-complete-practice-review"),
+      ).toBeDisabled();
+      await fireEvent.press(screen.getByTestId("duration-45"));
+      expect(onDurationChange).not.toHaveBeenCalled();
+      expect(mockAudio.controller.prepareSelection).toHaveBeenCalledTimes(
+        preparations,
+      );
+      await act(async () =>
+        result === "success"
+          ? pending.resolve()
+          : pending.reject(new PlaybackCancelledError()),
+      );
+      expect(screen.getByTestId("duration-45")).toBeEnabled();
+      if (result === "cancel") expect(mockPush).not.toHaveBeenCalled();
+    },
+  );
+  it("offers 90-minute complete practice and opens its playlist without starting audio", async () => {
+    const screen = await render(
+      <AdaptiveSessionSetup
+        outcome="yoga"
+        completePractice
+        reviewProgramFactory={createWholeFileReviewProgram}
+      />,
+    );
+    await fireEvent.press(screen.getByTestId("duration-90"));
+    await waitFor(() =>
+      expect(screen.getByText("90 min · Ready")).toBeTruthy(),
+    );
+    expect(screen.getByText(/90 min · 8 music works/)).toBeTruthy();
+    expect(screen.queryByText("Threshold of Breath")).toBeNull();
+    await fireEvent.press(screen.getByTestId("open-complete-practice-review"));
+    expect(mockPush).toHaveBeenCalledWith(
+      "/adaptive-session/yoga?duration=90&sound=music&nature=off&active=1&review=1",
+    );
+    expect(
+      mockAudio.controller.startSelectionFromUserGesture,
+    ).not.toHaveBeenCalled();
+    expect(mockAudio.controller.loadAdaptiveSession).not.toHaveBeenCalled();
+  });
+  it("does not extend the native complete-practice duration contract", async () => {
+    const screen = await render(
+      <AdaptiveSessionSetup outcome="yoga" completePractice />,
+    );
+    expect(screen.queryByTestId("duration-90")).toBeNull();
+    expect(screen.queryByTestId("open-complete-practice-review")).toBeNull();
+  });
+  it("builds a multi-track private Yoga review from duration, with titles secondary", async () => {
+    const screen = await render(
+      <AdaptiveSessionSetup
+        outcome="yoga"
+        qaAvailable
+        reviewProgramFactory={createWholeFileReviewProgram}
+      />,
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId("start-adaptive-session")).toBeEnabled(),
+    );
+    const selected =
+      mockAudio.controller.prepareSelection.mock.calls.at(-1)![0];
+    expect(selected.kind).toBe("adaptive");
+    if (selected.kind !== "adaptive")
+      throw new Error("Expected automatic session");
+    expect(selected.program.plan.segments.length).toBeGreaterThanOrEqual(4);
+    expect(screen.queryByText("Threshold of Breath")).toBeNull();
+    await fireEvent.press(screen.getByTestId("start-adaptive-session"));
+    await waitFor(() =>
+      expect(mockPush).toHaveBeenCalledWith(
+        "/adaptive-session/yoga?duration=30&sound=music&nature=off&active=1",
+      ),
+    );
+  });
   beforeEach(() => {
     mockPush.mockClear();
     mockAudio = createConsumerAudioMock();
@@ -36,7 +143,9 @@ describe("prepared consumer session setup", () => {
     );
     expect(screen.getByText("HOW LONG DO YOU HAVE?")).toBeTruthy();
     expect(screen.queryByText(/IN PRODUCTION/)).toBeNull();
-    expect(screen.queryByLabelText("Natural sound")).toBeNull();
+    expect(
+      screen.getByRole("radio", { name: "Music", checked: true }),
+    ).toBeTruthy();
     await waitFor(() =>
       expect(mockAudio.controller.prepareSelection).toHaveBeenCalledTimes(1),
     );
@@ -54,7 +163,7 @@ describe("prepared consumer session setup", () => {
     expect(mockPush).not.toHaveBeenCalled();
     await act(async () => starting.resolve());
     expect(mockPush).toHaveBeenCalledWith(
-      "/adaptive-session/yoga?duration=30&sound=nature&nature=sea&active=1",
+      "/listen/respiro-hatha-1-01?outcome=yoga&duration=30",
     );
     expect(
       mockAudio.controller.startSelectionFromUserGesture,
@@ -77,15 +186,16 @@ describe("prepared consumer session setup", () => {
     expect(
       screen.getByTestId("duration-45").props.accessibilityState,
     ).toMatchObject({ checked: true });
-    expect(screen.getByText(/An evolving nature session/)).toBeTruthy();
+    await fireEvent.press(screen.getByRole("radio", { name: "Ocean waves" }));
+    expect(screen.getByText(/Ocean recordings change gently/)).toBeTruthy();
     await fireEvent.press(
       screen.getByRole("button", { name: /Personalize your session/ }),
     );
     expect(screen.getByText("Guided · IN PRODUCTION")).toBeTruthy();
-    expect(screen.getByLabelText("Natural sound").props.accessibilityRole).toBe(
-      "radiogroup",
-    );
-    const nature = within(screen.getByLabelText("Natural sound"));
+    expect(
+      screen.getByLabelText("Choose your sound").props.accessibilityRole,
+    ).toBe("radiogroup");
+    const nature = within(screen.getByLabelText("Choose your sound"));
     await fireEvent.press(nature.getByRole("radio", { name: "Rain" }));
     expect(nature.getAllByRole("radio", { checked: true })).toHaveLength(1);
     expect(
@@ -141,9 +251,7 @@ describe("prepared consumer session setup", () => {
     await waitFor(() =>
       expect(screen.getByTestId("start-adaptive-session")).toBeEnabled(),
     );
-    expect(
-      screen.getByText("One complete sound, for your chosen time."),
-    ).toBeTruthy();
+    expect(screen.getByText(/One complete sound repeats/)).toBeTruthy();
     expect(screen.queryByText(/IN PRODUCTION/)).toBeNull();
     await fireEvent.press(screen.getByTestId("start-adaptive-session"));
     expect(
@@ -213,5 +321,64 @@ describe("prepared consumer session setup", () => {
     ).toHaveBeenCalledWith(
       mockAudio.controller.prepareSelection.mock.calls[1]![0],
     );
+  });
+
+  it.each([
+    "yoga",
+    "meditation",
+    "massage",
+    "relax",
+    "sleep",
+    "focus",
+  ] as const)(
+    "lets %s explicitly choose music without substituting waves or rain",
+    async (outcome) => {
+      const screen = await render(
+        <AdaptiveSessionSetup outcome={outcome} qaAvailable />,
+      );
+      expect(
+        screen.getByRole("radio", { name: "Music", checked: true }),
+      ).toBeTruthy();
+      await waitFor(() =>
+        expect(screen.getByTestId("start-adaptive-session")).toBeEnabled(),
+      );
+      await fireEvent.press(screen.getByTestId("start-adaptive-session"));
+      const selection =
+        mockAudio.controller.startSelectionFromUserGesture.mock.calls[0]![0];
+      expect(selection).toMatchObject({ kind: "single", outcome });
+      if (selection.kind !== "single")
+        throw new Error("Music must select an actual track");
+      expect(selection.program.work.sourceKind).toBe("file");
+      expect(selection.program.work.familyId).not.toMatch(/^field-/);
+      if (outcome === "yoga")
+        expect(selection.program.work.id).toBe("respiro-hatha-1-01");
+    },
+  );
+
+  it("offers Ocean waves and Rain without opening personalization", async () => {
+    const screen = await render(
+      <AdaptiveSessionSetup outcome="relax" qaAvailable />,
+    );
+    await fireEvent.press(screen.getByRole("radio", { name: "Ocean waves" }));
+    await waitFor(() =>
+      expect(screen.getByTestId("start-adaptive-session")).toBeEnabled(),
+    );
+    expect(
+      mockAudio.controller.prepareSelection.mock.calls.at(-1)![0],
+    ).toMatchObject({
+      kind: "adaptive",
+      request: { soundKind: "nature", natureFamily: "sea" },
+    });
+    await fireEvent.press(screen.getByRole("radio", { name: "Rain" }));
+    await waitFor(() =>
+      expect(screen.getByTestId("start-adaptive-session")).toBeEnabled(),
+    );
+    expect(
+      mockAudio.controller.prepareSelection.mock.calls.at(-1)![0],
+    ).toMatchObject({
+      kind: "adaptive",
+      request: { soundKind: "nature", natureFamily: "rain" },
+    });
+    expect(screen.queryByText(/An evolving nature session/)).toBeNull();
   });
 });

@@ -7,11 +7,16 @@ let mockAudio = createConsumerAudioMock();
 let mockParams: Record<string, string>;
 const mockPush = jest.fn();
 jest.mock("expo-router", () => ({
+  useFocusEffect: (callback: () => void) => {
+    const { useEffect } = jest.requireActual("react");
+    useEffect(callback, [callback]);
+  },
   useLocalSearchParams: () => mockParams,
   useRouter: () => ({ back: jest.fn(), push: mockPush }),
 }));
 jest.mock("expo-linear-gradient", () => ({ LinearGradient: "LinearGradient" }));
 jest.mock("@/domain/sessions/playbackAvailability", () => ({
+  isNativeCatalogPreview: () => false,
   isAdaptivePlaybackAvailable: () => true,
 }));
 jest.mock("@/audio/AudioProvider", () => ({

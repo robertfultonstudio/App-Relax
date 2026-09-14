@@ -41,6 +41,7 @@ export function createConsumerAudioMock() {
       ),
       getConsumerSelection: jest.fn(() => active),
       getSnapshot: () => state.snapshot,
+      getReviewReadMetrics: jest.fn(() => null),
       getListeningRun: () => run,
       subscribe: jest.fn((listener: SessionListener) => {
         listeners.add(listener);
@@ -52,6 +53,9 @@ export function createConsumerAudioMock() {
       play: jest.fn(async () => undefined),
       playFromUserGesture: jest.fn(async () => undefined),
       pause: jest.fn(async () => undefined),
+      prepareReviewSeek: jest.fn(
+        async (_position: number, _signal: AbortSignal) => false,
+      ),
       stop: jest.fn(async () => undefined),
       setTimer: jest.fn(async (_minutes: number) => undefined),
       setVolume: jest.fn(async (_volume: number) => undefined),

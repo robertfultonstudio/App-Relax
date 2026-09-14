@@ -1,3 +1,5 @@
+import type { AudioElementPort } from "./ClockedWavSource";
+
 const SEEK_TOLERANCE_SECONDS = 0.02;
 const SEEK_TIMEOUT_MS = 10_000;
 
@@ -6,7 +8,7 @@ function closeEnough(actual: number, target: number): boolean {
 }
 
 export async function positionMediaElement(
-  element: HTMLAudioElement,
+  element: AudioElementPort,
   positionSeconds: number,
   signal?: AbortSignal,
   requestLoad = true,
@@ -17,6 +19,18 @@ export async function positionMediaElement(
     return error;
   };
   if (signal?.aborted) throw abortError();
+
+  if (element.prepareAt) {
+    const cancel = () => element.pause();
+    signal?.addEventListener("abort", cancel, { once: true });
+    try {
+      await element.prepareAt(Math.max(0, positionSeconds));
+      if (signal?.aborted) throw abortError();
+    } finally {
+      signal?.removeEventListener("abort", cancel);
+    }
+    return;
+  }
 
   if (element.readyState < 1) {
     await new Promise<void>((resolve, reject) => {

@@ -60,6 +60,8 @@ function energyFor(id: string): 1 | 2 | 3 {
 function createNaturalWaterProfile(
   work: (typeof CONSUMER_AUDIO_WORKS)[number],
 ): SessionWorkProfile {
+  if (!work.primaryOutcome)
+    throw new Error("Unclassified material has no session profile.");
   const aestheticFamily = work.id.startsWith("field-rain")
     ? "rain"
     : work.id.startsWith("field-sea")
@@ -97,6 +99,8 @@ function createNaturalWaterProfile(
 function createTonalProfile(
   work: (typeof CONSUMER_AUDIO_WORKS)[number],
 ): SessionWorkProfile {
+  if (!work.primaryOutcome)
+    throw new Error("Unclassified material has no session profile.");
   const filename = work.sourceFilename ?? "";
   const harmonicFamily = filename.includes("EMINOR")
     ? "e-minor"
@@ -148,6 +152,7 @@ export const SESSION_WORK_PROFILES: readonly SessionWorkProfile[] =
   CONSUMER_AUDIO_WORKS.filter(
     (work) =>
       work.sourceKind === "file" &&
+      work.primaryOutcome !== null &&
       work.availability !== "rejected-listening" &&
       work.listeningStatus === "APPROVED — LISTENING PASSED",
   ).map((work) =>

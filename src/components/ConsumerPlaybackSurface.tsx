@@ -5,6 +5,7 @@ import { OUTCOME_ARTWORK } from "@/design/outcomeArtwork";
 import { editorial } from "@/design/editorialTheme";
 import { fonts, spacing } from "@/design/theme";
 import { PlaybackTransport } from "./PlaybackTransport";
+import { consumerPlaybackError } from "@/audio/consumerPlaybackError";
 
 export function formatPlaybackTime(milliseconds: number): string {
   const seconds = Math.max(0, Math.ceil(milliseconds / 1000));
@@ -25,7 +26,7 @@ interface ConsumerPlaybackSurfaceProps {
   onStop: () => void;
   onVolumeChange?: (volume: number) => void;
   options?: ReactNode;
-  outcome: ConsumerOutcomeId;
+  outcome: ConsumerOutcomeId | null;
   playPauseTestID?: string;
   remainingMs: number;
   title: string;
@@ -72,14 +73,21 @@ export function ConsumerPlaybackSurface({
 
   return (
     <View testID="consumer-playback-surface">
-      <Image
-        accessible={false}
-        accessibilityIgnoresInvertColors
-        resizeMode="cover"
-        source={OUTCOME_ARTWORK[outcome]}
-        style={[styles.artwork, variant === "session" && styles.sessionArtwork]}
-      />
-      <Text style={styles.functionLabel}>{contextLabel}</Text>
+      {outcome ? (
+        <Image
+          accessible={false}
+          accessibilityIgnoresInvertColors
+          resizeMode="cover"
+          source={OUTCOME_ARTWORK[outcome]}
+          style={[
+            styles.artwork,
+            variant === "session" && styles.sessionArtwork,
+          ]}
+        />
+      ) : null}
+      {contextLabel ? (
+        <Text style={styles.functionLabel}>{contextLabel}</Text>
+      ) : null}
       <Text
         accessibilityRole="header"
         style={[styles.title, variant === "session" && styles.sessionTitle]}
@@ -109,7 +117,7 @@ export function ConsumerPlaybackSurface({
 
       {error ? (
         <Text accessibilityRole="alert" style={styles.error}>
-          {error}
+          {consumerPlaybackError(error)}
         </Text>
       ) : null}
       {error && onRetry ? (

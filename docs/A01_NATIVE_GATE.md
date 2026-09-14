@@ -4,6 +4,66 @@
 
 ## Esito e confini
 
+### D-103 — APK1.0.3/4: correzione Ocean verificata standalone
+
+[F] Unica build autorizzata a costo zero conclusa; stessa firma, dati47/47
+conservati nell'aggiornamento. Hatha90+Ocean parte e prosegue oltre prima
+giunzione a516s; pausa/ripresa, volume/mute separati, Rain→Stop→Ocean e Stop
+verificati senza Metro. Non è un ascolto umano o un test90min completo.
+Il solo residuo tecnico legacy Audio Test è già documentato, fuori dalla
+navigazione consumer. Rapporto completo: `ANDROID_APK_D103_PREFLIGHT.md`.
+Le versioni1.0.1/1.0.2 sotto conservano gli esiti negativi storici.
+
+### D-102 — correzione locale Ocean verificata; APK non aggiornata
+
+[F] Riprodotto il timeout di conferma posizione del decoder Hatha02 e
+corretti allocazione iniziale e recupero limitato dello seek. Nel development
+client: Ocean parte, supera la prima giunzione musicale, pausa/ripresa/mute
+e Rain → Stop → Ocean passano. Diagnostica rimossa, processi spenti.
+653 test generali e 257 audio verdi. Rapporto: `ANDROID_OCEAN_D102_FIX.md`.
+
+[U] L'APK 1.0.2/3 sotto conserva il FAIL: D-102 non è compilata in quel
+file. Nuova APK e ascolto su telefono sono ancora gate separati.
+
+### D-101 — APK1.0.2/3: Rain osservata, Ocean waves fallisce
+
+[F] Nuova APK consumer compilata e installata su AVD API34 x86_64,
+senza Metro.47/47 registrazioni importate conservate. Hatha90+Rain avviata,
+pausa/ripresa, volume/mute distinti e Stop→Ready osservati; segnale presente
+oltre il tempo previsto della prima giunzione. Non è ascolto umano.
+
+[F] Ocean waves fallisce l'avvio, al Retry e dopo riavvio pulito. Gate
+complessivo FAIL, nonostante647 test e audit statici verdi. Causa nativa
+esatta NON DETERMINATO — EVIDENZA INSUFFICIENTE; possibile finestra seek
+persa, non ancora riprodotta con errore interno. Nessuna patch speculativa
+o build aggiuntiva. Artefatto, hash e prove in `ANDROID_APK_D101_PREFLIGHT.md`.
+Le sezioni seguenti conservano i risultati storici, non lo stato corrente.
+
+### D-097 — collegamento Android interno autorizzato
+
+[F] Factory/storage reali e import locale verificato ora implementati per il
+solo profilo preview-android. Piani Hatha30/45/60/90, famiglia Rain/Ocean e
+guardia di preparazione10s testati; file47/47 verificati nel kit esterno.
+Le note sotto descrivono i gate storici, non una factory ancora scollegata.
+Dettagli in `ANDROID_CONSUMER_OFFLINE_KIT.md`. La certificazione su telefono
+e l'APK restano gate distinti, non dedotti da questa integrazione software.
+
+[F] Chiusura prova D-097: APK1.0.1/2 compilata/installata,47/47 importati
+realmente. Singole opere WAV/FLAC producono segnale nativo; Hatha90 con/senza
+ambiente fallisce. Gate di consegna quindi FAIL. Nel sorgente è corretto un
+overlap numerico delle curve dimostrato da un mock più fedele alla libreria;
+644 test passano, ma quella correzione non è nell'APK e la prova nativa deve
+essere ripetuta dopo una nuova build autorizzata. Nessuna garanzia implicita.
+
+### Aggiornamento locale D-095 — 13 settembre 2026
+
+[F] Corretta la divergenza di gain descritta storicamente sotto: bus musica0,5
+e natura0–0,5, test dei livelli/mute; Stop impedisce il completamento tardivo
+di load/start/resume. La singola opera accetta ora lease verificate oltre
+agli asset incorporati. D-095 registra30 test nelle due suite native e624
+complessivi. Nessuna factory o delivery concreta ancora abilitata; quelle
+correzioni non chiudono i gate di decoder/background su device.
+
 ### Blocco aggiuntivo rilevato prima del checkpoint D-068
 
 [F] L'audit statico del 6 settembre rileva che `AdaptiveNativePlayback`

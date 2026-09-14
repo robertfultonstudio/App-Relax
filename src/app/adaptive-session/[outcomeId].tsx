@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { type Href, useLocalSearchParams, useRouter } from "expo-router";
 import { Pressable, Text } from "react-native";
 import { useAudioSession } from "@/audio/AudioProvider";
@@ -9,7 +9,11 @@ import { PlaybackTransport } from "@/components/PlaybackTransport";
 import { EditorialHeader } from "@/components/EditorialHeader";
 import { EditorialScreen } from "@/components/EditorialScreen";
 import { SessionNatureControl } from "@/components/SessionNatureControl";
-import { getSessionPolicy } from "@/content/sessionPolicies";
+import { NatureAmbienceChoice } from "@/components/NatureAmbienceChoice";
+import {
+  getSessionPolicy,
+  sessionContextTitle,
+} from "@/content/sessionPolicies";
 import {
   CONSUMER_OUTCOMES,
   type ConsumerOutcomeId,
@@ -17,9 +21,11 @@ import {
 import { createAdaptiveSessionProgram } from "@/domain/sessions/continuumPlanner";
 import { isAdaptivePlaybackAvailable } from "@/domain/sessions/playbackAvailability";
 import type {
+  AdaptiveSessionProgram,
   NatureAmbienceFamily,
   SessionDurationMinutes,
   SessionSoundKind,
+  CreateAdaptiveSessionInput,
 } from "@/domain/sessions/types";
 import type { ConsumerSelection } from "@/domain/audio/consumerSelection";
 import {
@@ -28,8 +34,21 @@ import {
   recentWorkIdsForSession,
 } from "@/state/adaptiveSessionPersistence";
 
+import { platformReviewProgramFactory } from "@/domain/sessions/platformSessionFactories";
 const historyStore = createAdaptiveSessionHistoryStore();
-export default function AdaptiveSessionPlayerScreen() {
+export default function AdaptiveSessionPlayerScreen({
+  renderReviewControls,
+  reviewProgramFactory = platformReviewProgramFactory,
+}: {
+  reviewProgramFactory?: (
+    input: CreateAdaptiveSessionInput,
+  ) => AdaptiveSessionProgram;
+  renderReviewControls?: (
+    program: AdaptiveSessionProgram,
+    matching: boolean,
+    onVariant: (program: AdaptiveSessionProgram) => void,
+  ) => ReactNode;
+} = {}) {
   const params = useLocalSearchParams<{
     outcomeId?: string;
     duration?: string;
@@ -48,7 +67,9 @@ export default function AdaptiveSessionPlayerScreen() {
       ? (params.sound as SessionSoundKind)
       : null;
   const family =
-    params.nature === undefined || params.nature === "sea"
+    params.nature === undefined ||
+    params.nature === "sea" ||
+    params.nature === "off"
       ? "sea"
       : params.nature === "rain"
         ? "rain"
@@ -63,12 +84,17 @@ export default function AdaptiveSessionPlayerScreen() {
     active.request.outcome === outcome &&
     active.request.durationMinutes === duration &&
     active.request.soundKind === sound &&
-    active.request.natureFamily === family
+    active.request.natureFamily === family &&
+    (sound !== "music" ||
+      Boolean(active.program.plan.natureMix) ===
+        (params.nature !== "off" && params.nature !== undefined))
       ? active
       : null;
   const [recent, setRecent] = useState<string[] | null>(null);
   const [nonce] = useState(() => Date.now());
   const [error, setError] = useState<string | null>(null);
+  const [reviewSelection, setReviewSelection] =
+    useState<ConsumerSelection | null>(null);
   useEffect(() => {
     let live = true;
     void historyStore
@@ -92,6 +118,14 @@ export default function AdaptiveSessionPlayerScreen() {
     selection: ConsumerSelection | null;
     error: string | null;
   }>(() => {
+    if (
+      reviewSelection?.kind === "adaptive" &&
+      reviewSelection.request.outcome === outcome &&
+      reviewSelection.request.durationMinutes === duration &&
+      reviewSelection.request.soundKind === sound &&
+      reviewSelection.request.natureFamily === family
+    )
+      return { selection: reviewSelection, error: null };
     if (current) return { selection: current, error: null };
     if (!valid || !outcome || !sound || !family)
       return {
@@ -111,17 +145,25 @@ export default function AdaptiveSessionPlayerScreen() {
       mode: "sound-only" as const,
       soundKind: sound,
       natureFamily: family as NatureAmbienceFamily,
+      includeNatureBed:
+        sound === "music" &&
+        params.nature !== "off" &&
+        params.nature !== undefined,
     };
     try {
       return {
         selection: {
           kind: "adaptive",
           request,
-          program: createAdaptiveSessionProgram({
+          program: (reviewProgramFactory ?? createAdaptiveSessionProgram)({
             ...request,
             seed: createConsumerSessionSeed(request, nonce),
             recentWorkIds: recent,
             allowProvisionalMetadata: true,
+            includeNatureBed:
+              sound === "music" &&
+              params.nature !== "off" &&
+              params.nature !== undefined,
           }),
         },
         error: null,
@@ -133,7 +175,19 @@ export default function AdaptiveSessionPlayerScreen() {
           "No compatible session is available at this duration. Choose one complete sound or another duration.",
       };
     }
-  }, [current, valid, outcome, sound, family, duration, recent, nonce]);
+  }, [
+    current,
+    valid,
+    outcome,
+    sound,
+    family,
+    duration,
+    recent,
+    nonce,
+    reviewSelection,
+    reviewProgramFactory,
+    params.nature,
+  ]);
   const selection = result.selection;
   const matching =
     selection?.kind === "adaptive" &&
@@ -155,23 +209,6 @@ export default function AdaptiveSessionPlayerScreen() {
   const ready = needsPreparation
     ? prepared.ready
     : ["ready", "paused", "completed"].includes(snapshot.status);
-  const elapsed =
-    program && matching
-      ? Math.max(
-          0,
-          program.plan.totalDurationSeconds - snapshot.remainingMs / 1000,
-        )
-      : 0;
-  const currentSegment =
-    program?.plan.segments
-      .filter((segment) => (segment.lane ?? "primary") === "primary")
-      .findLast(
-        (segment) =>
-          elapsed >= segment.startSeconds && elapsed < segment.endSeconds,
-      ) ?? program?.plan.segments[0];
-  const currentWork = program?.works.find(
-    ({ id }) => id === currentSegment?.workId,
-  );
   const visibleError =
     error ??
     result.error ??
@@ -219,11 +256,7 @@ export default function AdaptiveSessionPlayerScreen() {
         previewTransport={otherSessionActive}
         canPlay={Boolean(program && ready)}
         canStop={matching && (playing || busy || snapshot.status === "paused")}
-        contextLabel={outcome?.toUpperCase() ?? "SESSION"}
-        currentLabel={
-          snapshot.status === "completed" ? undefined : "NOW PLAYING"
-        }
-        currentTitle={currentWork?.title}
+        contextLabel=""
         error={visibleError}
         isPlaying={playing}
         status={
@@ -261,29 +294,63 @@ export default function AdaptiveSessionPlayerScreen() {
               : 0
         }
         title={
-          outcome ? getSessionPolicy(outcome).startLabel : "Session unavailable"
+          outcome
+            ? sessionContextTitle(
+                outcome,
+                Boolean(reviewProgramFactory) && sound === "music",
+              )
+            : "Session unavailable"
         }
         variant="session"
         volume={snapshot.volume}
         playPauseTestID="adaptive-play-pause"
         options={
-          program?.plan.natureMix ? (
-            <SessionNatureControl
-              family={program.plan.natureMix.selectedFamily}
-              familyDisabled
-              level={
-                snapshot.natureMixLevel ?? program.plan.natureMix.initialLevel
-              }
-              onFamilyChange={() => undefined}
-              onLevelChange={(level) =>
-                void controller.setNatureMixLevel(level)
-              }
-              title="Natural ambience"
-              volumeDisabled={!matching || busy}
-            />
-          ) : null
+          <>
+            {reviewProgramFactory && sound === "music" && (
+              <NatureAmbienceChoice
+                value={program?.plan.natureMix?.selectedFamily ?? null}
+                disabled={
+                  matching &&
+                  ["playing", "paused", "fadingOut", "preparing"].includes(
+                    snapshot.status,
+                  )
+                }
+                onChange={(next) => {
+                  setReviewSelection(null);
+                  router.replace(
+                    `/adaptive-session/${outcome}?duration=${duration}&sound=music&nature=${next ?? "off"}` as Href,
+                  );
+                }}
+              />
+            )}
+            {program?.plan.natureMix ? (
+              <SessionNatureControl
+                family={program.plan.natureMix.selectedFamily}
+                familyDisabled
+                hideFamilyChoice
+                level={
+                  snapshot.natureMixLevel ?? program.plan.natureMix.initialLevel
+                }
+                onFamilyChange={() => undefined}
+                onLevelChange={(level) =>
+                  void controller.setNatureMixLevel(level)
+                }
+                title={
+                  program.plan.natureMix.selectedFamily === "rain"
+                    ? "Rain"
+                    : "Ocean waves"
+                }
+                volumeDisabled={!matching || busy}
+              />
+            ) : null}
+          </>
         }
       />
+      {program &&
+        renderReviewControls?.(program, matching, (next) => {
+          if (selection?.kind === "adaptive")
+            setReviewSelection({ ...selection, program: next });
+        })}
       {visibleError ? (
         <Pressable
           accessibilityRole="button"

@@ -1,5 +1,6 @@
 import type { ConsumerOutcomeId } from "@/content/productShell";
 import { getSessionPolicy } from "@/content/sessionPolicies";
+import type { SessionPhaseId } from "@/domain/sessions/types";
 
 export type ConsumerCollectionId =
   | "cosmic-zen-ambient"
@@ -25,13 +26,24 @@ export interface ConsumerAudioWork {
   id: string;
   title: string;
   familyId: string;
+  deliveryScope?: "local-only" | "private-review";
+  cycle?: {
+    id: string;
+    structuralOrder: number;
+    role: string;
+    phaseRoles: readonly SessionPhaseId[];
+    sourceReference: string;
+    reviewStatus: "source-document-mapped";
+    transitionStatus: "final-wav-review-required";
+  };
   sourceKind: "file" | "generated-noise";
   assetKey: string;
   sourceFilename: string | null;
   localPreviewFilename: string | null;
   noiseColor: NoiseColorId | null;
   spectralDefinition: string | null;
-  primaryOutcome: ConsumerOutcomeId;
+  /** null: unclassified material admitted only to manual local review. */
+  primaryOutcome: ConsumerOutcomeId | null;
   secondaryOutcomes: readonly ConsumerOutcomeId[];
   collectionIds: readonly ConsumerCollectionId[];
   durationSeconds: number;
@@ -54,10 +66,15 @@ export interface ConsumerAudioWork {
     packId:
       | "APP_READY_AUDIO_01"
       | "APP_READY_AUDIO_02_ELEMENTAL_WATER_AIR"
+      | "RESPIRO_HATHA_1_LOOPS_20260912"
+      | "FIELD_RECORDING_01_LOOP_20260913"
+      | "NIGHT_BIRDS_B1_LOOP_20260913"
       | "RUNTIME_NOISE_GENERATORS";
     manifestReference:
       | "qa/APP_READY_AUDIO_01_MANIFEST.json"
       | "QA/APP_READY_AUDIO_02_MANIFEST.json"
+      | "src/content/hathaAudioFiles.json"
+      | "src/content/localNaturalAudioFiles.json"
       | "src/audio/generators/coloredNoise.ts";
   };
 }

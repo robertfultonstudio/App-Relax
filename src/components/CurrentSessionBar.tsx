@@ -12,6 +12,8 @@ import { editorial } from "@/design/editorialTheme";
 import { fonts } from "@/design/theme";
 import { formatPlaybackTime } from "./ConsumerPlaybackSurface";
 import { PlaybackTransport } from "./PlaybackTransport";
+import { sessionContextTitle } from "@/content/sessionPolicies";
+import { isPwaWebSurface } from "@/domain/sessions/playbackAvailability";
 
 export function CurrentSessionBar() {
   const { controller, snapshot } = useAudioSession();
@@ -32,15 +34,32 @@ export function CurrentSessionBar() {
   )
     return null;
   const url = consumerSelectionUrl(selection);
+  const hasSessionReview =
+    isPwaWebSurface() &&
+    selection.kind === "adaptive" &&
+    !selection.program.plan.listeningWorkId;
+  const playerUrl = hasSessionReview ? `${url}&review=1` : url;
   const sameDetails =
     selection.kind === "single"
-      ? (params.outcome ?? selection.program.work.primaryOutcome) ===
-          selection.outcome &&
+      ? (params.outcome ?? selection.outcome) === selection.outcome &&
         Number(params.duration ?? selection.durationMinutes) ===
-          selection.durationMinutes
-      : Number(params.duration) === selection.request.durationMinutes &&
-        params.sound === selection.request.soundKind &&
-        (params.nature ?? "sea") === selection.request.natureFamily;
+          selection.durationMinutes &&
+        (params.nature ?? "off") === "off"
+      : selection.program.plan.listeningWorkId
+        ? (params.outcome ?? selection.request.outcome) ===
+            selection.request.outcome &&
+          Number(params.duration ?? selection.request.durationMinutes) ===
+            selection.request.durationMinutes &&
+          (params.nature ??
+            selection.program.plan.natureMix?.selectedFamily) ===
+            selection.program.plan.natureMix?.selectedFamily
+        : Number(params.duration) === selection.request.durationMinutes &&
+          params.sound === selection.request.soundKind &&
+          (params.nature ?? "sea") ===
+            (selection.request.soundKind === "music" &&
+            !selection.program.plan.natureMix
+              ? "off"
+              : selection.request.natureFamily);
   if (path === url.split("?")[0] && sameDetails) return null;
   const playing =
     snapshot.status === "playing" || snapshot.status === "fadingOut";
@@ -54,16 +73,23 @@ export function CurrentSessionBar() {
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Return to current session"
-        onPress={() => router.push(url as Href)}
+        onPress={() => router.push(playerUrl as Href)}
         style={styles.return}
       >
         <Text style={styles.title}>
-          {selection.kind === "single"
-            ? selection.program.work.title
-            : `${selection.request.outcome} session`}
+          {sessionContextTitle(
+            selection.kind === "single"
+              ? selection.outcome
+              : selection.request.outcome,
+            selection.kind === "adaptive" &&
+              !selection.program.plan.listeningWorkId,
+          )}
         </Text>
         <Text style={styles.detail}>
-          {formatPlaybackTime(snapshot.remainingMs)} · Return →
+          {formatPlaybackTime(snapshot.remainingMs)} ·{" "}
+          {hasSessionReview
+            ? `${selection.request.durationMinutes} min · Player & review →`
+            : "Return →"}
           {snapshot.status === "error" ? " · Playback needs attention" : ""}
         </Text>
       </Pressable>

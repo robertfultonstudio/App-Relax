@@ -54,5 +54,6 @@ yarn-error.*
 /src/qa/
 /public-pwa/
 /src/app-pwa/
+/src/pwa-review/
 /output/
 /tmp/

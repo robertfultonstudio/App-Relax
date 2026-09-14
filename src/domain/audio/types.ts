@@ -113,7 +113,10 @@ export interface AudioEngine {
   loadProgram(program: SingleTrackProgram): Promise<void>;
   loadAdaptiveSession(program: AdaptiveSessionProgram): Promise<void>;
   seekSingleTrack(positionSeconds: number): Promise<void>;
-  seekAdaptiveSession(positionSeconds: number): Promise<void>;
+  seekAdaptiveSession(
+    positionSeconds: number,
+    clearAudition?: boolean,
+  ): Promise<void>;
   configureAdaptiveAudition(audition: TransitionAudition | null): Promise<void>;
   setNatureMixLevel(level: NatureMixLevel, fadeMs?: number): Promise<void>;
   play(): Promise<void>;

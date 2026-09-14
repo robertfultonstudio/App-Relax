@@ -2,7 +2,7 @@
   "expo": {
     "name": "App Relax",
     "slug": "app-relax",
-    "version": "1.0.0",
+    "version": "1.0.3",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "apprelax",
@@ -13,6 +13,8 @@
       "supportsTablet": false
     },
     "android": {
+      "versionCode": 4,
+      "allowBackup": false,
       "adaptiveIcon": {
         "backgroundColor": "#101719",
         "foregroundImage": "./assets/images/android-icon-foreground.png",

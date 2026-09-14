@@ -1,19 +1,10 @@
 import type { ReactNode } from "react";
 import { REVIEW_REVISION } from "@/content/reviewRevision";
+import { PWA_SHELL_BOOTSTRAP } from "@/pwa-review/pwaShellBootstrap";
 import {
   ScrollViewStyleReset,
   useServerDocumentContext,
 } from "expo-router/html";
-
-const SERVICE_WORKER_REGISTRATION = `
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", function () {
-    navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(function (error) {
-      console.warn("App Relax service worker registration failed.", error);
-    });
-  });
-}
-`;
 
 export default function PwaDocument({ children }: { children: ReactNode }) {
   const { bodyAttributes, bodyNodes, htmlAttributes, headNodes } =
@@ -47,9 +38,7 @@ export default function PwaDocument({ children }: { children: ReactNode }) {
           }
         </style>
         {headNodes}
-        <script
-          dangerouslySetInnerHTML={{ __html: SERVICE_WORKER_REGISTRATION }}
-        />
+        <script dangerouslySetInnerHTML={{ __html: PWA_SHELL_BOOTSTRAP }} />
       </head>
       <body {...bodyAttributes}>
         {children}

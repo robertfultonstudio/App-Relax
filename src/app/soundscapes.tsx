@@ -8,43 +8,50 @@ import {
   getVisibleConsumerWorks,
   isPlayableWork,
 } from "@/content/consumerCatalog";
-import type { ConsumerAudioWork } from "@/domain/audio/consumerTypes";
+import { soundFamilyFor } from "@/content/soundFamilies";
 import { editorial } from "@/design/editorialTheme";
 import { fonts, spacing } from "@/design/theme";
+import { isNativeCatalogPreview } from "@/domain/sessions/playbackAvailability";
 
 const FAMILIES = [
+  { id: "music", label: "Music" },
   { id: "sea", label: "Sea" },
   { id: "rain", label: "Rain" },
   { id: "stream", label: "Stream" },
-  { id: "music", label: "Music" },
   { id: "noise", label: "Noise" },
   { id: "air", label: "Air" },
+  { id: "unclassified-nature", label: "Natural textures · local review" },
 ] as const;
 type FamilyId = (typeof FAMILIES)[number]["id"];
 
-function familyFor(work: ConsumerAudioWork): FamilyId {
-  if (work.sourceKind === "generated-noise") return "noise";
-  if (work.familyId.startsWith("field-sea-")) return "sea";
-  if (work.familyId.startsWith("field-rain-")) return "rain";
-  if (work.familyId.startsWith("field-stream-") || work.id === "deep-river")
-    return "stream";
-  if (
-    work.collectionIds.includes("elemental-air") ||
-    work.collectionIds.includes("esoteric-series")
-  )
-    return "air";
-  return "music";
-}
-
-export default function SoundscapesScreen() {
+export default function SoundscapesScreen({
+  musicOnly = false,
+  reviewLabel,
+  onUnclassifiedWorkSelect,
+}: {
+  musicOnly?: boolean;
+  reviewLabel?: string;
+  onUnclassifiedWorkSelect?: (workId: string) => void;
+} = {}) {
   const router = useRouter();
-  const [expandedFamily, setExpandedFamily] = useState<FamilyId | null>(null);
+  const [expandedFamily, setExpandedFamily] = useState<FamilyId | null>(
+    musicOnly ? "music" : null,
+  );
   const visibleWorks = getVisibleConsumerWorks().filter(
-    (work) => work.listeningStatus !== "REJECTED — REPLACEMENT REQUIRED",
+    (work) =>
+      work.listeningStatus !== "REJECTED — REPLACEMENT REQUIRED" &&
+      (work.primaryOutcome !== null ||
+        Boolean(onUnclassifiedWorkSelect) ||
+        isNativeCatalogPreview()),
   );
   const families = FAMILIES.map((family) => ({
     ...family,
-    works: visibleWorks.filter((work) => familyFor(work) === family.id),
+    works: visibleWorks
+      .filter((work) => soundFamilyFor(work) === family.id)
+      .sort(
+        (a, b) =>
+          (a.cycle?.structuralOrder ?? 100) - (b.cycle?.structuralOrder ?? 100),
+      ),
   })).filter(({ works }) => works.length > 0);
   const selected = families.find(({ id }) => id === expandedFamily);
 
@@ -55,56 +62,69 @@ export default function SoundscapesScreen() {
     >
       <EditorialHeader
         actionLabel="Settings"
-        label="SOUNDS"
+        label={musicOnly ? "MUSIC" : "SOUNDS"}
         onAction={() => router.push("/settings" as Href)}
       />
       <Text accessibilityRole="header" style={styles.title}>
-        Find your sound.
+        {musicOnly ? "Your music." : "Find your sound."}
       </Text>
       <Text style={styles.intro}>
-        Open a family, choose a sound, then set your listening time.
+        {musicOnly
+          ? `${selected?.works.length ?? 0} musical works. Open a track, then press Play.`
+          : "Open a family, choose a sound, then set your listening time."}
       </Text>
+      {reviewLabel ? (
+        <Text style={styles.count} testID="music-review-version">
+          {reviewLabel}
+        </Text>
+      ) : null}
 
-      <View
-        accessibilityLabel="Sound families"
-        style={styles.index}
-        testID="sound-family-index"
-      >
-        {families.map((family) => {
-          const expanded = family.id === expandedFamily;
-          return (
-            <Pressable
-              key={family.id}
-              accessibilityRole="button"
-              accessibilityLabel={`${family.label}, ${family.works.length} ${family.works.length === 1 ? "sound" : "sounds"}`}
-              accessibilityHint={
-                expanded ? "Closes this family" : "Shows sounds in this family"
-              }
-              accessibilityState={{ expanded }}
-              aria-expanded={expanded}
-              aria-controls={expanded ? `sound-family-${family.id}` : undefined}
-              onPress={() => setExpandedFamily(expanded ? null : family.id)}
-              style={({ pressed }) => [
-                styles.family,
-                expanded && styles.selectedFamily,
-                pressed && styles.pressed,
-              ]}
-              testID={`sound-family-toggle-${family.id}`}
-            >
-              <View style={styles.familyCopy}>
-                <Text style={styles.familyLabel}>{family.label}</Text>
-                <Text style={styles.count}>
-                  {family.works.length}{" "}
-                  {family.works.length === 1 ? "sound" : "sounds"}
+      {!musicOnly ? (
+        <View
+          accessibilityLabel="Sound families"
+          style={styles.index}
+          testID="sound-family-index"
+        >
+          {families.map((family) => {
+            const expanded = family.id === expandedFamily;
+            return (
+              <Pressable
+                key={family.id}
+                accessibilityRole="button"
+                accessibilityLabel={`${family.label}, ${family.works.length} ${family.works.length === 1 ? "sound" : "sounds"}`}
+                accessibilityHint={
+                  expanded
+                    ? "Closes this family"
+                    : "Shows sounds in this family"
+                }
+                accessibilityState={{ expanded }}
+                aria-expanded={expanded}
+                aria-controls={
+                  expanded ? `sound-family-${family.id}` : undefined
+                }
+                onPress={() => setExpandedFamily(expanded ? null : family.id)}
+                style={({ pressed }) => [
+                  styles.family,
+                  expanded && styles.selectedFamily,
+                  pressed && styles.pressed,
+                ]}
+                testID={`sound-family-toggle-${family.id}`}
+              >
+                <View style={styles.familyCopy}>
+                  <Text style={styles.familyLabel}>{family.label}</Text>
+                  <Text style={styles.count}>
+                    {family.works.length}{" "}
+                    {family.works.length === 1 ? "sound" : "sounds"}
+                  </Text>
+                </View>
+                <Text accessible={false} style={styles.mark}>
+                  {expanded ? "−" : "+"}
                 </Text>
-              </View>
-              <Text accessible={false} style={styles.mark}>
-                {expanded ? "−" : "+"}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+              </Pressable>
+            );
+          })}
+        </View>
+      ) : null}
 
       {selected ? (
         <View
@@ -113,9 +133,16 @@ export default function SoundscapesScreen() {
           style={styles.collection}
           testID={`soundscape-collection-${selected.id}`}
         >
-          <Text accessibilityRole="header" style={styles.collectionTitle}>
-            {selected.label}
-          </Text>
+          {!musicOnly ? (
+            <Text accessibilityRole="header" style={styles.collectionTitle}>
+              {selected.label}
+            </Text>
+          ) : null}
+          {selected.works.some(
+            (work) => work.cycle?.id === "respiro-hatha-1",
+          ) ? (
+            <Text style={styles.intro}>Respiro Hatha 1 · 8 music tracks</Text>
+          ) : null}
           {selected.works.map((work) => {
             const available = isPlayableWork(work);
             return (
@@ -125,7 +152,11 @@ export default function SoundscapesScreen() {
                 accessibilityLabel={`${work.title}. ${available ? "Choose listening time" : "Not available on this device"}.`}
                 accessibilityState={{ disabled: !available }}
                 disabled={!available}
-                onPress={() => router.push(`/listen/${work.id}` as Href)}
+                onPress={() =>
+                  work.primaryOutcome === null && !isNativeCatalogPreview()
+                    ? onUnclassifiedWorkSelect?.(work.id)
+                    : router.push(`/listen/${work.id}` as Href)
+                }
                 style={({ pressed }) => [
                   styles.work,
                   pressed && styles.pressed,
@@ -137,9 +168,13 @@ export default function SoundscapesScreen() {
                   <Text style={styles.workNote}>
                     {!available
                       ? "Not available on this device"
-                      : work.sourceKind === "generated-noise"
-                        ? "Continuous sound · Choose duration"
-                        : "Choose duration"}
+                      : work.cycle
+                        ? `Respiro Hatha 1 · ${String(work.cycle.structuralOrder).padStart(2, "0")} / 08 · Choose duration`
+                        : work.sourceKind === "generated-noise"
+                          ? "Continuous sound · Choose duration"
+                          : work.primaryOutcome === null
+                            ? "Local review only · classification and listening pending"
+                            : "Choose duration"}
                   </Text>
                 </View>
                 {available ? (

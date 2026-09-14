@@ -9,8 +9,10 @@ import type {
   NatureMixLevel,
 } from "@/domain/sessions/types";
 import type { TransitionAudition } from "@/domain/sessions/workbench";
+import type { ReviewReadMetrics } from "@/domain/audio/reviewReadMetrics";
 
 export interface RemoteCommandHandlers {
+  error?: (error: Error) => void;
   play: () => void;
   pause: () => void;
   stop: () => void;
@@ -25,6 +27,7 @@ export interface AdaptiveSessionEventHandlers {
 export interface AudioGraphDriver {
   readonly capabilities: AudioCapabilities;
   activateUserGesture(): void;
+  getReviewReadMetrics?(): ReviewReadMetrics | null;
   setRemoteCommandHandlers(handlers: RemoteCommandHandlers): void;
   setAdaptiveSessionEventHandlers(handlers: AdaptiveSessionEventHandlers): void;
   loadPreset(preset: AudioPreset): Promise<void>;
@@ -41,7 +44,14 @@ export interface AudioGraphDriver {
     positionSeconds?: number,
   ): Promise<void>;
   seekSingleTrack(positionSeconds: number): Promise<void>;
-  seekAdaptiveSession(positionSeconds: number): Promise<void>;
+  prepareReviewSeek?(
+    positionSeconds: number,
+    signal: AbortSignal,
+  ): Promise<boolean>;
+  seekAdaptiveSession(
+    positionSeconds: number,
+    clearAudition?: boolean,
+  ): Promise<void>;
   configureAdaptiveAudition(audition: TransitionAudition | null): Promise<void>;
   setAdaptiveNatureLevel(level: NatureMixLevel, fadeMs: number): Promise<void>;
   resume(): Promise<void>;

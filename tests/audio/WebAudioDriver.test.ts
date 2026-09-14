@@ -13,6 +13,7 @@ class DriverMediaElement {
   preload = "";
   readyState = 1;
   seeking = false;
+  prepareAt?: (position: number) => Promise<void>;
   src: string;
   readonly pause = jest.fn();
   readonly play = jest.fn(async () => {});
@@ -137,6 +138,87 @@ function fileProgram(id = "field-sea-003-open-tide") {
 }
 
 describe("WebAudioDriver file seeking", () => {
+  it("requests the media audio session in the direct gesture before resuming Web Audio", async () => {
+    const context = installDriverBrowser([]);
+    const original = Object.getOwnPropertyDescriptor(navigator, "audioSession");
+    const set = jest.fn();
+    Object.defineProperty(navigator, "audioSession", {
+      configurable: true,
+      value: {
+        get type() {
+          return "auto";
+        },
+        set type(value: string) {
+          set(value);
+        },
+      },
+    });
+    const driver = new WebAudioDriver({
+      resolveStem: () => null,
+      resolveWork: () => null,
+    });
+    try {
+      driver.activateUserGesture();
+      expect(set).toHaveBeenCalledWith("playback");
+      expect(set.mock.invocationCallOrder[0]).toBeLessThan(
+        jest.mocked(context.resume).mock.invocationCallOrder[0],
+      );
+    } finally {
+      await driver.dispose();
+      if (original) Object.defineProperty(navigator, "audioSession", original);
+      else Reflect.deleteProperty(navigator, "audioSession");
+    }
+  });
+  it("resumes PCM scheduling after a playing seek but keeps paused seeks silent", async () => {
+    const elements: DriverMediaElement[] = [];
+    installDriverBrowser(elements, (element) => {
+      element.prepareAt = jest.fn(async (at) => {
+        element.pause();
+        element.currentTime = at;
+      });
+    });
+    const driver = new WebAudioDriver({
+      resolveStem: () => null,
+      resolveWork: () => "/sound.flac",
+    });
+    const program = fileProgram();
+    await driver.loadSingleTrack(program);
+    await driver.startSingleTrack(program, 0.8);
+    const element = elements[0];
+    element.play.mockClear();
+    await driver.seekSingleTrack(42);
+    expect(element.prepareAt).toHaveBeenLastCalledWith(42);
+    expect(element.play).toHaveBeenCalledTimes(1);
+    await driver.pause(true);
+    element.play.mockClear();
+    await driver.seekSingleTrack(50);
+    expect(element.play).not.toHaveBeenCalled();
+    await driver.dispose();
+  });
+  it("rejects a late PCM seek after Stop without resurrecting playback", async () => {
+    const elements: DriverMediaElement[] = [];
+    installDriverBrowser(elements);
+    const driver = new WebAudioDriver({
+      resolveStem: () => null,
+      resolveWork: () => "/sound.flac",
+    });
+    const program = fileProgram();
+    await driver.loadSingleTrack(program);
+    await driver.startSingleTrack(program, 0.8);
+    let complete!: () => void;
+    elements[0].prepareAt = () =>
+      new Promise<void>((resolve) => {
+        complete = resolve;
+      });
+    const seeking = driver.seekSingleTrack(40);
+    const rejected = expect(seeking).rejects.toThrow();
+    await driver.stop();
+    elements[0].play.mockClear();
+    complete();
+    await rejected;
+    expect(elements[0].play).not.toHaveBeenCalled();
+    await driver.dispose();
+  });
   it("waits for the browser seeked event before confirming a new position", async () => {
     const listeners = new Map<string, EventListener>();
     let currentTime = 0;
@@ -252,6 +334,16 @@ describe("WebAudioDriver file seeking", () => {
 });
 
 describe("WebAudioDriver browser gesture lifecycle", () => {
+  it("requests the source 48 kHz clock for the PWA before any audio is prepared", async () => {
+    installDriverBrowser([]);
+    const driver = new WebAudioDriver(
+      { resolveStem: () => null, resolveWork: () => null },
+      true,
+    );
+    driver.activateUserGesture();
+    expect(window.AudioContext).toHaveBeenCalledWith({ sampleRate: 48000 });
+    await driver.dispose();
+  });
   const originalAudio = globalThis.Audio;
   const originalAudioContext = window.AudioContext;
 

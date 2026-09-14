@@ -133,6 +133,125 @@ const artifactFiles = filesBelow(artifactRoot);
 const artifactPaths = artifactFiles.map((path) =>
   relative(artifactRoot, path).replaceAll("\\", "/"),
 );
+// The approved index bytes and the built worker are part of this exact shell,
+// never trusted merely because a same-named URL exists on the server.
+const flacRegistry = JSON.parse(
+  readFileSync(
+    join(projectRoot, "src/pwa-review/flacIndexManifest.json"),
+    "utf8",
+  ),
+);
+const approvedAudio = JSON.parse(
+  readFileSync(
+    join(projectRoot, "docs/M4_LOCAL_LISTENING_MANIFEST.json"),
+    "utf8",
+  ),
+).files.filter(({ filename }) => filename.endsWith(".flac"));
+const musicDelivery = JSON.parse(
+  readFileSync(
+    join(projectRoot, "docs/SESSION_REVIEW_5_LOSSLESS_REPORT.json"),
+    "utf8",
+  ),
+).files;
+assert(
+  musicDelivery.length === 21 &&
+    musicDelivery.every((f) => f.pcmIdentity === true),
+  "music lossless provenance changed",
+);
+approvedAudio.push(
+  ...musicDelivery.map((f) => ({
+    filename: f.filename,
+    bytes: f.flacBytes,
+    sha256: f.sha256,
+  })),
+);
+assert(
+  flacRegistry.version === 1 &&
+    flacRegistry.files.length === 45 &&
+    approvedAudio.length === 45,
+  "changed FLAC scope requires revalidation",
+);
+assert(
+  new Set(flacRegistry.files.map(({ filename }) => filename)).size === 45,
+  "duplicate FLAC index identity",
+);
+assert(
+  artifactPaths.filter((path) => path.startsWith("flac-index/")).length === 45,
+  "unexpected or missing FLAC indexes",
+);
+for (const entry of flacRegistry.files) {
+  const music = musicDelivery.find((f) => f.filename === entry.filename);
+  assert(
+    music
+      ? entry.onDemand === true &&
+          entry.sourceFilename === music.sourceFilename &&
+          entry.sourceWavSha256 === music.sourceSha256 &&
+          entry.totalFrames === music.frames
+      : !entry.onDemand && !entry.sourceFilename,
+    "online-only music indexes and offline nature scope differ",
+  );
+  const approved = approvedAudio.find(
+    ({ filename }) => filename === entry.filename,
+  );
+  assert(
+    approved &&
+      approved.sha256 === entry.sourceSha256 &&
+      approved.bytes === entry.bytes,
+    "FLAC source is not approved",
+  );
+  const path = join(artifactRoot, "flac-index", `${entry.indexSha256}.json`);
+  assert(
+    existsSync(path) &&
+      statSync(path).size === entry.indexBytes &&
+      sha256(path) === entry.indexSha256,
+    "FLAC index byte/hash mismatch",
+  );
+  const index = JSON.parse(readFileSync(path, "utf8"));
+  assert(
+    index.file === entry.filename &&
+      index.bytes === entry.bytes &&
+      index.totalFrames === entry.totalFrames &&
+      index.sampleRate === 48000 &&
+      index.channels === 2 &&
+      index.bitDepth === 24,
+    "FLAC index source/format mismatch",
+  );
+}
+const decoderBuild = JSON.parse(
+  readFileSync(join(projectRoot, "dist/flac-worker/build.json"), "utf8"),
+);
+const decoderPath = join(artifactRoot, "flac-decoder.worker.min.js");
+assert(
+  existsSync(decoderPath) &&
+    statSync(decoderPath).size === decoderBuild.bytes &&
+    sha256(decoderPath) === decoderBuild.sha256 &&
+    decoderBuild.propertyMangling === false,
+  "FLAC worker differs from the tested build",
+);
+assert(
+  decoderBuild.bytes < 128 * 1024,
+  "FLAC worker exceeds its bounded budget",
+);
+const noticeManifestPath = join(artifactRoot, "flac-source/MANIFEST.sha256");
+assert(
+  existsSync(noticeManifestPath) &&
+    sha256(noticeManifestPath) === decoderBuild.noticeManifestSha256,
+  "decoder source/notice manifest mismatch",
+);
+for (const line of readFileSync(noticeManifestPath, "utf8")
+  .trim()
+  .split("\n")) {
+  const match = /^([a-f0-9]{64})  \.\/([A-Za-z0-9_./-]+)$/.exec(line);
+  assert(
+    match && !match[2].split("/").includes(".."),
+    "unsafe source/notice entry",
+  );
+  const file = join(artifactRoot, "flac-source", match[2]);
+  assert(
+    existsSync(file) && sha256(file) === match[1],
+    "decoder source/notice hash mismatch",
+  );
+}
 for (const required of [
   "index.html",
   "manifest.webmanifest",
@@ -170,10 +289,18 @@ const precacheMatch = /^self\.APP_RELAX_PRECACHE = (\{.*\});\n$/.exec(
 );
 assert(precacheMatch, "invalid finalized precache manifest");
 const precache = JSON.parse(precacheMatch[1]);
+const onDemandIndexes = new Set(
+  flacRegistry.files
+    .filter((f) => f.onDemand)
+    .map((f) => `flac-index/${f.indexSha256}.json`),
+);
 const shellPaths = artifactFiles
   .filter(
     (path) =>
-      !["sw.js", "precache-manifest.js"].includes(relative(artifactRoot, path)),
+      !["sw.js", "precache-manifest.js"].includes(
+        relative(artifactRoot, path),
+      ) &&
+      !onDemandIndexes.has(relative(artifactRoot, path).replaceAll("\\", "/")),
   )
   .sort();
 const shellDigest = createHash("sha256").update(serviceWorker);
@@ -201,7 +328,14 @@ assert(
   "worker revision mismatch",
 );
 assert(
-  !/skipWaiting\s*\(|clients\.claim\s*\(/.test(serviceWorker),
+  !/clients\.claim\s*\(/.test(serviceWorker) &&
+    (serviceWorker.match(/skipWaiting\s*\(/g) ?? []).length === 1 &&
+    serviceWorker.includes('event.data?.type === "APP_RELAX_APPLY_UPDATE"') &&
+    serviceWorker.includes('sender.pathname !== "/update.html"') &&
+    serviceWorker.includes("includeUncontrolled: true") &&
+    /if \(otherApp\) \{[\s\S]*?APP_RELAX_UPDATE_BLOCKED[\s\S]*?return;\s*\}\s*await self\.skipWaiting\(\)/.test(
+      serviceWorker,
+    ),
   "updates must not take over an active session",
 );
 
@@ -229,6 +363,11 @@ for (const path of artifactPaths) {
   );
 }
 
+assert(
+  artifactPaths.includes("loop-review.html"),
+  "individual-file loop review route missing from the private PWA",
+);
+
 for (const outcomeId of outcomeIds) {
   assert(
     artifactPaths.includes(`outcome/${outcomeId}.html`),
@@ -244,8 +383,8 @@ const staticWorkRoutes = artifactPaths.filter(
     path.startsWith("listen/") && path.endsWith(".html") && !path.includes("["),
 );
 assert(
-  staticWorkRoutes.length === 45,
-  `expected 45 PWA work routes, found ${staticWorkRoutes.length}`,
+  staticWorkRoutes.length === 53,
+  `expected 53 PWA work routes, found ${staticWorkRoutes.length}`,
 );
 for (const forbidden of [
   "listen/soft-air.html",
@@ -297,7 +436,7 @@ assert(
 );
 
 const textual = artifactFiles
-  .filter((path) => /\.(?:html|js|json|webmanifest|txt|css)$/i.test(path))
+  .filter((path) => /\.(?:html|js|json|webmanifest|txt|md|css)$/i.test(path))
   .map((path) => readFileSync(path, "utf8"))
   .join("\n");
 for (const forbidden of [
@@ -335,7 +474,7 @@ assert(
 );
 
 console.log(
-  `PWA: PASS (${artifactFiles.length} files, ${totalBytes} bytes, 45 prepared player routes, no audio bytes, Audio Test, or QA Workbench).`,
+  `PWA: PASS (${artifactFiles.length} files, ${totalBytes} bytes, 53 prepared player routes, no audio bytes, Audio Test, or QA Workbench).`,
 );
 console.log(
   "Audio delivery: authenticated same-origin streaming or explicitly downloaded, hash-verified local files. Shell has no audio bytes.",

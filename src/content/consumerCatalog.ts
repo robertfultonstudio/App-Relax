@@ -1,8 +1,12 @@
 import type { ConsumerOutcomeId } from "./productShell";
+import { HATHA_AUDIO_WORKS } from "./hathaCatalog";
+import { LOCAL_NATURAL_WORKS } from "./localNaturalCatalog";
 import {
   isAdaptivePlaybackAvailable,
   isPwaWebSurface,
+  isNativeCatalogPreview,
 } from "@/domain/sessions/playbackAvailability";
+import { hasVerifiedNativeWork } from "@/offline/nativeCatalogAvailability";
 import type {
   ConsumerAudioWork,
   ConsumerCollectionId,
@@ -312,6 +316,8 @@ export const CONSUMER_AUDIO_WORKS: readonly ConsumerAudioWork[] = [
   noiseWork("grey-noise", "grey", "focus", ["massage"]),
   noiseWork("green-noise", "green", "meditation", ["relax", "yoga"]),
   noiseWork("black-noise", "black", "sleep", ["relax", "meditation"]),
+  ...HATHA_AUDIO_WORKS,
+  ...LOCAL_NATURAL_WORKS,
 ] as const;
 
 function noiseWork(
@@ -389,6 +395,17 @@ export function isEmbeddedWork(work: ConsumerAudioWork): boolean {
 }
 
 export function isPlayableWork(work: ConsumerAudioWork): boolean {
+  if (isNativeCatalogPreview()) {
+    return (
+      isEmbeddedWork(work) ||
+      work.availability === "generated-runtime" ||
+      (work.availability === "local-preview-file" &&
+        hasVerifiedNativeWork(work.id))
+    );
+  }
+  if (work.deliveryScope === "local-only") {
+    return !isPwaWebSurface() && isAdaptivePlaybackAvailable();
+  }
   if (isPwaWebSurface()) {
     return (
       work.availability === "generated-runtime" ||
@@ -413,6 +430,8 @@ export function isPlayableWorkOnWeb(work: ConsumerAudioWork): boolean {
 }
 
 export function isVisibleConsumerWork(work: ConsumerAudioWork): boolean {
+  if (isNativeCatalogPreview()) return isPlayableWork(work);
+  if (work.deliveryScope) return isPlayableWork(work);
   return (
     work.availability === "local-preview-file" ||
     work.availability === "generated-runtime"
@@ -445,6 +464,12 @@ export function getWorksForOutcome(
       work.secondaryOutcomes.includes(outcome),
   );
 
+  if (outcome === "yoga") {
+    return works.sort(
+      (a, b) =>
+        (a.cycle?.structuralOrder ?? 999) - (b.cycle?.structuralOrder ?? 999),
+    );
+  }
   if (outcome !== "meditation") return works;
 
   return works.sort(

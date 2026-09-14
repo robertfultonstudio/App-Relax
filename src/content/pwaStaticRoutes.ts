@@ -8,7 +8,8 @@ export function getPwaOutcomeStaticParams(): { outcomeId: string }[] {
 export function getPwaWorkStaticParams(): { workId: string }[] {
   return CONSUMER_AUDIO_WORKS.filter(
     (work) =>
-      work.availability === "local-preview-file" ||
-      work.availability === "generated-runtime",
+      work.deliveryScope !== "local-only" &&
+      (work.availability === "local-preview-file" ||
+        work.availability === "generated-runtime"),
   ).map(({ id }) => ({ workId: id }));
 }

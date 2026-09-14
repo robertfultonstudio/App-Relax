@@ -187,7 +187,11 @@ describe("product and asset request contracts", () => {
   });
 
   it("keeps the consumer paper shell separate from the dark technical shell", () => {
-    for (const route of ["index.tsx", "yoga.tsx", "soundscapes.tsx"]) {
+    for (const route of [
+      "index.tsx",
+      "outcome/[outcomeId].tsx",
+      "soundscapes.tsx",
+    ]) {
       const source = readFileSync(
         join(projectRoot, "src", "app", route),
         "utf8",
@@ -196,6 +200,9 @@ describe("product and asset request contracts", () => {
       expect(source).toContain("EditorialHeader");
       expect(source).not.toMatch(/AmbientScreen|TopBar/);
     }
+    expect(
+      readFileSync(join(projectRoot, "src", "app", "yoga.tsx"), "utf8"),
+    ).toContain('href="/outcome/yoga?practice=complete"');
 
     const technicalSource = readFileSync(
       join(projectRoot, "src", "app", "audio-test.tsx"),

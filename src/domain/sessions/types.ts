@@ -127,6 +127,8 @@ export interface AdaptiveSessionTransition {
 }
 
 export interface AdaptiveSessionPlan {
+  /** Private review: one autonomous looping recording, not a music playlist. */
+  listeningWorkId?: string;
   schemaVersion: 1;
   kind: "adaptive-session-plan";
   id: string;
@@ -143,7 +145,10 @@ export interface AdaptiveSessionPlan {
   segments: readonly AdaptiveSessionSegment[];
   transitions: readonly AdaptiveSessionTransition[];
   endingStrategy:
-    "editorial-boundary" | "controlled-final-envelope-no-editorial-outro";
+    | "editorial-boundary"
+    | "controlled-final-envelope-no-editorial-outro"
+    | "source-file-boundary-review-only"
+    | "extended-loop-boundary-review-only";
   offlineReady: boolean;
   transitionReviewStatus: "PROVISIONAL — LISTENING REVIEW REQUIRED";
   metadataReviewStatus:
@@ -171,6 +176,8 @@ export interface AdaptiveSessionProgram {
 }
 
 export interface CreateAdaptiveSessionInput {
+  listeningWorkId?: string;
+  cycleId?: string;
   outcome: ConsumerOutcomeId;
   mode: SessionMode;
   soundKind: SessionSoundKind;
@@ -188,6 +195,7 @@ export interface CreateAdaptiveSessionInput {
 }
 
 export type SessionPlanningErrorCode =
+  | "CYCLE_TRANSITIONS_UNREVIEWED"
   | "GUIDED_UNAVAILABLE"
   | "UNSUPPORTED_DURATION"
   | "INSUFFICIENT_COMPATIBLE_WORKS"

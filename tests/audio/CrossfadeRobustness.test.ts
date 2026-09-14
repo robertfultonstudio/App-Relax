@@ -1,5 +1,8 @@
 import { transitionGains } from "@/domain/sessions/equalPower";
-import { auditPlanAccelerated } from "@/domain/sessions/workbench";
+import {
+  auditPlanAccelerated,
+  createTransitionAudition,
+} from "@/domain/sessions/workbench";
 import { crossfadeProgram } from "../fixtures/crossfadeProgram";
 import { adaptiveWebHarness } from "../fakes/AdaptiveWebHarness";
 
@@ -14,6 +17,22 @@ describe("track-independent crossfade scheduler", () => {
     await h.playback.dispose();
     h.restore();
     jest.useRealTimers();
+  });
+
+  it("clears a QA loop and seeks atomically, without rebuilding at the old position", async () => {
+    const program = crossfadeProgram();
+    await h.playback.load(program);
+    await h.playback.start(program, 0.8);
+    await h.playback.configureAudition(
+      createTransitionAudition(program.plan, 0, 30, "both"),
+    );
+    const rebuild = jest.spyOn(h.playback, "prepareForUserGesture");
+    await h.playback.seek(100, true);
+    expect(rebuild).toHaveBeenCalledTimes(1);
+    expect(rebuild).toHaveBeenCalledWith(100);
+    await h.playback.configureAudition(null);
+    expect(rebuild).toHaveBeenCalledTimes(1);
+    expect(h.handlers.error).not.toHaveBeenCalled();
   });
 
   it.each([10, 20, 30, 45, 60, 90] as const)(
@@ -148,6 +167,81 @@ describe("track-independent crossfade scheduler", () => {
         calls[i - 1][1] + calls[i - 1][2],
       );
   });
+
+  it.each([220.5913333333334, 20000.33333333333, 1000000.1234567])(
+    "keeps point and adjoining curves ordered on a fractional context clock %f",
+    async (clock) => {
+      await h.playback.dispose();
+      h.restore();
+      h = adaptiveWebHarness(clock);
+      const program = crossfadeProgram(60),
+        incoming = program.plan.segments[1],
+        transition = program.plan.transitions[0];
+      incoming.finalEnvelopeSeconds =
+        program.plan.totalDurationSeconds - transition.startSeconds;
+      // Actual remote failure: a mathematically zero offset rounded below now.
+      if (clock === 220.5913333333334)
+        expect(
+          clock + transition.startSeconds - transition.startSeconds,
+        ).toBeLessThan(clock);
+      await h.playback.load(program);
+      await h.playback.start(program, 0.8, transition.startSeconds);
+      const gain = h.gainFor(incoming.workId)!.gain;
+      const curves = gain.setValueCurveAtTime.mock.calls;
+      expect(curves.length).toBeGreaterThanOrEqual(2);
+      expect(curves[0][1]).toBe(gain.setValueAtTime.mock.lastCall![1]);
+      for (let index = 1; index < curves.length; index++)
+        expect(curves[index][1]).toBeGreaterThanOrEqual(
+          curves[index - 1][1] + curves[index - 1][2],
+        );
+      expect(h.handlers.error).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(["outgoing", "incoming", "both"] as const)(
+    "actually repeats the audition window twice in %s mode and cancels on Stop",
+    async (mode) => {
+      const program = crossfadeProgram();
+      const window = createTransitionAudition(program.plan, 0, 30, mode);
+      const spanMs = (window.endSeconds - window.startSeconds) * 1000;
+      const midpointMs =
+        (program.plan.transitions[0].startSeconds + 90 - window.startSeconds) *
+        1000;
+      await h.playback.load(program);
+      await h.playback.configureAudition(window);
+      await h.playback.start(program, 0.8, window.startSeconds);
+      for (let iteration = 0; iteration < 2; iteration++) {
+        await jest.advanceTimersByTimeAsync(midpointMs);
+        for (const [index, direction] of (
+          ["outgoing", "incoming"] as const
+        ).entries()) {
+          const gain = h.gainFor(program.works[index].id)!.gain;
+          const value = gain.setValueAtTime.mock.lastCall![0];
+          if (mode !== "both" && direction !== mode) expect(value).toBe(0);
+          else expect(value).toBeGreaterThan(0);
+        }
+        await jest.advanceTimersByTimeAsync(spanMs - midpointMs);
+        expect(h.playback.positionSeconds()).toBeCloseTo(
+          window.startSeconds,
+          6,
+        );
+        expect(h.handlers.error).not.toHaveBeenCalled();
+      }
+      await h.playback.stop(false);
+      const plays = h.media.reduce(
+        (count, m) => count + m.play.mock.calls.length,
+        0,
+      );
+      expect(jest.getTimerCount()).toBe(0);
+      await jest.advanceTimersByTimeAsync(2 * spanMs);
+      expect(h.media.every((m) => m.paused)).toBe(true);
+      expect(
+        h.media.reduce((count, m) => count + m.play.mock.calls.length, 0),
+      ).toBe(plays);
+      expect(h.handlers.ended).not.toHaveBeenCalled();
+      expect(h.handlers.error).not.toHaveBeenCalled();
+    },
+  );
 
   it("realigns a delayed incoming seek to the live session clock before Play", async () => {
     const program = crossfadeProgram(),

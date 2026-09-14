@@ -6,14 +6,14 @@ import {
 
 describe("QA catalog and direct transition programs", () => {
   it("exposes the complete local catalog with honest playback states", () => {
-    expect(QA_CATALOG).toHaveLength(48);
-    expect(QA_CATALOG.filter(({ playable }) => playable)).toHaveLength(47);
+    expect(QA_CATALOG).toHaveLength(58);
+    expect(QA_CATALOG.filter(({ playable }) => playable)).toHaveLength(57);
     expect(
       QA_CATALOG.filter(({ readiness }) => readiness === "transition-ready"),
     ).toHaveLength(33);
     expect(
       QA_CATALOG.filter(({ readiness }) => readiness === "single-only"),
-    ).toHaveLength(14);
+    ).toHaveLength(24);
     expect(
       QA_CATALOG.filter(({ readiness }) => readiness === "rejected"),
     ).toHaveLength(1);

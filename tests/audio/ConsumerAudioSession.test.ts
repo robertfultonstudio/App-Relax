@@ -32,6 +32,75 @@ class Runtime implements ControllerRuntime {
 }
 
 describe("consumer single-track session", () => {
+  it("admits review only while paused and never queues Stop behind speculative IO", async () => {
+    let finish!: (ready: boolean) => void;
+    let pendingSignal: AbortSignal | undefined;
+    const prepareReviewSeek = jest.fn(
+      async (_position: number, signal: AbortSignal) => {
+        pendingSignal = signal;
+        return new Promise<boolean>((resolve) => {
+          finish = resolve;
+        });
+      },
+    );
+    const driver = Object.assign(new FakeAudioDriver(), { prepareReviewSeek });
+    const controller = new AudioSessionController(
+      driver,
+      technicalStore,
+      new Runtime(),
+    );
+    await controller.loadProgram(
+      createSingleTrackProgram(getConsumerWork("deep-river")!),
+    );
+    expect(
+      await controller.prepareReviewSeek(10, new AbortController().signal),
+    ).toBe(false);
+    await controller.play();
+    expect(
+      await controller.prepareReviewSeek(10, new AbortController().signal),
+    ).toBe(false);
+    expect(prepareReviewSeek).not.toHaveBeenCalled();
+    await controller.pause();
+    const prefetch = controller.prepareReviewSeek(
+      10,
+      new AbortController().signal,
+    );
+    for (let i = 0; i < 5; i++) await Promise.resolve();
+    expect(prepareReviewSeek).toHaveBeenCalledTimes(1);
+    await controller.stop();
+    expect(pendingSignal?.aborted).toBe(true);
+    expect(controller.getSnapshot().status).toBe("ready");
+    finish(true);
+    expect(await prefetch).toBe(false);
+    await controller.dispose();
+  });
+  it("lets Stop interrupt a stalled file seek and ignores its late completion", async () => {
+    const driver = new FakeAudioDriver();
+    const controller = new AudioSessionController(
+      driver,
+      technicalStore,
+      new Runtime(),
+    );
+    await controller.loadProgram(
+      createSingleTrackProgram(getConsumerWork("deep-river")!),
+    );
+    await controller.play();
+    let finish!: () => void;
+    driver.seekSingleTrack = () =>
+      new Promise<void>((resolve) => {
+        finish = resolve;
+      });
+    const seeking = controller.seekSingleTrack(10);
+    const cancelled = expect(seeking).rejects.toThrow("cancelled");
+    await Promise.resolve();
+    await controller.stop();
+    await cancelled;
+    expect(controller.getSnapshot().status).toBe("ready");
+    finish();
+    await Promise.resolve();
+    expect(controller.getSnapshot().status).toBe("ready");
+    await controller.dispose();
+  });
   it("loads one program, starts one source path and persists timer and volume", async () => {
     const work = getConsumerWork("deep-river");
     expect(work).toBeDefined();

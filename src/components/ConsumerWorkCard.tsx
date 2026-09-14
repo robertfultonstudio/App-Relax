@@ -35,7 +35,7 @@ export function ConsumerWorkCard({
               : "Opens this sound"
             : "This sound is in production"
       }
-      accessibilityLabel={`${work.title}. ${work.primaryOutcome}. ${rejected || !available ? "In production" : "Available"}.`}
+      accessibilityLabel={`${work.title}. ${work.primaryOutcome ?? "Unclassified nature"}. ${rejected || !available ? "In production" : "Available"}.`}
       accessibilityRole="button"
       accessibilityState={{ disabled: !available }}
       disabled={!available}
@@ -49,7 +49,9 @@ export function ConsumerWorkCard({
       testID={`consumer-work-${work.id}`}
     >
       <View style={styles.topRow}>
-        <Text style={styles.outcome}>{work.primaryOutcome.toUpperCase()}</Text>
+        <Text style={styles.outcome}>
+          {work.primaryOutcome?.toUpperCase() ?? "UNCLASSIFIED NATURE"}
+        </Text>
         <Text style={styles.state}>
           {rejected
             ? "IN PRODUCTION"

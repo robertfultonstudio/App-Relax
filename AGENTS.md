@@ -2,6 +2,14 @@
 
 ## Ambito
 
+Aggiornamento D-097, 13 settembre 2026: l'utente autorizza il collegamento
+nativo Android e una successiva APK consumer interna, a costo zero verificato.
+Il catalogo resta separato dall'APK/EAS: import locale verificato nello storage
+privato del telefono. Il flag del solo profilo preview-android consente questa
+implementazione concreta e il ciclo Hatha provvisorio per test; non abilita
+iOS, Guided, store, PWA, commit o approvazioni sonore. Questa decisione supera
+soltanto i precedenti blocchi M5 sulla factory nativa e sulla build Android.
+
 Questo repository contiene una vera app mobile consumer iOS/Android basata su
 React Native ed Expo. La milestone attiva è M5 `Adaptive Sessions & QA
 Workbench`: modalità `Sound only` e `Guided`, durata prima dello Start,
@@ -56,6 +64,13 @@ In caso di conflitto, fermarsi, registrare il conflitto e non inventare una solu
   utilizzabili soltanto nel QA locale; non valgono come revisione musicale.
 - Il mixer multilayer resta soltanto nel percorso tecnico `AUDIO TEST`.
 - Functionality and time-to-sound first; evocative naming is secondary metadata.
+- D-074: ascolto quotidiano attività → Play, timer facoltativo e una sola opera
+  adatta scelta silenziosamente e mantenuta in loop. Titoli dei brani fuori da
+  player/barra/attività; catalogo manuale solo nel sottomenu delle impostazioni.
+  Hatha completo è un percorso separato con sequenza strutturata; non confondere
+  loop autonomo e ciclo completo. D-105: nella sola PWA privata di prova i
+  controlli di sviluppo partono aperti, anche con Rain/Ocean; `review=0` può
+  richiuderli esplicitamente. Nessuna esposizione nella superficie nativa consumer.
 - Gli artwork outcome seguono un contemporary minimal Japanese impressionism
   materico (pigmento minerale nihonga, sumi, gouache asciutta, washi,
   asimmetria e `ma`) insieme a refined cosmic new age; functionality e
@@ -64,6 +79,21 @@ In caso di conflitto, fermarsi, registrare il conflitto e non inventare una solu
 - Non dichiarare background audio o qualita sonora validati senza prove su telefono reale.
 - Usare le etichette `[F]`, `[I]`, `[U]`; quando manca evidenza scrivere `NON DETERMINATO — EVIDENZA INSUFFICIENTE`.
 - Nessun nuovo Mac o altro acquisto hardware e un prerequisito di progetto.
+
+## Scelta dinamica di strumenti, plugin e skill
+
+Aggiornamento esplicito dell'utente, 14 settembre 2026: per ogni task scegliere
+autonomamente lo strumento o la skill più pertinente alle capacità richieste,
+senza chiedere all'utente le normali scelte tecniche. Preferire le capacità
+già disponibili, inclusi strumenti nativi e CLI; cercare altre integrazioni
+solo quando manca una funzione utile. Motivare la scelta in una frase quando
+aiuta a comprendere il lavoro.
+
+Expo è installato e si usa quando pertinente, ma non è esclusivo né obbligatorio
+per ogni attività. Figma, Sentry e Supabase sono esempi, non integrazioni o
+sequenze di adozione già autorizzate. La scelta tecnica non autorizza nuove
+installazioni, account, credenziali, costi o operazioni esterne: restano validi
+tutti i gate espliciti di questo repository.
 
 ## Workflow
 
@@ -110,24 +140,29 @@ usate solo su una rete fidata e spente a fine prova.
 
 Il gate repository/non nativo M5 è chiuso solo quando:
 
-- i sei outcome mostrano soltanto durate pertinenti tra 10/20/30/45/60/90 e
-  mantengono la sequenza funzione → durata → Start;
+- i sei outcome seguono attività → Play (D-074): timer già impostato,
+  facoltativo e modificabile con sole durate pertinenti tra 10/20/30/45/60/90;
+  nessun wizard, titolo musicale o scelta voce obbligatoria. Il ritorno
+  conserva la sessione attiva; un nuovo avvio è esplicito;
 - le sessioni musicali permettono di scegliere `Rain` o `Ocean waves`, tengono
   distinto il volume principale dal volume ambiente e cambiano registrazione
   naturale soltanto dentro la famiglia selezionata;
-- Guided e scelta voce sono presenti ma bloccati e onesti;
+- Guided e scelta voce restano contratti futuri senza false disponibilità;
+  non vanno reintrodotti nel flusso consumer corrente;
 - il planner produce Arrival → Flow → Deepening → Return, è riproducibile da
   seed, evita ripetizioni e fallisce senza fallback casuale;
 - safe entry/exit, regole di fase, compatibilità e stima conservativa del picco
   sono coperte da test;
-- la preview adattiva è limitata al browser loopback oppure alla modalità LAN
-  consumer esplicitamente attivata per un singolo IPv4 privato, sempre
-  non-production; il driver nativo fallisce esplicitamente;
+- preview adattiva e pratica Hatha completa restano distinte dai loop
+  quotidiani: browser locale/LAN autorizzato o PWA privata owner-only già
+  autorizzata; non certificano una release native. Il driver adattivo nativo
+  fallisce esplicitamente finché manca l'adapter verificato;
 - il manifest offline non contiene URL e stato, spazio, integrità, retry,
   rimozione e astrazioni streaming/atomiche sono verificati senza dichiarare
   adapter o delivery inesistenti;
-- il Workbench esiste soltanto nella radice Router QA, è escluso da `.easignore`
-  e assente dall'export consumer verificato;
+- il Workbench scuro esiste soltanto nella radice Router QA; la PWA privata
+  dispone dei controlli di review e dell'inventario loop separato richiesti
+  dall'utente. Entrambi esclusi da EAS/export consumer; titoli fuori dalla Home;
 - lint, typecheck, test, test audio, validatori, Expo Doctor, controllo Expo
   install ed export Metro Android/iOS e Web consumer/QA sono verdi;
 - nessun segreto o nuovo byte audio entra in Git/EAS e gli screenshot locali

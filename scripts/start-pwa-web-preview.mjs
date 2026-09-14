@@ -1,12 +1,14 @@
 import { createServer } from "node:http";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createPwaPreviewHandler } from "./pwa-preview-server.mjs";
+import { createCurrentPwaPreview } from "./current-pwa-preview.mjs";
 
 const projectRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const args = process.argv.slice(2).filter((arg) => arg !== "--");
 let port = 8095;
 let checkOnly = false;
+let losslessRoot;
+let artifactRoot = join(projectRoot, "dist", "m5-pwa");
 
 try {
   for (let index = 0; index < args.length; index += 1) {
@@ -15,21 +17,27 @@ try {
     else if (argument === "--port" || argument.startsWith("--port=")) {
       const value = argument === "--port" ? args[++index] : argument.slice(7);
       port = /^\d+$/.test(value ?? "") ? Number(value) : NaN;
+    } else if (argument === "--lossless-root" || argument === "--artifact") {
+      const value = args[++index];
+      if (!value || value.startsWith("--"))
+        throw new Error(`Manca il percorso per ${argument}.`);
+      if (argument === "--lossless-root") losslessRoot = resolve(value);
+      else artifactRoot = resolve(value);
     } else
       throw new Error(
-        `Opzione non supportata: ${argument}. Usa soltanto --port o --check.`,
+        `Opzione non supportata: ${argument}. Usa --port, --check, --artifact o --lossless-root.`,
       );
   }
   if (!Number.isSafeInteger(port) || port < 1024 || port > 65535)
     throw new Error("La porta deve essere compresa fra 1024 e 65535.");
-  const preview = createPwaPreviewHandler({
-    artifactRoot: join(projectRoot, "dist", "m5-pwa"),
-    audioCatalogRoot: join(projectRoot, "public", "audio-catalog"),
-    manifestPath: join(projectRoot, "docs", "M4_LOCAL_LISTENING_MANIFEST.json"),
+  const preview = createCurrentPwaPreview({
+    projectRoot,
+    artifactRoot,
+    losslessRoot,
     port,
   });
   console.log(
-    `Catalogo locale pronto: ${preview.audioCount} file, ${preview.audioBytes} byte; lettura su richiesta.`,
+    `Catalogo review locale: ${preview.reviewAudioCount} file, ${preview.reviewAudioBytes} byte; lettura su richiesta. ${preview.audioCount - preview.reviewAudioCount} URL precedenti conservati per compatibilità offline.`,
   );
   if (checkOnly)
     console.log(
@@ -66,5 +74,9 @@ try {
   }
 } catch (error) {
   console.error(`PWA non avviata: ${error.message}`);
+  if (error.code === "ENOENT" && !losslessRoot)
+    console.error(
+      "Indica la cartella dei FLAC già esistenti con --lossless-root. Nessun audio viene copiato o generato.",
+    );
   process.exitCode = 1;
 }

@@ -14,7 +14,7 @@ export function OutcomeGridTile({
   return (
     <Pressable
       accessibilityHint="Choose a listening duration and sound"
-      accessibilityLabel={`${outcome.functionLabel}. Choose your listening time.`}
+      accessibilityLabel={`${outcome.functionLabel}. Open and press Play.`}
       accessibilityRole="button"
       onPress={onPress}
       style={({ pressed }) => [

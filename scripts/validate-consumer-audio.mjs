@@ -129,6 +129,22 @@ const localAudioFiles = readdirSync(localPreviewDir)
   .filter((filename) => /\.(flac|wav)$/i.test(filename))
   .sort();
 const expectedAudioFiles = localManifest.files
+  .concat(
+    JSON.parse(
+      readFileSync(
+        new URL("../src/content/localNaturalAudioFiles.json", import.meta.url),
+        "utf8",
+      ),
+    ).files,
+  )
+  .concat(
+    JSON.parse(
+      readFileSync(
+        new URL("../src/content/hathaAudioFiles.json", import.meta.url),
+        "utf8",
+      ),
+    ).files,
+  )
   .map((file) => file.filename)
   .sort();
 assert(localManifest.fileCount === 37, "local manifest must declare 37 files");
@@ -162,3 +178,5 @@ assert(
 console.log(
   `Consumer audio: PASS (40 file works + 8 runtime noise colours; 37 approved local preview files verified, ${localBytes} B; no consumer starter FLAC).`,
 );
+await import("./validate-hatha-audio.mjs");
+await import("./validate-local-natural-audio.mjs");

@@ -1,5 +1,6 @@
 import { AdaptiveWebPlayback } from "@/audio/web/AdaptiveWebPlayback";
 import { createQaPairProgram } from "@/qa/qaCatalog";
+import { createWholeFileReviewProgram } from "@/pwa-review/createWholeFileReviewProgram";
 import type { WebAudioSourceLease } from "@/audio/web/WebAudioSourceResolver";
 
 class FakeMediaElement {
@@ -139,6 +140,27 @@ describe("AdaptiveWebPlayback verified source leases", () => {
     expect(releases.every((release) => release.mock.calls.length === 1)).toBe(
       true,
     );
+  });
+  it("prepares Hatha 60 plus six nature recordings with fourteen leases but only four decks", async () => {
+    const acquire = jest.fn(async (work) => ({
+      uri: `blob:${work.id}`,
+      release: jest.fn(),
+    }));
+    const playback = create(acquire);
+    const selected = createWholeFileReviewProgram({
+      outcome: "yoga",
+      durationMinutes: 60,
+      mode: "sound-only",
+      soundKind: "music",
+      seed: "all-eight",
+      natureFamily: "rain",
+      includeNatureBed: true,
+    });
+    expect(selected.works).toHaveLength(14);
+    await playback.load(selected);
+    expect(acquire).toHaveBeenCalledTimes(14);
+    expect(elements.length).toBeLessThanOrEqual(4);
+    await playback.dispose();
   });
 
   it("honours Stop even before the first source acquisition microtask", async () => {
@@ -324,6 +346,15 @@ describe("AdaptiveWebPlayback seeking", () => {
     await Promise.resolve();
     expect(elements).toHaveLength(4);
     expect(elements.length).toBeLessThanOrEqual(program.plan.segments.length);
+    const loads = elements.map(({ load }) => load.mock.calls.length);
+    const pauses = elements.map(({ pause }) => pause.mock.calls.length);
+    const plays = elements.map(({ play }) => play.mock.calls.length);
+    await playback.configureAudition(null);
+    expect(elements.map(({ load }) => load.mock.calls.length)).toEqual(loads);
+    expect(elements.map(({ pause }) => pause.mock.calls.length)).toEqual(
+      pauses,
+    );
+    expect(elements.map(({ play }) => play.mock.calls.length)).toEqual(plays);
     await playback.stop();
   });
 

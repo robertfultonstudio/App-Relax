@@ -1,5 +1,7 @@
 import type { AudioContext, GainNode } from "react-native-audio-api";
 import { dbToLinear } from "@/domain/audio/consumerTypes";
+import { HATHA_AUDIO_WORKS } from "@/content/hathaCatalog";
+import { SESSION_WORK_PROFILES } from "@/content/sessionWorkProfiles";
 import { transitionGains } from "@/domain/sessions/equalPower";
 import type {
   AdaptiveSessionProgram,
@@ -48,18 +50,23 @@ export class AdaptiveNativePlayback {
   private natureLevel = 0;
   private sessionBus: GainNode | null = null;
   private natureBus: GainNode | null = null;
+  private primaryBus: GainNode | null = null;
 
   constructor(
     private readonly context: AudioContext,
     private readonly destination: GainNode,
     private readonly resolver: NativeAudioSourceResolver,
     private readonly handlers: Handlers,
+    private readonly policy: { allowHathaPreview?: boolean } = {},
   ) {}
 
   async load(program: AdaptiveSessionProgram): Promise<void> {
-    await this.stop();
-    this.validate(program);
+    const stopping = this.stop();
     const generation = this.generation;
+    await stopping;
+    if (generation !== this.generation)
+      throw new Error("Native load cancelled.");
+    this.validate(program);
     try {
       for (const workId of new Set(
         program.plan.segments.map((segment) => segment.workId),
@@ -88,11 +95,13 @@ export class AdaptiveNativePlayback {
   async start(volume: number, positionSeconds = 0): Promise<void> {
     if (!this.program) throw new Error("No native adaptive program is loaded.");
     this.volume = this.level(volume);
+    const preparing = this.prepareAt(positionSeconds);
+    const generation = this.generation;
     try {
-      await this.prepareAt(positionSeconds);
+      await preparing;
       this.begin();
     } catch (error) {
-      await this.stop();
+      if (generation === this.generation) await this.stop();
       throw error;
     }
   }
@@ -121,12 +130,14 @@ export class AdaptiveNativePlayback {
 
   async seek(positionSeconds: number): Promise<void> {
     const resume = this.running;
+    const preparing = this.prepareAt(positionSeconds);
+    const generation = this.generation;
     try {
-      await this.prepareAt(positionSeconds);
+      await preparing;
       if (resume) this.begin();
       else await this.context.suspend();
     } catch (error) {
-      await this.stop();
+      if (generation === this.generation) await this.stop();
       throw error;
     }
   }
@@ -153,7 +164,7 @@ export class AdaptiveNativePlayback {
     if (!this.program?.plan.natureMix)
       throw new Error("This session has no nature lane.");
     this.natureLevel = this.level(level);
-    this.ramp(this.natureBus, this.natureLevel, fadeMs);
+    this.ramp(this.natureBus, this.natureLevel * 0.5, fadeMs);
   }
 
   async stop(): Promise<void> {
@@ -195,12 +206,18 @@ export class AdaptiveNativePlayback {
           .map((segment) => segment.workId),
       );
       if (
-        natureIds.size !== 2 ||
+        natureIds.size < 2 ||
         !["rain", "sea"].includes(plan.natureMix.selectedFamily) ||
-        [...natureIds].some((id) => !plan.natureMix!.natureWorkIds.includes(id))
+        natureIds.size !== new Set(plan.natureMix.natureWorkIds).size ||
+        [...natureIds].some(
+          (id) =>
+            !plan.natureMix!.natureWorkIds.includes(id) ||
+            SESSION_WORK_PROFILES.find((profile) => profile.work.id === id)
+              ?.aestheticFamily !== plan.natureMix!.selectedFamily,
+        )
       ) {
         throw new Error(
-          "A native nature lane requires exactly two recordings from the planned family.",
+          "A native nature lane requires verified recordings from the planned family.",
         );
       }
       this.level(plan.natureMix.initialLevel);
@@ -216,7 +233,18 @@ export class AdaptiveNativePlayback {
         !Number.isFinite(work.durationSeconds) ||
         work.durationSeconds <= 0 ||
         !Number.isFinite(work.playbackGainDb) ||
-        work.listeningStatus !== "APPROVED — LISTENING PASSED"
+        (work.listeningStatus !== "APPROVED — LISTENING PASSED" &&
+          !(
+            this.policy.allowHathaPreview &&
+            HATHA_AUDIO_WORKS.some(
+              (hatha) =>
+                hatha.id === work.id &&
+                hatha.frameCount === work.frameCount &&
+                hatha.provenance.packId === work.provenance.packId &&
+                work.listeningStatus ===
+                  "PROVISIONAL — LISTENING APPROVAL REQUIRED",
+            )
+          ))
       ) {
         throw new Error(
           `Native session source ${segment.workId} is not an approved file.`,
@@ -322,9 +350,16 @@ export class AdaptiveNativePlayback {
     this.sessionBus.gain.value = 0;
     this.sessionBus.connect(this.destination);
     this.natureBus = this.context.createGain();
-    this.natureBus.gain.value = this.natureLevel;
+    this.natureBus.gain.value = program.plan.natureMix
+      ? this.natureLevel * 0.5
+      : 0;
     this.natureBus.connect(this.sessionBus);
+    this.primaryBus = this.context.createGain();
+    this.primaryBus.gain.value = program.plan.natureMix ? 0.5 : 1;
+    this.primaryBus.connect(this.sessionBus);
     await this.context.resume();
+    if (generation !== this.generation)
+      throw new Error("Native preparation cancelled.");
     const candidates = program.plan.segments
       .filter((segment) => segment.endSeconds > target)
       .sort((a, b) => a.startSeconds - b.startSeconds || a.index - b.index);
@@ -380,9 +415,14 @@ export class AdaptiveNativePlayback {
     const abort = new AbortController();
     this.preparations.add(abort);
     try {
+      // Construct every initial decoder before starting any of their strict
+      // 100 ms position-confirmation windows across the native bridge.
+      await Promise.resolve();
+      if (generation !== this.generation || abort.signal.aborted)
+        throw new Error("Native preparation cancelled.");
       runtime.output.connect(gain);
       gain.connect(
-        segment.lane === "nature" ? this.natureBus! : this.sessionBus!,
+        segment.lane === "nature" ? this.natureBus! : this.primaryBus!,
       );
       const sourcePosition =
         (segment.sourceEntrySeconds +
@@ -457,6 +497,7 @@ export class AdaptiveNativePlayback {
     ]
       .filter((value) => value >= position && value <= segment.endSeconds)
       .sort((a, b) => a - b);
+    let previousCurveEnd = -Infinity;
     for (let index = 0; index < boundaries.length - 1; index += 1) {
       const from = boundaries[index];
       const to = boundaries[index + 1];
@@ -481,11 +522,16 @@ export class AdaptiveNativePlayback {
           ).outgoing;
         return value;
       });
-      deck.gain.gain.setValueCurveAtTime(
-        curve,
-        this.originSeconds + from,
-        to - from,
-      );
+      // RNAA rejects ANY curve overlap. Computing a relative duration and an
+      // absolute start separately can place the reconstructed end one ULP past
+      // the next start. Chain the actual absolute ends instead: no tolerance is
+      // removed, and any boundary adjustment is only floating-point roundoff.
+      const curveStart = Math.max(this.originSeconds + from, previousCurveEnd);
+      const curveDuration = this.originSeconds + to - curveStart;
+      if (!(curveDuration > 0))
+        throw new Error("Native gain automation has an invalid interval.");
+      deck.gain.gain.setValueCurveAtTime(curve, curveStart, curveDuration);
+      previousCurveEnd = curveStart + curveDuration;
     }
     deck.source.start(startsAt);
     deck.source.stop(this.originSeconds + segment.endSeconds);
@@ -573,7 +619,7 @@ export class AdaptiveNativePlayback {
       /* Source pause/disconnection must still run after a graph error. */
     }
     for (const deck of [...this.decks.values()]) this.retire(deck);
-    for (const bus of [this.natureBus, this.sessionBus]) {
+    for (const bus of [this.natureBus, this.primaryBus, this.sessionBus]) {
       try {
         bus?.disconnect();
       } catch {
@@ -581,6 +627,7 @@ export class AdaptiveNativePlayback {
       }
     }
     this.natureBus = null;
+    this.primaryBus = null;
     this.sessionBus = null;
   }
 

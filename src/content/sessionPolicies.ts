@@ -59,3 +59,18 @@ export const SESSION_POLICIES: Readonly<
 export function getSessionPolicy(outcome: ConsumerOutcomeId): SessionPolicy {
   return SESSION_POLICIES[outcome];
 }
+
+export function sessionContextTitle(
+  outcome: ConsumerOutcomeId,
+  completePractice = false,
+): string {
+  if (completePractice && outcome === "yoga") return "Hatha practice";
+  return {
+    meditation: "Meditation",
+    yoga: "Yoga",
+    massage: "Massage",
+    relax: "Relax",
+    sleep: "Sleep",
+    focus: "Focus",
+  }[outcome];
+}

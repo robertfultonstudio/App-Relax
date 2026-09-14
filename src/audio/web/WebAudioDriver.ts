@@ -10,7 +10,10 @@ import {
 } from "@/audio/generators/coloredNoise";
 import { createBrownNoiseSamples } from "@/audio/generators/brownNoise";
 import { getBinauralFrequencies } from "@/audio/generators/binaural";
-import type { SingleTrackProgram } from "@/domain/audio/consumerTypes";
+import type {
+  ConsumerAudioWork,
+  SingleTrackProgram,
+} from "@/domain/audio/consumerTypes";
 import { dbToLinear } from "@/domain/audio/consumerTypes";
 import type {
   AudioPreset,
@@ -24,6 +27,12 @@ import type {
 import type { TransitionAudition } from "@/domain/sessions/workbench";
 import { AdaptiveWebPlayback } from "./AdaptiveWebPlayback";
 import { positionMediaElement } from "./positionMediaElement";
+import { requestPlaybackAudioSession } from "./requestPlaybackAudioSession";
+import {
+  ClockedWavSource,
+  type AudioElementPort,
+  type PcmWorkReaderFactory,
+} from "./ClockedWavSource";
 import {
   acquireWebAudioWork,
   cancelledWebAudioLoad,
@@ -35,8 +44,8 @@ const SILENT_GAIN = 0.0001;
 const NOISE_SECONDS = 8;
 
 interface MediaRuntime {
-  element: HTMLAudioElement;
-  source: MediaElementAudioSourceNode;
+  element: AudioElementPort;
+  source: AudioNode;
   gain: GainNode;
 }
 
@@ -56,7 +65,9 @@ interface BinauralRuntime {
   gain: GainNode;
 }
 
-type BrowserAudioContextConstructor = new () => AudioContext;
+type BrowserAudioContextConstructor = new (
+  options?: AudioContextOptions,
+) => AudioContext;
 
 function browserAudioContextConstructor(): BrowserAudioContextConstructor {
   if (typeof window === "undefined") {
@@ -113,6 +124,7 @@ export class WebAudioDriver implements AudioGraphDriver {
   private loadedAdaptiveProgramId: string | null = null;
   private stemUrls = new Map<StemSourceId, string>();
   private programUrl: string | null = null;
+  private programWork: ConsumerAudioWork | null = null;
   private programLease: WebAudioSourceLease | null = null;
   private pendingLoad: PendingWebLoad | null = null;
   private loadCommitQueue: Promise<unknown> = Promise.resolve();
@@ -137,9 +149,15 @@ export class WebAudioDriver implements AudioGraphDriver {
   private gestureAbort: AbortController | null = null;
   private playbackGeneration = 0;
 
-  constructor(private readonly sourceResolver: WebAudioSourceResolver) {}
+  constructor(
+    private readonly sourceResolver: WebAudioSourceResolver,
+    private readonly clockedWav = false,
+    private readonly pcmReaderFactory?: PcmWorkReaderFactory,
+  ) {}
 
   activateUserGesture(): void {
+    requestPlaybackAudioSession();
+    this.pcmReaderFactory?.cancelReview?.();
     const context = this.ensureContext();
     if (this.loadedAdaptiveProgramId && this.adaptivePlayback) {
       this.adaptivePlayback.activateUserGesture();
@@ -155,6 +173,8 @@ export class WebAudioDriver implements AudioGraphDriver {
           this.programUrl,
           SILENT_GAIN,
           this.requireMaster(),
+          undefined,
+          this.programWork,
         );
         this.mediaRuntime.set("program", runtime);
       }
@@ -315,6 +335,8 @@ export class WebAudioDriver implements AudioGraphDriver {
           nextProgramUrl,
           SILENT_GAIN,
           this.requireMaster(),
+          undefined,
+          program.work,
         );
         await positionMediaElement(
           nextRuntime.element,
@@ -327,6 +349,7 @@ export class WebAudioDriver implements AudioGraphDriver {
         await this.stopInternal(false);
         this.assertLoad(pending);
         this.programUrl = nextProgramUrl;
+        this.programWork = program.work;
         this.programLease = nextLease;
         nextLease = null;
         this.programNoiseBuffer = nextProgramNoiseBuffer;
@@ -382,6 +405,8 @@ export class WebAudioDriver implements AudioGraphDriver {
         },
       },
       (work, signal) => acquireWebAudioWork(this.sourceResolver, work, signal),
+      this.clockedWav,
+      this.pcmReaderFactory,
     );
     pending.cleanup = () => candidate.dispose();
     try {
@@ -498,6 +523,8 @@ export class WebAudioDriver implements AudioGraphDriver {
             this.programUrl,
             SILENT_GAIN,
             master,
+            undefined,
+            program.work,
           );
         this.mediaRuntime.set("program", runtime);
         runtime.gain.gain.value = gainValue;
@@ -559,6 +586,7 @@ export class WebAudioDriver implements AudioGraphDriver {
   }
 
   async seekSingleTrack(positionSeconds: number): Promise<void> {
+    this.pcmReaderFactory?.cancelReview?.();
     if (!this.loadedProgramId) {
       throw new Error("No single-track program is loaded.");
     }
@@ -568,15 +596,54 @@ export class WebAudioDriver implements AudioGraphDriver {
     this.singleTrackPositionSeconds = positionSeconds;
     const runtime = this.mediaRuntime.get("program");
     if (runtime) {
+      const generation = this.playbackGeneration;
+      const resumePcm = Boolean(
+        runtime.element.prepareAt &&
+        this.graphStarted &&
+        this.context?.state === "running",
+      );
       await positionMediaElement(runtime.element, positionSeconds);
+      this.assertPlayback(generation);
+      // PCM prepareAt intentionally stops scheduling while reading the target.
+      // A single-file seek must preserve Playing; paused seeks stay silent.
+      if (resumePcm && this.context?.state === "running")
+        await runtime.element.play();
     }
   }
 
-  async seekAdaptiveSession(positionSeconds: number): Promise<void> {
+  async seekAdaptiveSession(
+    positionSeconds: number,
+    clearAudition = false,
+  ): Promise<void> {
+    this.pcmReaderFactory?.cancelReview?.();
     if (!this.adaptivePlayback) {
       throw new Error("No adaptive session is loaded.");
     }
-    await this.adaptivePlayback.seek(positionSeconds);
+    await this.adaptivePlayback.seek(positionSeconds, clearAudition);
+  }
+
+  getReviewReadMetrics() {
+    return this.pcmReaderFactory?.getReviewReadMetrics?.() ?? null;
+  }
+
+  async prepareReviewSeek(
+    positionSeconds: number,
+    signal: AbortSignal,
+  ): Promise<boolean> {
+    if (this.disposed || signal.aborted || this.context?.state !== "suspended")
+      return false;
+    if (this.loadedAdaptiveProgramId && this.adaptivePlayback)
+      return this.adaptivePlayback.prepareReviewSeek(positionSeconds, signal);
+    if (
+      !this.programUrl ||
+      !this.programWork ||
+      !this.pcmReaderFactory?.prepareReview
+    )
+      return false;
+    return this.pcmReaderFactory.prepareReview(
+      [{ url: this.programUrl, work: this.programWork, positionSeconds }],
+      signal,
+    );
   }
 
   async configureAdaptiveAudition(
@@ -599,6 +666,7 @@ export class WebAudioDriver implements AudioGraphDriver {
   }
 
   async resume(): Promise<void> {
+    this.pcmReaderFactory?.cancelReview?.();
     if (!this.context || !this.graphStarted) return;
     await this.context.resume();
     if (this.loadedAdaptiveProgramId && this.adaptivePlayback) {
@@ -631,6 +699,7 @@ export class WebAudioDriver implements AudioGraphDriver {
   }
 
   private async stopInternal(prepareForReplay: boolean): Promise<void> {
+    this.pcmReaderFactory?.cancelReview?.();
     this.playbackGeneration += 1;
     this.gestureAbort?.abort();
     this.gestureAbort = null;
@@ -691,6 +760,7 @@ export class WebAudioDriver implements AudioGraphDriver {
   }
 
   async dispose(): Promise<void> {
+    this.pcmReaderFactory?.clearReview?.();
     this.disposed = true;
     await this.cancelPendingLoad();
     await this.loadCommitQueue.catch(() => undefined);
@@ -762,7 +832,11 @@ export class WebAudioDriver implements AudioGraphDriver {
       throw new Error("This Web Audio driver has been disposed.");
     if (!this.context) {
       const Constructor = browserAudioContextConstructor();
-      this.context = new Constructor();
+      // PCM windows must share their 48 kHz frame grid. Resample the continuous
+      // mixed output at the device boundary, not every source window/loop.
+      this.context = this.clockedWav
+        ? new Constructor({ sampleRate: 48000 })
+        : new Constructor();
       this.masterGain = this.context.createGain();
       this.masterGain.gain.value = 0;
       this.masterGain.connect(this.context.destination);
@@ -781,11 +855,35 @@ export class WebAudioDriver implements AudioGraphDriver {
     gainValue: number,
     master: GainNode,
     existingGain?: GainNode,
+    work?: ConsumerAudioWork | null,
   ): MediaRuntime {
-    const element = new Audio(url);
+    const filename = work?.localPreviewFilename ?? url;
+    const pcm =
+      this.clockedWav &&
+      (/\.wav(?:$|\?)/i.test(filename) ||
+        (this.pcmReaderFactory && work && /\.flac$/i.test(filename)))
+        ? new ClockedWavSource(
+            context,
+            undefined,
+            work && this.pcmReaderFactory
+              ? (source) => this.pcmReaderFactory!(source, work)
+              : undefined,
+          )
+        : null;
+    const element = pcm ?? new Audio(url);
+    element.src = url;
     element.loop = true;
     element.preload = "auto";
-    const source = context.createMediaElementSource(element);
+    const source =
+      pcm?.output ??
+      context.createMediaElementSource(element as HTMLAudioElement);
+    if (pcm)
+      element.addEventListener("error", () => {
+        if (this.graphStarted)
+          this.handlers?.error?.(
+            new Error(pcm.error?.message ?? "Audio stream failed."),
+          );
+      });
     const gain = existingGain ?? context.createGain();
     gain.gain.value = Math.max(0, gainValue);
     source.connect(gain);
@@ -849,7 +947,10 @@ export class WebAudioDriver implements AudioGraphDriver {
     const now = this.context.currentTime;
     this.masterGain.gain.cancelScheduledValues(now);
     this.masterGain.gain.setValueAtTime(0, now);
-    this.masterGain.gain.linearRampToValueAtTime(1, now + seconds);
+    // PWA review must respond promptly once ready. Keep a short anti-click
+    // attack; this does not alter musical crossfades, exits or source samples.
+    const attack = this.clockedWav ? Math.min(seconds, 0.08) : seconds;
+    this.masterGain.gain.linearRampToValueAtTime(1, now + attack);
   }
 
   private rampGain(node: GainNode, value: number, fadeMs: number): void {

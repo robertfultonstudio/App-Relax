@@ -35,6 +35,13 @@ async function drain(): Promise<void> {
 }
 
 describe("adaptive session controller", () => {
+  it("ignores stale review cleanup when no adaptive program is current", async () => {
+    const driver = new FakeAudioDriver();
+    const controller = new AudioSessionController(driver, store, new Runtime());
+    await controller.configureAdaptiveAudition(null);
+    expect(driver.adaptiveAuditions).toEqual([]);
+    expect(controller.getSnapshot().error).toBeNull();
+  });
   it("loads and starts the adaptive path without a second consumer source or generic fade", async () => {
     const program = createAdaptiveSessionProgram({
       outcome: "meditation",
@@ -65,6 +72,10 @@ describe("adaptive session controller", () => {
 
     const audition = createTransitionAudition(program.plan, 0, 30, "both");
     await controller.configureAdaptiveAudition(audition);
+    expect(controller.getSnapshot().remainingMs).toBe(
+      (program.plan.totalDurationSeconds - audition.startSeconds) * 1000,
+    );
+    expect(driver.adaptiveSeekCalls).toEqual([]);
     await controller.seekAdaptiveSession(audition.startSeconds);
     expect(driver.adaptiveAuditions).toEqual([audition]);
     expect(driver.adaptiveSeekCalls).toEqual([audition.startSeconds]);

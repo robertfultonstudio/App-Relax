@@ -1,5 +1,9 @@
 import type { StemAssetKey } from "@/domain/audio/types";
 import type { ConsumerAudioWork } from "@/domain/audio/consumerTypes";
+import {
+  isAdaptivePlaybackAvailable,
+  isPwaWebSurface,
+} from "@/domain/sessions/playbackAvailability";
 
 export interface WebAudioSourceResolver {
   resolveStem(assetKey: StemAssetKey): string | null;
@@ -93,6 +97,11 @@ export function localCatalogUrl(filename: string): string {
 export function resolveLocalPreviewWork(
   work: ConsumerAudioWork,
 ): string | null {
+  if (
+    work.deliveryScope === "local-only" &&
+    (isPwaWebSurface() || !isAdaptivePlaybackAvailable())
+  )
+    return null;
   return work.availability === "local-preview-file" && work.localPreviewFilename
     ? localCatalogUrl(work.localPreviewFilename)
     : null;

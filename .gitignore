@@ -54,3 +54,5 @@ example
 # Metadata and preparation instructions remain tracked; audio bytes do not.
 /public/audio-catalog/*.wav
 /public/audio-catalog/*.flac
+# Reproducible PWA-only decoder; generated from pinned sources before export.
+/public-pwa/flac-decoder.worker.min.js

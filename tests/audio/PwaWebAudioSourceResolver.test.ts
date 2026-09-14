@@ -8,6 +8,24 @@ const work = getConsumerWork("field-sea-003-open-tide")!;
 beforeEach(() => mockAcquire.mockReset());
 
 describe("PWA offline-first source leases", () => {
+  it("uses the verified FLAC for online music without changing native catalog identity", async () => {
+    const music = getConsumerWork("distant-garden")!;
+    mockAcquire.mockResolvedValue(null);
+    const result = await new PwaWebAudioSourceResolver().acquireWork(music);
+    expect(result?.uri).toBe(
+      `/audio-catalog/${music.localPreviewFilename!.replace(/\.wav$/, ".flac")}`,
+    );
+    expect(music.localPreviewFilename).toMatch(/\.wav$/);
+  });
+  it("keeps an already verified offline music WAV instead of reinterpreting it as FLAC", async () => {
+    const lease = { uri: "blob:verified-music-wav", release: jest.fn() };
+    mockAcquire.mockResolvedValue(lease);
+    expect(
+      await new PwaWebAudioSourceResolver().acquireWork(
+        getConsumerWork("distant-garden")!,
+      ),
+    ).toBe(lease);
+  });
   it("prefers the verified local file and forwards its lease", async () => {
     const lease = { uri: "blob:verified", release: jest.fn() };
     mockAcquire.mockResolvedValue(lease);

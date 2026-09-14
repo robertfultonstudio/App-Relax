@@ -20,6 +20,132 @@ import {
 const projectRoot = process.cwd();
 
 describe("PWA contract", () => {
+  it.each([true, false])(
+    "recovers online only after a click and only for this app scope: %s",
+    async (sameScope) => {
+      const handlers: Record<string, () => Promise<void>> = {};
+      const unregister = jest.fn(async () => true);
+      const replace = jest.fn();
+      runInNewContext(
+        readFileSync(join(projectRoot, "public-pwa", "pwa-update.js"), "utf8"),
+        {
+          URL,
+          Error,
+          document: {
+            getElementById: (id: string) => ({
+              addEventListener: (
+                _event: string,
+                listener: () => Promise<void>,
+              ) => {
+                handlers[id] = listener;
+              },
+            }),
+          },
+          navigator: {
+            serviceWorker: {
+              getRegistration: async () => ({
+                scope: sameScope
+                  ? "https://relax.test/"
+                  : "https://other.test/",
+                unregister,
+              }),
+            },
+          },
+          window: { location: { origin: "https://relax.test", replace } },
+        },
+      );
+      expect(unregister).not.toHaveBeenCalled();
+      expect(replace).not.toHaveBeenCalled();
+      await handlers.online();
+      expect(unregister).toHaveBeenCalledTimes(sameScope ? 1 : 0);
+      expect(replace).toHaveBeenCalledTimes(sameScope ? 1 : 0);
+      if (sameScope) expect(replace).toHaveBeenCalledWith("/");
+    },
+  );
+
+  it.each([
+    { source: "https://relax.test/update.html", clients: [], allowed: true },
+    {
+      source: "https://relax.test/update.html",
+      clients: ["https://relax.test/listen/respiro-hatha-1-01"],
+      allowed: false,
+    },
+    { source: "https://relax.test/", clients: [], allowed: false },
+    { source: "https://other.test/update.html", clients: [], allowed: false },
+  ])(
+    "updates only from the explicit recovery page without another app client: $source / $clients",
+    async ({ source, clients, allowed }) => {
+      type UpdateEvent = {
+        origin: string;
+        data: { type: string };
+        source: { url: string };
+        ports: { postMessage: jest.Mock }[];
+        waitUntil(task: Promise<unknown>): void;
+      };
+      const handlers: Record<string, (event: UpdateEvent) => void> = {};
+      const skipWaiting = jest.fn(async () => undefined);
+      const postMessage = jest.fn();
+      runInNewContext(
+        readFileSync(join(projectRoot, "public-pwa", "sw.js"), "utf8"),
+        {
+          URL,
+          importScripts: () => undefined,
+          self: {
+            APP_RELAX_PRECACHE: { revision: "a".repeat(64), urls: [] },
+            location: { origin: "https://relax.test" },
+            addEventListener: (
+              type: string,
+              handler: (typeof handlers)[string],
+            ) => {
+              handlers[type] = handler;
+            },
+            clients: { matchAll: async () => clients.map((url) => ({ url })) },
+            skipWaiting,
+          },
+        },
+      );
+      expect(skipWaiting).not.toHaveBeenCalled();
+      let pending: Promise<unknown> | undefined;
+      handlers.message({
+        origin: new URL(source).origin,
+        data: { type: "APP_RELAX_APPLY_UPDATE" },
+        source: { url: source },
+        ports: [{ postMessage }],
+        waitUntil(task) {
+          pending = task;
+        },
+      });
+      await pending;
+      expect(skipWaiting).toHaveBeenCalledTimes(allowed ? 1 : 0);
+      if (allowed)
+        expect(postMessage).toHaveBeenCalledWith({
+          type: "APP_RELAX_UPDATE_ACCEPTED",
+        });
+      else if (clients.length)
+        expect(postMessage).toHaveBeenCalledWith({
+          type: "APP_RELAX_UPDATE_BLOCKED",
+        });
+    },
+  );
+
+  it("offers an explicit update without deleting saved audio, storage or reloading other clients", () => {
+    const script = readFileSync(
+      join(projectRoot, "public-pwa", "pwa-update.js"),
+      "utf8",
+    );
+    expect(script).toContain('button.addEventListener("click"');
+    expect(script).toContain("registration.update()");
+    expect(script).toContain('window.location.replace("/")');
+    expect(script).not.toMatch(
+      /caches\.delete|localStorage\.clear|indexedDB\.deleteDatabase/,
+    );
+    expect(script).toContain('online.addEventListener("click"');
+    expect(script).toContain(
+      'scope.origin !== window.location.origin || scope.pathname !== "/"',
+    );
+    expect(script).toContain("await registration.unregister()");
+  });
+
   it("generates concrete routes only for PWA-deliverable works", () => {
     const outcomes = getPwaOutcomeStaticParams().map(
       ({ outcomeId }) => outcomeId,
@@ -34,8 +160,8 @@ describe("PWA contract", () => {
       "sleep",
       "focus",
     ]);
-    expect(new Set(works).size).toBe(45);
-    expect(works).toHaveLength(45);
+    expect(new Set(works).size).toBe(53);
+    expect(works).toHaveLength(53);
     for (const forbidden of [
       "soft-air",
       "moon-drone",
@@ -57,7 +183,7 @@ describe("PWA contract", () => {
     expect(localWork).toBeDefined();
     expect(embeddedWork).toBeDefined();
     expect(resolver.resolveWork(localWork!)).toBe(
-      `/audio-catalog/${encodeURIComponent(localWork!.localPreviewFilename!)}`,
+      `/audio-catalog/${encodeURIComponent(localWork!.localPreviewFilename!.replace(/\.wav$/, ".flac"))}`,
     );
     expect(resolver.resolveWork(embeddedWork!)).toBeNull();
     expect(resolver.resolveStem("sleepDrone001")).toBeNull();
@@ -99,7 +225,9 @@ describe("PWA contract", () => {
     expect(serviceWorker).not.toContain('key.startsWith("ritual-audio-")');
     expect(serviceWorker).toContain('importScripts("/precache-manifest.js")');
     expect(serviceWorker).toContain("for (const url of manifest.urls)");
-    expect(serviceWorker).not.toContain("self.skipWaiting(");
+    expect(serviceWorker).toContain(
+      'event.data?.type === "APP_RELAX_APPLY_UPDATE"',
+    );
     expect(serviceWorker).not.toContain("self.clients.claim(");
     expect(serviceWorker.indexOf("isAudioRequest(request, url)")).toBeLessThan(
       serviceWorker.indexOf(

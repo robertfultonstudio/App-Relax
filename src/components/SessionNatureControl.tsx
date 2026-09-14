@@ -18,6 +18,7 @@ const FAMILIES = [
 export function SessionNatureControl({
   family,
   familyDisabled,
+  hideFamilyChoice = false,
   level,
   onFamilyChange,
   onLevelChange,
@@ -26,6 +27,7 @@ export function SessionNatureControl({
 }: {
   family: NatureAmbienceFamily;
   familyDisabled: boolean;
+  hideFamilyChoice?: boolean;
   level: NatureMixLevel;
   onFamilyChange: (family: NatureAmbienceFamily) => void;
   onLevelChange: (level: NatureMixLevel) => void;
@@ -46,41 +48,43 @@ export function SessionNatureControl({
       <Text accessibilityLiveRegion="polite" style={styles.title}>
         {title}
       </Text>
-      <View
-        accessibilityLabel="Natural ambience sound"
-        accessibilityRole="radiogroup"
-        style={styles.row}
-      >
-        {FAMILIES.map((item) => {
-          const selected = item.value === family;
-          return (
-            <Pressable
-              accessibilityLabel={item.label}
-              accessibilityRole="radio"
-              aria-checked={selected}
-              accessibilityState={{
-                disabled: familyDisabled,
-                checked: selected,
-              }}
-              disabled={familyDisabled}
-              key={item.label}
-              onPress={() => onFamilyChange(item.value)}
-              style={[
-                styles.option,
-                selected && styles.optionSelected,
-                familyDisabled && styles.disabled,
-              ]}
-              testID={`nature-family-${item.value}`}
-            >
-              <Text
-                style={[styles.optionText, selected && styles.selectedText]}
+      {!hideFamilyChoice && (
+        <View
+          accessibilityLabel="Natural ambience sound"
+          accessibilityRole="radiogroup"
+          style={styles.row}
+        >
+          {FAMILIES.map((item) => {
+            const selected = item.value === family;
+            return (
+              <Pressable
+                accessibilityLabel={item.label}
+                accessibilityRole="radio"
+                aria-checked={selected}
+                accessibilityState={{
+                  disabled: familyDisabled,
+                  checked: selected,
+                }}
+                disabled={familyDisabled}
+                key={item.label}
+                onPress={() => onFamilyChange(item.value)}
+                style={[
+                  styles.option,
+                  selected && styles.optionSelected,
+                  familyDisabled && styles.disabled,
+                ]}
+                testID={`nature-family-${item.value}`}
               >
-                {item.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+                <Text
+                  style={[styles.optionText, selected && styles.selectedText]}
+                >
+                  {item.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
 
       <Text style={styles.volumeLabel}>AMBIENCE VOLUME · {volumePercent}%</Text>
       <View

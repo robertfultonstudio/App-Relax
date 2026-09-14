@@ -3,6 +3,7 @@ import { Buffer } from "node:buffer";
 import { spawnSync } from "node:child_process";
 import {
   closeSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   openSync,
@@ -21,6 +22,7 @@ import {
   createPwaPreviewHandler,
   parseByteRange,
 } from "../../scripts/pwa-preview-server.mjs";
+import { createCurrentPwaPreview } from "../../scripts/current-pwa-preview.mjs";
 
 const projectRoot = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
 
@@ -110,13 +112,43 @@ test("root, clean deep links and missing routes are served without a blanket HTM
   assert.equal((await request(handler, "/qa-workbench")).statusCode, 404);
 });
 
+test("audio ranges bind to a stable revision and changed local files fail closed", async (t) => {
+  const { handler, audioCatalogRoot } = fixture(t);
+  const first = await request(handler, "/audio-catalog/SAMPLE.flac", {
+    headers: { range: "bytes=0-3" },
+  });
+  const etag = first.headers.get("etag");
+  assert.match(etag, /^"[^"]+"$/);
+  const matched = await request(handler, "/audio-catalog/SAMPLE.flac", {
+    headers: { range: "bytes=4-7", "if-range": etag },
+  });
+  assert.equal(matched.statusCode, 206);
+  assert.equal(matched.body.toString(), "4567");
+  const changed = await request(handler, "/audio-catalog/SAMPLE.flac", {
+    headers: { range: "bytes=4-7", "if-range": '"old"' },
+  });
+  assert.equal(changed.statusCode, 200);
+  writeFileSync(join(audioCatalogRoot, "SAMPLE.flac"), "changed");
+  assert.equal(
+    (await request(handler, "/audio-catalog/SAMPLE.flac")).statusCode,
+    409,
+  );
+});
+
 test("manifest, service worker and both audio formats have explicit MIME types", async (t) => {
-  const { handler } = fixture(t);
+  const f = fixture(t);
+  mkdirSync(join(f.artifactRoot, "flac-source"));
+  writeFileSync(
+    join(f.artifactRoot, "flac-source/MANIFEST.sha256"),
+    "source hashes",
+  );
+  const { handler } = createPwaPreviewHandler(f.config);
   for (const [url, type] of [
     ["/manifest.webmanifest", "application/manifest+json"],
     ["/sw.js", "text/javascript; charset=utf-8"],
     ["/audio-catalog/SAMPLE.wav", "audio/wav"],
     ["/audio-catalog/SAMPLE.flac", "audio/flac"],
+    ["/flac-source/MANIFEST.sha256", "text/plain; charset=utf-8"],
   ]) {
     const res = await request(handler, url);
     assert.equal(res.statusCode, 200);
@@ -220,6 +252,214 @@ test("manifest mismatch fails preflight", (t) => {
   assert.throws(() => createPwaPreviewHandler(f.config), /size mismatch/);
 });
 
+test("preflight rejects an unserved precache entry rather than leaving a stale shell installed", (t) => {
+  const f = fixture(t);
+  const manifest = join(f.artifactRoot, "precache-manifest.js");
+  writeFileSync(
+    manifest,
+    'self.APP_RELAX_PRECACHE = {"urls":["/index.html","/missing.bin"]};',
+  );
+  assert.throws(
+    () => createPwaPreviewHandler(f.config),
+    /Unserved PWA precache resource/,
+  );
+  writeFileSync(
+    manifest,
+    'self.APP_RELAX_PRECACHE = {"urls":["/index.html"]};',
+  );
+  assert.doesNotThrow(() => createPwaPreviewHandler(f.config));
+  writeFileSync(manifest, "runArbitraryCode()");
+  assert.throws(
+    () => createPwaPreviewHandler(f.config),
+    /Invalid PWA precache manifest/,
+  );
+});
+
+test("approved lossless additions stream from an explicit read-only root without copying", async (t) => {
+  const f = fixture(t);
+  const losslessRoot = join(f.audioCatalogRoot, "derivatives");
+  mkdirSync(losslessRoot);
+  writeFileSync(join(losslessRoot, "MUSIC.flac"), f.bytes);
+  const preview = createPwaPreviewHandler({
+    ...f.config,
+    losslessRoot,
+    additionalAudioFiles: [
+      { filename: "MUSIC.flac", bytes: 16, sha256: "a".repeat(64) },
+    ],
+  });
+  const res = await request(preview.handler, "/audio-catalog/MUSIC.flac", {
+    headers: { range: "bytes=12-15" },
+  });
+  assert.equal(res.statusCode, 206);
+  assert.deepEqual(res.body, f.bytes.subarray(12));
+  assert.equal(res.headers.get("x-content-sha256"), "a".repeat(64));
+  assert.throws(
+    () => lstatSync(join(f.audioCatalogRoot, "MUSIC.flac")),
+    /ENOENT/,
+  );
+  assert.equal(
+    (await request(preview.handler, "/audio-catalog/derivatives/MUSIC.flac"))
+      .statusCode,
+    404,
+  );
+});
+
+test("lossless fallback cannot hide broken catalog files or admit symlinks/WAV masters", (t) => {
+  const f = fixture(t);
+  const losslessRoot = join(f.audioCatalogRoot, "derivatives");
+  mkdirSync(losslessRoot);
+  writeFileSync(join(losslessRoot, "SAMPLE.flac"), f.bytes);
+  writeFileSync(join(f.audioCatalogRoot, "SAMPLE.flac"), "corrupt");
+  assert.throws(
+    () => createPwaPreviewHandler({ ...f.config, losslessRoot }),
+    /size mismatch/,
+  );
+  writeFileSync(join(f.audioCatalogRoot, "SAMPLE.flac"), f.bytes);
+  symlinkSync(
+    join(losslessRoot, "SAMPLE.flac"),
+    join(losslessRoot, "LINK.flac"),
+  );
+  assert.throws(
+    () =>
+      createPwaPreviewHandler({
+        ...f.config,
+        losslessRoot,
+        additionalAudioFiles: [{ filename: "LINK.flac", bytes: 16 }],
+      }),
+    /Unsafe preview resource/,
+  );
+  writeFileSync(join(losslessRoot, "MASTER.wav"), f.bytes);
+  assert.throws(
+    () =>
+      createPwaPreviewHandler({
+        ...f.config,
+        losslessRoot,
+        additionalAudioFiles: [{ filename: "MASTER.wav", bytes: 16 }],
+      }),
+    /ENOENT/,
+  );
+});
+
+test("current preview merges identities but refuses conflicts instead of silently replacing audio", (t) => {
+  const f = fixture(t);
+  const root = join(f.audioCatalogRoot, "project");
+  for (const dir of [
+    "docs",
+    "src/content",
+    "src/pwa-review",
+    "public/audio-catalog",
+  ])
+    mkdirSync(join(root, dir), { recursive: true });
+  const file = { filename: "SAMPLE.flac", bytes: 16, sha256: "b".repeat(64) };
+  const save = (path, value) =>
+    writeFileSync(join(root, path), JSON.stringify(value));
+  save("docs/M4_LOCAL_LISTENING_MANIFEST.json", {
+    files: [file],
+    fileCount: 1,
+    totalBytes: 16,
+  });
+  save("src/content/hathaAudioFiles.json", { files: [] });
+  save("src/content/localNaturalAudioFiles.json", { files: [] });
+  const index = {
+    filename: file.filename,
+    bytes: 16,
+    sourceSha256: file.sha256,
+  };
+  save("src/pwa-review/flacIndexManifest.json", { files: [index] });
+  writeFileSync(join(root, "public/audio-catalog/SAMPLE.flac"), f.bytes);
+  const config = { projectRoot: root, artifactRoot: f.artifactRoot };
+  assert.equal(createCurrentPwaPreview(config).audioCount, 1);
+  save("src/pwa-review/flacIndexManifest.json", {
+    files: [{ ...index, sourceSha256: "c".repeat(64) }],
+  });
+  assert.throws(() => createCurrentPwaPreview(config), /Conflicting approved/);
+});
+
+test(
+  "current 47 review URLs support HEAD and exact first/last ranges, including musical FLAC and two local textures",
+  {
+    skip:
+      !process.env.APP_RELAX_TEST_LOSSLESS_ROOT &&
+      "Set APP_RELAX_TEST_LOSSLESS_ROOT to verify the external read-only files",
+  },
+  async () => {
+    const losslessRoot = process.env.APP_RELAX_TEST_LOSSLESS_ROOT;
+    const preview = createCurrentPwaPreview({
+      projectRoot,
+      artifactRoot: join(projectRoot, "dist/pwa-d093"),
+      losslessRoot,
+    });
+    const json = (path) =>
+      JSON.parse(readFileSync(join(projectRoot, path), "utf8"));
+    const files = [
+      ...json("src/pwa-review/flacIndexManifest.json").files.map((f) => ({
+        ...f,
+        sha256: f.sourceSha256,
+      })),
+      ...json("src/content/localNaturalAudioFiles.json").files,
+    ];
+    assert.equal(preview.reviewAudioCount, 47);
+    assert.equal(preview.reviewAudioBytes, 2_434_210_564);
+    assert.equal(preview.audioCount, 68); // 21 existing WAV URLs retained, no copies.
+    for (const file of files) {
+      const url = `/audio-catalog/${file.filename}`;
+      const head = await request(preview.handler, url, { method: "HEAD" });
+      assert.equal(head.statusCode, 200, file.filename);
+      assert.equal(head.headers.get("content-length"), String(file.bytes));
+      assert.equal(head.headers.get("x-content-sha256"), file.sha256);
+      let path = join(projectRoot, "public/audio-catalog", file.filename);
+      if (!lstatSync(path, { throwIfNoEntry: false }))
+        path = join(losslessRoot, file.filename);
+      const descriptor = openSync(path, "r");
+      try {
+        for (const start of [0, file.bytes - 16]) {
+          const expected = Buffer.alloc(16);
+          readSync(descriptor, expected, 0, 16, start);
+          const res = await request(preview.handler, url, {
+            headers: { range: `bytes=${start}-${start + 15}` },
+          });
+          assert.equal(res.statusCode, 206, file.filename);
+          assert.deepEqual(res.body, expected, file.filename);
+        }
+      } finally {
+        closeSync(descriptor);
+      }
+    }
+  },
+);
+
+test("explicit review additions preserve base validation and reject duplicates or unsafe paths", async (t) => {
+  const f = fixture(t);
+  const extra = { filename: "UNAPPROVED.flac", bytes: 16 };
+  const review = createPwaPreviewHandler({
+    ...f.config,
+    additionalAudioFiles: [extra],
+  });
+  assert.equal(
+    (await request(review.handler, "/audio-catalog/UNAPPROVED.flac"))
+      .statusCode,
+    200,
+  );
+  for (const entry of [
+    { filename: "SAMPLE.wav", bytes: 16 },
+    { filename: "../UNAPPROVED.flac", bytes: 16 },
+    { ...extra, bytes: -1 },
+  ]) {
+    assert.throws(
+      () =>
+        createPwaPreviewHandler({ ...f.config, additionalAudioFiles: [entry] }),
+      /Invalid or duplicate/,
+    );
+  }
+  const base = JSON.parse(readFileSync(f.manifestPath, "utf8"));
+  writeFileSync(f.manifestPath, JSON.stringify({ ...base, totalBytes: 1 }));
+  assert.throws(
+    () =>
+      createPwaPreviewHandler({ ...f.config, additionalAudioFiles: [extra] }),
+    /Invalid base audio manifest/,
+  );
+});
+
 test("audio symlinks and shell symlinks fail preflight", (t) => {
   const f = fixture(t);
   rmSync(join(f.audioCatalogRoot, "SAMPLE.wav"));
@@ -246,7 +486,7 @@ test("a disappearing file returns 500 instead of hanging or leaking its path", a
   assert.equal(res.body.toString(), "Resource could not be read.");
 });
 
-test("all 37 real catalog files pass HEAD and byte-identical first/last Range responses without listening", async () => {
+test("all 45 real catalog files pass HEAD and byte-identical first/last Range responses without listening", async () => {
   const audioCatalogRoot = join(projectRoot, "public", "audio-catalog");
   const manifestPath = join(
     projectRoot,
@@ -254,13 +494,17 @@ test("all 37 real catalog files pass HEAD and byte-identical first/last Range re
     "M4_LOCAL_LISTENING_MANIFEST.json",
   );
   const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+  const review = JSON.parse(
+    readFileSync(join(projectRoot, "src/content/hathaAudioFiles.json"), "utf8"),
+  );
   const preview = createPwaPreviewHandler({
     artifactRoot: join(projectRoot, "dist", "m5-pwa"),
     audioCatalogRoot,
     manifestPath,
+    additionalAudioFiles: review.files,
   });
-  assert.equal(preview.audioCount, 37);
-  for (const file of manifest.files) {
+  assert.equal(preview.audioCount, 45);
+  for (const file of [...manifest.files, ...review.files]) {
     const url = `/audio-catalog/${file.filename}`;
     const head = await request(preview.handler, url, { method: "HEAD" });
     assert.equal(head.statusCode, 200, file.filename);
@@ -289,6 +533,8 @@ test("launcher rejects unsupported exposure options and invalid ports before bin
     ["--tunnel"],
     ["--port", "0"],
     ["--port=NaN"],
+    ["--lossless-root"],
+    ["--artifact"],
   ]) {
     const result = spawnSync(
       process.execPath,

@@ -3,23 +3,101 @@ import ConsumerPlayerScreen from "@/app/listen/[workId]";
 import { getConsumerWork } from "@/content/consumerCatalog";
 import { createSingleTrackProgram } from "@/domain/audio/consumerTypes";
 import { createConsumerAudioMock, deferred } from "./helpers/consumerAudioMock";
+import { HATHA_AUDIO_WORKS } from "@/content/hathaCatalog";
+import { createListeningNatureProgram } from "@/pwa-review/createListeningNatureProgram";
 
 let mockAudio = createConsumerAudioMock();
 let mockParams: Record<string, string>;
 jest.mock("expo-router", () => ({
+  useFocusEffect: (callback: () => void) => {
+    const { useEffect } = jest.requireActual("react");
+    useEffect(callback, [callback]);
+  },
   useLocalSearchParams: () => mockParams,
-  useRouter: () => ({ back: jest.fn() }),
+  useRouter: () => ({ back: jest.fn(), setParams: jest.fn() }),
 }));
 jest.mock("expo-linear-gradient", () => ({ LinearGradient: "LinearGradient" }));
 jest.mock("@/audio/AudioProvider", () => ({
   useAudioSession: () => mockAudio,
 }));
 jest.mock("@/domain/sessions/playbackAvailability", () => ({
+  isNativeCatalogPreview: () => false,
   isAdaptivePlaybackAvailable: () => true,
   isPwaWebSurface: () => false,
 }));
 
 describe("autonomous consumer player", () => {
+  it("prepares real music plus chosen rain, keeps levels separate and allows Off", async () => {
+    mockParams = { workId: "astral-thread", outcome: "focus", duration: "30" };
+    const screen = await render(
+      <ConsumerPlayerScreen
+        createNatureProgram={createListeningNatureProgram}
+      />,
+    );
+    await fireEvent.press(screen.getByRole("radio", { name: "Ambience Rain" }));
+    await waitFor(() =>
+      expect(screen.getByTestId("consumer-play-pause")).toBeEnabled(),
+    );
+    await fireEvent.press(screen.getByTestId("consumer-play-pause"));
+    const selected =
+      mockAudio.controller.startSelectionFromUserGesture.mock.calls.at(-1)![0];
+    expect(selected.kind).toBe("adaptive");
+    if (selected.kind !== "adaptive") throw Error("Expected composed program");
+    expect(selected.program.plan.natureMix?.selectedFamily).toBe("rain");
+    expect(selected.program.works).toHaveLength(4); // one music + three rain recordings over 30 min
+    mockAudio.setActive(selected);
+    mockAudio.snapshot.status = "playing";
+    mockAudio.snapshot.sessionPlanId = selected.program.plan.id;
+    mockAudio.snapshot.natureMixLevel = 0.5;
+    await screen.rerender(
+      <ConsumerPlayerScreen
+        createNatureProgram={createListeningNatureProgram}
+      />,
+    );
+    expect(
+      screen.getByRole("radio", { name: "Ambience Ocean waves" }),
+    ).toBeDisabled();
+    await fireEvent.press(
+      screen.getByRole("button", { name: "Mute natural ambience" }),
+    );
+    expect(mockAudio.controller.setNatureMixLevel).toHaveBeenCalledWith(0);
+    expect(mockAudio.controller.setVolume).not.toHaveBeenCalled();
+    mockAudio.snapshot.status = "ready";
+    await screen.rerender(
+      <ConsumerPlayerScreen
+        createNatureProgram={createListeningNatureProgram}
+      />,
+    );
+    await fireEvent.press(screen.getByRole("radio", { name: "Ambience Off" }));
+    await waitFor(() =>
+      expect(mockAudio.controller.prepareSelection).toHaveBeenLastCalledWith(
+        expect.objectContaining({ kind: "single" }),
+      ),
+    );
+  });
+  it.each(HATHA_AUDIO_WORKS)(
+    "opens and starts $title through the controller without a technical title",
+    async (work) => {
+      mockParams = { workId: work.id, outcome: "yoga", duration: "30" };
+      const screen = await render(<ConsumerPlayerScreen />);
+      expect(screen.getByRole("header", { name: "Yoga" })).toBeTruthy();
+      expect(screen.queryByText(work.title)).toBeNull();
+      expect(screen.queryByText(work.sourceFilename!)).toBeNull();
+      await waitFor(() =>
+        expect(screen.getByTestId("consumer-play-pause")).toBeEnabled(),
+      );
+      await fireEvent.press(screen.getByTestId("consumer-play-pause"));
+      expect(
+        mockAudio.controller.startSelectionFromUserGesture,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          kind: "single",
+          durationMinutes: 30,
+          program: expect.objectContaining({ work }),
+        }),
+      );
+    },
+  );
   beforeEach(() => {
     mockAudio = createConsumerAudioMock();
     mockParams = {
@@ -38,6 +116,8 @@ describe("autonomous consumer player", () => {
     expect(screen.getAllByTestId("playback-transport")).toHaveLength(1);
     expect(screen.getByTestId("consumer-play-pause")).toBeDisabled();
     expect(screen.getByText("90:00")).toBeTruthy();
+    expect(screen.queryByRole("radio", { name: "90 minutes" })).toBeNull();
+    await fireEvent.press(screen.getByText("Timer · 90 min +"));
     expect(
       screen.getByRole("radio", { name: "90 minutes", checked: true }),
     ).toBeTruthy();
@@ -82,6 +162,7 @@ describe("autonomous consumer player", () => {
     const screen = await render(<ConsumerPlayerScreen />);
     expect(screen.getByRole("button", { name: "Pause" })).toBeEnabled();
     expect(screen.getByText("89:00")).toBeTruthy();
+    await fireEvent.press(screen.getByText("Timer · 90 min +"));
     expect(mockAudio.controller.prepareSelection).not.toHaveBeenCalled();
     expect(
       mockAudio.controller.startSelectionFromUserGesture,
@@ -99,6 +180,7 @@ describe("autonomous consumer player", () => {
 
   it("re-prepares a changed duration without mutating the current timer or starting audio", async () => {
     const screen = await render(<ConsumerPlayerScreen />);
+    await fireEvent.press(screen.getByText("Timer · 90 min +"));
     await waitFor(() =>
       expect(screen.getByTestId("consumer-play-pause")).toBeEnabled(),
     );
@@ -145,7 +227,9 @@ describe("autonomous consumer player", () => {
     );
     const screen = await render(<ConsumerPlayerScreen />);
     await waitFor(() =>
-      expect(screen.getByRole("alert")).toHaveTextContent("File unavailable"),
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "This session could not be prepared. Retry, or choose another activity.",
+      ),
     );
     expect(screen.getByTestId("consumer-play-pause")).toBeDisabled();
     await fireEvent.press(screen.getByText("Retry loading"));

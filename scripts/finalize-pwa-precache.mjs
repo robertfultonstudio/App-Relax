@@ -3,6 +3,17 @@ import { readdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 const root = path.resolve(process.argv[2] ?? "dist/m5-pwa");
+const indexes = JSON.parse(
+  await readFile(
+    new URL("../src/pwa-review/flacIndexManifest.json", import.meta.url),
+    "utf8",
+  ),
+);
+const onDemand = new Set(
+  indexes.files
+    .filter((f) => f.onDemand)
+    .map((f) => `flac-index/${f.indexSha256}.json`),
+);
 async function files(directory) {
   const entries = await readdir(directory, { withFileTypes: true });
   return (
@@ -19,7 +30,8 @@ async function files(directory) {
 const paths = (await files(root))
   .filter(
     (file) =>
-      !["sw.js", "precache-manifest.js"].includes(path.relative(root, file)),
+      !["sw.js", "precache-manifest.js"].includes(path.relative(root, file)) &&
+      !onDemand.has(path.relative(root, file).split(path.sep).join("/")),
   )
   .sort();
 const digest = createHash("sha256");

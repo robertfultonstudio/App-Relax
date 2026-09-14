@@ -6,6 +6,7 @@ import LegalScreen from "@/app/legal";
 import PwaLegalScreen from "@/app-pwa/legal";
 import PwaSettingsScreen from "@/app-pwa/settings";
 import { editorial } from "@/design/editorialTheme";
+import { PWA_SHELL_BOOTSTRAP } from "@/pwa-review/pwaShellBootstrap";
 
 const mockDownloadControl = () => (
   <Text testID="download-control">Offline starter control</Text>
@@ -56,7 +57,7 @@ describe("coherent consumer information", () => {
     ).toBeNull();
   });
 
-  it("uses App Relax in install metadata and retains the existing SW registration", () => {
+  it("uses App Relax install metadata and the host-scoped shell bootstrap", () => {
     const root = join(__dirname, "..", "..");
     const manifest = JSON.parse(
       readFileSync(join(root, "public-pwa/manifest.webmanifest"), "utf8"),
@@ -68,10 +69,11 @@ describe("coherent consumer information", () => {
       scope: "/",
     });
     const html = readFileSync(join(root, "src/app-pwa/+html.tsx"), "utf8");
+    expect(html).toContain("__html: PWA_SHELL_BOOTSTRAP");
     expect(html).toContain(
       'content="App Relax" name="apple-mobile-web-app-title"',
     );
-    expect(html).toContain(
+    expect(PWA_SHELL_BOOTSTRAP).toContain(
       'navigator.serviceWorker.register("/sw.js", { scope: "/" })',
     );
   });

@@ -10,6 +10,7 @@ import { AudioProvider } from "@/audio/AudioProvider";
 import { createAudioGraphDriver } from "@/audio/createAudioDriver";
 import { colors } from "@/design/theme";
 import { CurrentSessionBar } from "@/components/CurrentSessionBar";
+import { NativeCatalogGate } from "@/components/NativeCatalogGate";
 
 void SplashScreen.preventAutoHideAsync();
 
@@ -41,15 +42,17 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <AudioProvider createDriver={createAudioGraphDriver}>
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: colors.background },
-            animation: "fade",
-          }}
-        />
-        <CurrentSessionBar />
-        <StatusBar style={usesTechnicalShell ? "light" : "dark"} />
+        <NativeCatalogGate>
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: colors.background },
+              animation: "fade",
+            }}
+          />
+          <CurrentSessionBar />
+          <StatusBar style={usesTechnicalShell ? "light" : "dark"} />
+        </NativeCatalogGate>
       </AudioProvider>
     </SafeAreaProvider>
   );

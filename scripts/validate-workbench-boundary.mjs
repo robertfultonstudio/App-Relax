@@ -58,6 +58,10 @@ assert(
 );
 assert(easIgnore.includes("/src/qa/"), "src/qa is not excluded from EAS");
 assert(
+  easIgnore.includes("/src/pwa-review/"),
+  "private player review is not excluded from EAS",
+);
+assert(
   easIgnore.includes("/src/app-pwa/"),
   "src/app-pwa is not excluded from EAS",
 );
@@ -72,6 +76,7 @@ for (const forbidden of [
   "AUDIO QA WORKBENCH",
   "qa-workbench",
   "@/qa/",
+  "@/pwa-review/",
   "src/app-qa",
 ]) {
   assert(

@@ -1,6 +1,6 @@
 import { Platform } from "react-native";
 
-/** Standard arrow/Home/End interaction for RN Web radio groups; native uses accessibility actions. */
+/** Standard keyboard interaction for RN Web radio groups; native uses accessibility actions. */
 export function radioKeyboard<T>(
   options: readonly T[],
   selected: T,
@@ -15,15 +15,17 @@ export function radioKeyboard<T>(
     }) => {
       const index = options.indexOf(selected);
       const next =
-        event.key === "Home"
-          ? 0
-          : event.key === "End"
-            ? options.length - 1
-            : event.key === "ArrowRight" || event.key === "ArrowDown"
-              ? (index + 1) % options.length
-              : event.key === "ArrowLeft" || event.key === "ArrowUp"
-                ? (index - 1 + options.length) % options.length
-                : -1;
+        event.key === " " || event.key === "Spacebar" || event.key === "Enter"
+          ? index
+          : event.key === "Home"
+            ? 0
+            : event.key === "End"
+              ? options.length - 1
+              : event.key === "ArrowRight" || event.key === "ArrowDown"
+                ? (index + 1) % options.length
+                : event.key === "ArrowLeft" || event.key === "ArrowUp"
+                  ? (index - 1 + options.length) % options.length
+                  : -1;
       if (next < 0) return;
       event.preventDefault();
       onChange(options[next]);

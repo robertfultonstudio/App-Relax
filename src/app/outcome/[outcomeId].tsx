@@ -1,25 +1,54 @@
 import { type Href, useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, StyleSheet, Text } from "react-native";
 import { AdaptiveSessionSetup } from "@/components/AdaptiveSessionSetup";
+import {
+  ImmediateSessionSetup,
+  type ListeningNatureFactory,
+} from "@/components/ImmediateSessionSetup";
 import { EditorialHeader } from "@/components/EditorialHeader";
 import { EditorialScreen } from "@/components/EditorialScreen";
 import {
   CONSUMER_OUTCOMES,
   type ConsumerOutcomeId,
 } from "@/content/productShell";
-import { getSessionPolicy } from "@/content/sessionPolicies";
-import { getWorksForOutcome, isPlayableWork } from "@/content/consumerCatalog";
 import { OUTCOME_ARTWORK } from "@/design/outcomeArtwork";
 import { editorial } from "@/design/editorialTheme";
 import { fonts } from "@/design/theme";
-import type { SessionDurationMinutes } from "@/domain/sessions/types";
+import {
+  platformReviewProgramFactory,
+  platformNatureProgramFactory,
+} from "@/domain/sessions/platformSessionFactories";
+import type {
+  SessionDurationMinutes,
+  CreateAdaptiveSessionInput,
+  AdaptiveSessionProgram,
+} from "@/domain/sessions/types";
 
-export default function OutcomeSessionScreen() {
-  const { outcomeId } = useLocalSearchParams<{ outcomeId: string }>();
+type ReviewFactory = (
+  input: CreateAdaptiveSessionInput,
+) => AdaptiveSessionProgram;
+export default function OutcomeSessionScreen({
+  reviewProgramFactory = platformReviewProgramFactory,
+  createNatureProgram = platformNatureProgramFactory,
+}: {
+  reviewProgramFactory?: ReviewFactory;
+  createNatureProgram?: ListeningNatureFactory;
+} = {}) {
+  const { outcomeId, practice } = useLocalSearchParams<{
+    outcomeId: string;
+    practice?: string;
+  }>();
   const outcome = CONSUMER_OUTCOMES.find((item) => item.id === outcomeId);
+  const completePractice = outcomeId === "yoga" && practice === "complete";
   return outcome ? (
-    <OutcomeContent key={outcome.id} outcomeId={outcome.id} />
+    <OutcomeContent
+      key={outcome.id + ":" + completePractice}
+      outcomeId={outcome.id}
+      completePractice={completePractice}
+      reviewProgramFactory={reviewProgramFactory}
+      createNatureProgram={createNatureProgram}
+    />
   ) : (
     <EditorialScreen>
       <EditorialHeader label="HOME" showBack />
@@ -29,14 +58,20 @@ export default function OutcomeSessionScreen() {
     </EditorialScreen>
   );
 }
-function OutcomeContent({ outcomeId }: { outcomeId: ConsumerOutcomeId }) {
+function OutcomeContent({
+  outcomeId,
+  completePractice,
+  reviewProgramFactory,
+  createNatureProgram,
+}: {
+  outcomeId: ConsumerOutcomeId;
+  completePractice: boolean;
+  reviewProgramFactory?: ReviewFactory;
+  createNatureProgram?: ListeningNatureFactory;
+}) {
   const router = useRouter();
   const outcome = CONSUMER_OUTCOMES.find((item) => item.id === outcomeId)!;
-  const [duration, setDuration] = useState<SessionDurationMinutes>(
-    getSessionPolicy(outcomeId).defaultDuration,
-  );
-  const [all, setAll] = useState(false);
-  const works = getWorksForOutcome(outcomeId).filter(isPlayableWork);
+  const [duration, setDuration] = useState<SessionDurationMinutes>(30);
   return (
     <EditorialScreen>
       <EditorialHeader label={outcome.functionLabel} showBack />
@@ -47,86 +82,70 @@ function OutcomeContent({ outcomeId }: { outcomeId: ConsumerOutcomeId }) {
         style={styles.artwork}
       />
       <Text accessibilityRole="header" style={styles.title}>
-        {outcome.cta}
+        {completePractice ? "Your complete Hatha practice" : outcome.cta}
       </Text>
-      <AdaptiveSessionSetup
-        outcome={outcomeId}
-        duration={duration}
-        onDurationChange={setDuration}
-      />
-      <View
-        style={styles.library}
-        accessibilityLabel={`${outcome.functionLabel} sound library`}
-        testID="outcome-sound-library"
-      >
-        <Text accessibilityRole="header" style={styles.subtitle}>
-          Or choose one sound
-        </Text>
-        {(all ? works : works.slice(0, 2)).map((work) => (
-          <Pressable
-            key={work.id}
-            accessibilityRole="button"
-            accessibilityLabel={`Open ${work.title}, ${duration} minutes for ${outcomeId}`}
-            onPress={() =>
-              router.push(
-                `/listen/${work.id}?outcome=${outcomeId}&duration=${duration}` as Href,
-              )
-            }
-            style={styles.work}
-            testID={`consumer-work-${work.id}`}
-          >
-            <Text style={styles.workTitle}>{work.title}</Text>
-            <Text style={styles.body}>{duration} min →</Text>
-          </Pressable>
-        ))}
-        {works.length > 2 ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityState={{ expanded: all }}
-            onPress={() => setAll(!all)}
-            style={styles.work}
-          >
-            <Text style={styles.body}>
-              {all ? "Show fewer sounds" : `View all ${works.length} sounds`}
-            </Text>
-          </Pressable>
-        ) : null}
-      </View>
+      {completePractice ? (
+        <>
+          <Text style={styles.note}>
+            A complete musical journey for your practice. No spoken guidance.
+          </Text>
+          <AdaptiveSessionSetup
+            outcome="yoga"
+            duration={duration}
+            onDurationChange={setDuration}
+            reviewProgramFactory={reviewProgramFactory}
+            completePractice
+          />
+        </>
+      ) : (
+        <ImmediateSessionSetup
+          outcome={outcomeId}
+          createNatureProgram={createNatureProgram}
+        />
+      )}
+      {outcomeId === "yoga" ? (
+        <Pressable
+          accessibilityRole="link"
+          style={styles.secondary}
+          onPress={() =>
+            router.push(
+              (completePractice
+                ? "/outcome/yoga"
+                : "/outcome/yoga?practice=complete") as Href,
+            )
+          }
+        >
+          <Text style={styles.note}>
+            {completePractice
+              ? "Simple yoga listening →"
+              : "Complete Hatha practice →"}
+          </Text>
+        </Pressable>
+      ) : null}
     </EditorialScreen>
   );
 }
 const styles = StyleSheet.create({
-  artwork: { height: 108, width: "100%" },
+  artwork: { height: 154, width: "100%" },
   title: {
     color: editorial.ink,
     fontFamily: fonts.serif,
-    fontSize: 32,
-    lineHeight: 36,
-    marginTop: 14,
+    fontSize: 34,
+    lineHeight: 39,
+    marginTop: 22,
+    marginBottom: 12,
   },
-  library: {
-    borderTopWidth: 1,
-    borderColor: editorial.line,
-    marginTop: 18,
-    paddingTop: 14,
+  note: {
+    color: editorial.inkMuted,
+    fontFamily: fonts.sans,
+    fontSize: 15,
+    lineHeight: 23,
   },
-  subtitle: { color: editorial.ink, fontFamily: fonts.serif, fontSize: 25 },
-  work: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    alignItems: "center",
-    justifyContent: "space-between",
+  secondary: {
     minHeight: 52,
-    borderBottomWidth: 1,
+    justifyContent: "center",
+    borderTopWidth: StyleSheet.hairlineWidth,
     borderColor: editorial.line,
-    paddingVertical: 10,
+    marginTop: 32,
   },
-  workTitle: {
-    color: editorial.ink,
-    fontFamily: fonts.serifItalic,
-    fontSize: 22,
-    flexShrink: 1,
-  },
-  body: { color: editorial.inkMuted, fontFamily: fonts.sans, fontSize: 14 },
 });

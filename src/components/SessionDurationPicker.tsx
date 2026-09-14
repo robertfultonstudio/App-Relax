@@ -8,10 +8,12 @@ export function SessionDurationPicker({
   options,
   selected,
   onChange,
+  disabled = false,
 }: {
   options: readonly SessionDurationMinutes[];
   selected: SessionDurationMinutes;
   onChange: (duration: SessionDurationMinutes) => void;
+  disabled?: boolean;
 }) {
   return (
     <View
@@ -21,14 +23,19 @@ export function SessionDurationPicker({
     >
       {options.map((minutes) => (
         <Pressable
-          {...radioKeyboard(options, minutes, onChange)}
+          {...(disabled ? {} : radioKeyboard(options, minutes, onChange))}
           accessibilityLabel={`${minutes} minutes`}
           accessibilityRole="radio"
           aria-checked={minutes === selected}
-          accessibilityState={{ checked: minutes === selected }}
+          accessibilityState={{ checked: minutes === selected, disabled }}
+          disabled={disabled}
           key={minutes}
           onPress={() => onChange(minutes)}
-          style={[styles.option, minutes === selected && styles.optionSelected]}
+          style={[
+            styles.option,
+            minutes === selected && styles.optionSelected,
+            disabled && { opacity: 0.5 },
+          ]}
           testID={`duration-${minutes}`}
         >
           <Text

@@ -1,6 +1,7 @@
 import { fireEvent, render, within } from "@testing-library/react-native";
 import { StyleSheet } from "react-native";
 import HomeScreen from "@/app/index";
+import PwaHome from "@/app-pwa/index";
 import { CONSUMER_OUTCOMES, PRODUCT_TABS } from "@/content/productShell";
 import { OUTCOME_EDITORIAL_SURFACE } from "@/design/editorialTheme";
 import { OUTCOME_ARTWORK } from "@/design/outcomeArtwork";
@@ -26,6 +27,17 @@ jest.mock("@/state/lastListeningPersistence", () => ({
 }));
 
 describe("compact outcome-first Home", () => {
+  it("keeps the private PWA need-first without a promoted music catalogue", async () => {
+    const screen = await render(<PwaHome />);
+    expect(screen.queryByTestId("home-music-library")).toBeNull();
+    expect(screen.queryByText(/music library|MUSIC-REVIEW/)).toBeNull();
+    expect(
+      within(screen.getByTestId("outcome-grid")).getAllByRole("button"),
+    ).toHaveLength(6);
+    expect(
+      mockAudio.controller.startSelectionFromUserGesture,
+    ).not.toHaveBeenCalled();
+  });
   beforeEach(() => {
     mockPush.mockClear();
     mockReplace.mockClear();
@@ -37,7 +49,9 @@ describe("compact outcome-first Home", () => {
     expect(screen.getByText("APP RELAX")).toBeTruthy();
     expect(screen.getByText("What do you need right now?")).toBeTruthy();
     expect(
-      screen.getByText("Choose your moment and how long you have."),
+      screen.getByText(
+        "Choose your moment. Press Play. Leave the phone behind.",
+      ),
     ).toBeTruthy();
     expect(
       screen.queryByRole("button", { name: "Play your last session" }),
@@ -63,7 +77,7 @@ describe("compact outcome-first Home", () => {
         minHeight: 148,
       });
       expect(tile.props.accessibilityLabel).toBe(
-        `${outcome.functionLabel}. Choose your listening time.`,
+        `${outcome.functionLabel}. Open and press Play.`,
       );
       const label = within(tile).getByText(outcome.functionLabel);
       expect(StyleSheet.flatten(label.props.style)).toMatchObject({
@@ -94,15 +108,15 @@ describe("compact outcome-first Home", () => {
     });
   });
 
-  it("offers Home and Sounds once, with Yoga remaining a need rather than a duplicate tab", async () => {
+  it("keeps the catalogue out of main tabs and offers a distinct complete Yoga path", async () => {
     expect(PRODUCT_TABS).toEqual([
       { id: "rituals", label: "HOME", route: "/" },
-      { id: "soundscapes", label: "SOUNDS", route: "/soundscapes" },
+      { id: "yoga", label: "HATHA", route: "/yoga" },
     ]);
     const screen = await render(<HomeScreen />);
-    expect(screen.queryByTestId("product-tab-yoga")).toBeNull();
-    await fireEvent.press(screen.getByTestId("product-tab-soundscapes"));
-    expect(mockReplace).toHaveBeenCalledWith("/soundscapes");
+    expect(screen.queryByTestId("product-tab-soundscapes")).toBeNull();
+    await fireEvent.press(screen.getByTestId("product-tab-yoga"));
+    expect(mockReplace).toHaveBeenCalledWith("/yoga");
     await fireEvent.press(screen.getByText("Settings"));
     expect(mockPush).toHaveBeenCalledWith("/settings");
   });

@@ -16,6 +16,8 @@ import type { StorageAdapter } from "./playerPersistence";
 const STORAGE_KEY = "@app-relax/adaptive-session-history";
 
 export interface SavedSessionRequest {
+  listeningWorkId?: string;
+  includeNatureBed?: boolean;
   outcome: ConsumerOutcomeId;
   durationMinutes: SessionDurationMinutes;
   mode: "sound-only";
@@ -75,7 +77,12 @@ function isSavedRequest(value: unknown): value is SavedSessionRequest {
     ) &&
     candidate.mode === "sound-only" &&
     (candidate.soundKind === "music" || candidate.soundKind === "nature") &&
-    (candidate.natureFamily === "rain" || candidate.natureFamily === "sea")
+    (candidate.natureFamily === "rain" || candidate.natureFamily === "sea") &&
+    (candidate.includeNatureBed === undefined ||
+      typeof candidate.includeNatureBed === "boolean") &&
+    (candidate.listeningWorkId === undefined ||
+      (typeof candidate.listeningWorkId === "string" &&
+        isCurrentConsumerWork(candidate.listeningWorkId)))
   );
 }
 
@@ -90,6 +97,12 @@ export function parseSavedSessionRequest(
     mode: "sound-only",
     soundKind: value.soundKind,
     natureFamily: value.natureFamily,
+    ...(value.includeNatureBed !== undefined
+      ? { includeNatureBed: value.includeNatureBed }
+      : {}),
+    ...(value.listeningWorkId
+      ? { listeningWorkId: value.listeningWorkId }
+      : {}),
   };
 }
 

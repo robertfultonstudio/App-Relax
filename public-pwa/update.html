@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Open updated App Relax</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 32px 24px;
+        background: #f3e9d8;
+        color: #23332e;
+        font:
+          17px/1.6 system-ui,
+          sans-serif;
+      }
+      main {
+        max-width: 440px;
+        margin: 8vh auto;
+      }
+      h1 {
+        font:
+          40px/1.15 Georgia,
+          serif;
+      }
+      button {
+        width: 100%;
+        min-height: 56px;
+        padding: 14px;
+        border: 0;
+        background: #23332e;
+        color: #fffaf0;
+        font: inherit;
+        cursor: pointer;
+      }
+      button:disabled {
+        opacity: 0.6;
+      }
+      button + button {
+        margin-top: 12px;
+      }
+      button:focus-visible {
+        outline: 3px solid #365b58;
+        outline-offset: 4px;
+      }
+      a {
+        color: inherit;
+      }
+    </style>
+    <script src="/pwa-update.js" defer></script>
+  </head>
+  <body>
+    <main>
+      <h1>Open your private review.</h1>
+      <p>Audio, session transitions and individual loop tests.</p>
+      <p>
+        Stop playback and close other App Relax tabs or app windows first. Your
+        saved sounds and settings stay untouched.
+      </p>
+      <button id="update">Open updated app</button>
+      <button id="online" hidden>Open latest online version</button>
+      <p id="status" role="status" aria-live="polite"></p>
+      <p><a href="/">Back to App Relax</a></p>
+    </main>
+  </body>
+</html>

@@ -55,6 +55,17 @@ beforeEach(() => {
 });
 
 describe("explicit offline download control", () => {
+  it("keeps review-only audio playable without querying an unapproved download", async () => {
+    const screen = await render(
+      <DownloadControl workId="respiro-hatha-1-01" />,
+    );
+    expect(
+      screen.getByText("Review audio · online listening only."),
+    ).toBeTruthy();
+    expect(mockDownloads.hydrate).not.toHaveBeenCalled();
+    expect(mockDownloads.download).not.toHaveBeenCalled();
+    expect(mockShellCheck).not.toHaveBeenCalled();
+  });
   it("never presents a verified audio download as proof of app reopening", async () => {
     mockSnapshot.record.status = "available";
     const screen = await render(<DownloadControl />);
@@ -96,14 +107,20 @@ describe("explicit offline download control", () => {
   });
   it("keeps removal reversible until a separate permanent space release", async () => {
     mockSnapshot = { ...mockSnapshot, removed: true };
-    const screen = await render(<DownloadControl workId="a" />);
+    const screen = await render(
+      <DownloadControl workId="field-rain-006-quiet-weather" />,
+    );
     await fireEvent.press(screen.getByRole("button", { name: "Undo removal" }));
-    expect(mockDownloads.undoRemoval).toHaveBeenCalledWith("a");
+    expect(mockDownloads.undoRemoval).toHaveBeenCalledWith(
+      "field-rain-006-quiet-weather",
+    );
     expect(mockDownloads.purgeRemoval).not.toHaveBeenCalled();
     await fireEvent.press(
       screen.getByRole("button", { name: "Free space permanently" }),
     );
-    expect(mockDownloads.purgeRemoval).toHaveBeenCalledWith("a");
+    expect(mockDownloads.purgeRemoval).toHaveBeenCalledWith(
+      "field-rain-006-quiet-weather",
+    );
   });
   it("offers an actionable recovery for a missing or corrupt copy", async () => {
     mockSnapshot = {
@@ -114,11 +131,15 @@ describe("explicit offline download control", () => {
         failureCode: "integrity-mismatch",
       },
     };
-    const screen = await render(<DownloadControl workId="a" />);
+    const screen = await render(
+      <DownloadControl workId="field-rain-006-quiet-weather" />,
+    );
     expect(screen.getByRole("alert")).toBeTruthy();
     await fireEvent.press(
       screen.getByRole("button", { name: "Retry download" }),
     );
-    expect(mockDownloads.download).toHaveBeenCalledWith(["a"]);
+    expect(mockDownloads.download).toHaveBeenCalledWith([
+      "field-rain-006-quiet-weather",
+    ]);
   });
 });

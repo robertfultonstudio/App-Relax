@@ -69,6 +69,7 @@ const forbiddenSegments = new Set([
   "node_modules",
   "output",
   "public-pwa",
+  "pwa-review",
   "qa",
   "scripts",
   "tests",

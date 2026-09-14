@@ -5,6 +5,9 @@ import { EditorialHeader } from "@/components/EditorialHeader";
 import { EditorialScreen } from "@/components/EditorialScreen";
 import { editorial } from "@/design/editorialTheme";
 import { fonts, spacing } from "@/design/theme";
+import { ListeningPreferences } from "@/components/ListeningPreferences";
+import { NativeCatalogInfo } from "@/components/NativeCatalogGate";
+import { isNativeCatalogPreview } from "@/domain/sessions/playbackAvailability";
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -16,8 +19,8 @@ export default function SettingsScreen() {
         A quiet place to begin.
       </Text>
       <Text style={styles.intro}>
-        Sessions begin with a purpose and duration. Guided voices and offline
-        downloads remain clearly marked while they are being produced.
+        Choose your moment and press Play. Your activity chooses the music; you
+        can change the timer whenever you prepare a session.
       </Text>
 
       <View style={styles.card}>
@@ -26,7 +29,11 @@ export default function SettingsScreen() {
         <SettingRow label="Guided sessions" value="In production" />
         <SettingRow
           label="Offline downloads"
-          value="In production on this device"
+          value={
+            isNativeCatalogPreview()
+              ? "Imported on this phone"
+              : "In production on this device"
+          }
         />
         <SettingRow label="Saved locally" value="Last session choices" />
         <SettingRow label="Version" value={version} last />
@@ -37,6 +44,8 @@ export default function SettingsScreen() {
         onPress={() => router.push("/legal" as Href)}
         title="About listening"
       />
+      <ListeningPreferences />
+      <NativeCatalogInfo />
     </EditorialScreen>
   );
 }

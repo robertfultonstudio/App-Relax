@@ -7,6 +7,8 @@ import { editorial } from "@/design/editorialTheme";
 import { fonts, spacing } from "@/design/theme";
 import { DownloadControl } from "@/components/DownloadControl";
 import { REVIEW_REVISION } from "@/content/reviewRevision";
+import { ListeningPreferences } from "@/components/ListeningPreferences";
+import { IndividualTrackReviewLink } from "@/pwa-review/IndividualTrackReview";
 
 export default function PwaSettingsScreen() {
   const router = useRouter();
@@ -19,8 +21,8 @@ export default function PwaSettingsScreen() {
         A quiet place to begin.
       </Text>
       <Text style={styles.intro}>
-        Choose a sound and how long you have. Playback begins when you press
-        Play; exploring the library does not replace your current sound.
+        Choose your moment and press Play. Your activity chooses the music; you
+        can change the timer whenever you prepare a session.
       </Text>
 
       <View style={styles.list}>
@@ -58,6 +60,8 @@ export default function PwaSettingsScreen() {
         </View>
         <Text style={styles.arrow}>→</Text>
       </Pressable>
+      <ListeningPreferences />
+      <IndividualTrackReviewLink />
     </EditorialScreen>
   );
 }

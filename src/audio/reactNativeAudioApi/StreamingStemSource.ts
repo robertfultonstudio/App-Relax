@@ -13,6 +13,9 @@ export interface StreamingStemSource {
   output: MediaElementAudioSourceNode;
 }
 
+const SEEK_CONFIRMATION_SECONDS = 0.1;
+const SEEK_CONFIRMATION_TIMEOUT_MS = 5000;
+
 type InternalAudioTagHandle = AudioTagHandle & {
   getFileSourceNode: () => NativeFileSourceNode;
 };
@@ -123,6 +126,71 @@ export function stopStreamingStemSource(runtime: StreamingStemSource): void {
   }
 }
 
+async function waitForStreamingPosition(
+  source: NativeFileSourceNode,
+  positionSeconds: number,
+  expectedDurationSeconds: number,
+  toleranceSeconds: number,
+  allowLoopWrap: boolean,
+  deadline: number,
+  signal: AbortSignal,
+  recovery: { remaining: number },
+): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const finish = (error?: Error) => {
+      clearTimeout(timer);
+      signal.removeEventListener("abort", abort);
+      if (error) reject(error);
+      else resolve();
+    };
+    const abort = () =>
+      finish(new Error("Native source preparation cancelled."));
+    const poll = () => {
+      try {
+        const current = source.currentTime;
+        const progress = allowLoopWrap
+          ? (current - positionSeconds + expectedDurationSeconds) %
+            expectedDurationSeconds
+          : current - positionSeconds;
+        if (
+          Number.isFinite(progress) &&
+          progress > 0 &&
+          progress <= toleranceSeconds
+        ) {
+          finish();
+        } else if (
+          Number.isFinite(progress) &&
+          progress > toleranceSeconds &&
+          recovery.remaining > 0 &&
+          Date.now() < deadline
+        ) {
+          // A live decoder can pass the strict window while the JS thread is
+          // busy. Re-seek once, without extending either tolerance or deadline.
+          recovery.remaining -= 1;
+          source.seekToTime(positionSeconds);
+          timer = setTimeout(poll, 10);
+        } else if (Date.now() >= deadline) {
+          finish(
+            new Error("Native decoder did not confirm the requested position."),
+          );
+        } else {
+          timer = setTimeout(poll, 10);
+        }
+      } catch (error) {
+        finish(
+          error instanceof Error
+            ? error
+            : new Error("Native decoder position failed."),
+        );
+      }
+    };
+    signal.addEventListener("abort", abort, { once: true });
+    if (signal.aborted) abort();
+    else poll();
+  });
+}
+
 /** RNAA 0.13.2 has an asynchronous seek but no seeked/error acknowledgement.
  * Decode behind a zero-gain graph and observe real position progress before
  * exposing it. This 100 ms software tolerance is NOT sample-accurate seek QA.
@@ -149,46 +217,54 @@ export async function prepareStreamingFilePosition(
   }
   if (signal.aborted) throw new Error("Native source preparation cancelled.");
   source.start(context.currentTime);
-  source.seekToTime(positionSeconds);
-  await new Promise<void>((resolve, reject) => {
-    const deadline = Date.now() + 5000;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const finish = (error?: Error) => {
-      clearTimeout(timer);
-      signal.removeEventListener("abort", abort);
-      try {
-        source.pause();
-        if (error) reject(error);
-        else resolve();
-      } catch (pauseError) {
-        reject(pauseError);
-      }
-    };
-    const abort = () =>
-      finish(new Error("Native source preparation cancelled."));
-    const poll = () => {
-      try {
-        const progress =
-          (source.currentTime - positionSeconds + expectedDurationSeconds) %
-          expectedDurationSeconds;
-        if (Number.isFinite(progress) && progress > 0 && progress <= 0.1) {
-          finish();
-        } else if (Date.now() >= deadline) {
-          finish(
-            new Error("Native decoder did not confirm the requested position."),
-          );
-        } else {
-          timer = setTimeout(poll, 10);
-        }
-      } catch (error) {
-        finish(
-          error instanceof Error
-            ? error
-            : new Error("Native decoder position failed."),
-        );
-      }
-    };
-    signal.addEventListener("abort", abort, { once: true });
-    poll();
-  });
+  const toleranceSeconds = Math.min(
+    SEEK_CONFIRMATION_SECONDS,
+    expectedDurationSeconds / 4,
+  );
+  const deadline = Date.now() + SEEK_CONFIRMATION_TIMEOUT_MS;
+  const recovery = { remaining: 1 };
+  try {
+    if (positionSeconds >= expectedDurationSeconds - toleranceSeconds) {
+      // At the end of a loop, an untouched decoder at zero looks identical to
+      // a completed seek that has already wrapped. First confirm an unambiguous
+      // pre-roll seek; only then may the requested seek be confirmed over wrap.
+      const probePosition = positionSeconds - toleranceSeconds * 2;
+      source.seekToTime(probePosition);
+      await waitForStreamingPosition(
+        source,
+        probePosition,
+        expectedDurationSeconds,
+        toleranceSeconds,
+        false,
+        deadline,
+        signal,
+        recovery,
+      );
+      source.seekToTime(positionSeconds);
+      await waitForStreamingPosition(
+        source,
+        positionSeconds,
+        expectedDurationSeconds,
+        toleranceSeconds,
+        true,
+        deadline,
+        signal,
+        recovery,
+      );
+    } else {
+      source.seekToTime(positionSeconds);
+      await waitForStreamingPosition(
+        source,
+        positionSeconds,
+        expectedDurationSeconds,
+        toleranceSeconds,
+        false,
+        deadline,
+        signal,
+        recovery,
+      );
+    }
+  } finally {
+    source.pause();
+  }
 }

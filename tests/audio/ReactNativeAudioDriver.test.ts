@@ -108,6 +108,127 @@ describe("ReactNativeAudioDriver lifecycle", () => {
     jest.clearAllMocks();
   });
 
+  it("loads an external single track only through a verified lease and releases it once on Stop", async () => {
+    const release = jest.fn();
+    const work = getConsumerWork("astral-thread")!;
+    const acquire = jest.fn(async (workId: string) => ({
+      workId,
+      uri: "file:///private/music.flac",
+      sha256: "a".repeat(64),
+      byteSize: 120,
+      release,
+    }));
+    const driver = new ReactNativeAudioDriver({ acquire });
+    const context = injectLoadedContext(driver);
+    Object.assign(driver, { masterGain: createGainNode() });
+    const program = createSingleTrackProgram(work);
+    await driver.loadSingleTrack(program);
+    await driver.startSingleTrack(program, 0);
+    expect(acquire).toHaveBeenCalledWith(work.id);
+    expect(createStreamingStemSource).toHaveBeenCalledWith(
+      context,
+      "file:///private/music.flac",
+    );
+    expect(context.createGain.mock.results.at(-1)?.value.gain.value).toBe(0);
+    await driver.stop();
+    await driver.stop();
+    expect(release).toHaveBeenCalledTimes(1);
+  });
+
+  it("releases a late catalog lease without resurrecting a stopped selection", async () => {
+    const release = jest.fn();
+    const work = getConsumerWork("astral-thread")!;
+    let acquired!: (file: {
+      workId: string;
+      uri: string;
+      sha256: string;
+      byteSize: number;
+      release: () => void;
+    }) => void;
+    const driver = new ReactNativeAudioDriver({
+      acquire: () =>
+        new Promise((resolve) => {
+          acquired = resolve;
+        }),
+    });
+    injectLoadedContext(driver);
+    const rejected = expect(
+      driver.loadSingleTrack(createSingleTrackProgram(work)),
+    ).rejects.toThrow("cancelled");
+    await flushMicrotasks();
+    await driver.stop();
+    acquired({
+      workId: work.id,
+      uri: "file:///private/music.flac",
+      sha256: "a".repeat(64),
+      byteSize: 120,
+      release,
+    });
+    await rejected;
+    expect(release).toHaveBeenCalledTimes(1);
+    expect(createStreamingStemSource).not.toHaveBeenCalled();
+  });
+
+  it("rejects a wrong-work catalog lease and releases it", async () => {
+    const release = jest.fn();
+    const driver = new ReactNativeAudioDriver({
+      acquire: async () => ({
+        workId: "wrong",
+        uri: "file:///private/music.flac",
+        sha256: "a".repeat(64),
+        byteSize: 120,
+        release,
+      }),
+    });
+    injectLoadedContext(driver);
+    await expect(
+      driver.loadSingleTrack(
+        createSingleTrackProgram(getConsumerWork("astral-thread")!),
+      ),
+    ).rejects.toThrow("verified local file lease");
+    expect(release).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not restart a preset after Stop wins a pending focus request", async () => {
+    let activated!: () => void;
+    (AudioManager.setAudioSessionActivity as jest.Mock).mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          activated = resolve;
+        }),
+    );
+    const driver = new ReactNativeAudioDriver();
+    injectLoadedContext(driver);
+    const rejected = expect(
+      driver.start(DEEP_SLEEP_432, DEEP_SLEEP_432.defaultMix),
+    ).rejects.toThrow("cancelled");
+    await flushMicrotasks();
+    await driver.stop();
+    activated();
+    await rejected;
+    expect(AudioManager.setAudioSessionActivity).toHaveBeenLastCalledWith(
+      false,
+    );
+    for (const result of (createStreamingStemSource as jest.Mock).mock.results)
+      expect(result.value.source.start).not.toHaveBeenCalled();
+  });
+
+  it("does not resume after Stop wins a pending context resume", async () => {
+    const driver = new ReactNativeAudioDriver();
+    const context = injectActiveContext(driver);
+    let resumed!: () => void;
+    context.resume.mockReturnValueOnce(
+      new Promise<void>((resolve) => {
+        resumed = resolve;
+      }),
+    );
+    const rejected = expect(driver.resume()).rejects.toThrow("cancelled");
+    await driver.stop();
+    resumed();
+    await rejected;
+    expect(AudioManager.setAudioSessionActivity).not.toHaveBeenCalledWith(true);
+  });
+
   it("releases audio focus for a manual pause", async () => {
     const driver = new ReactNativeAudioDriver();
     const context = injectActiveContext(driver);

@@ -3,7 +3,10 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { editorial } from "@/design/editorialTheme";
 import { fonts, spacing } from "@/design/theme";
 import { getPwaOfflineDownloads } from "@/offline/PwaOfflineDownloads";
-import { STARTER_PACKAGE_ID } from "@/offline/approvedDownloads";
+import {
+  APPROVED_DOWNLOAD_MANIFEST,
+  STARTER_PACKAGE_ID,
+} from "@/offline/approvedDownloads";
 import { getPwaShellReadiness } from "@/offline/PwaShellReadiness";
 
 const size = (bytes: number) => `${(bytes / 1_000_000).toFixed(1)} MB`;
@@ -21,6 +24,20 @@ const failures: Record<string, string> = {
 
 /** PWA-only surface. Omitting workId offers the small, explicitly selected starter. */
 export function DownloadControl({ workId }: { workId?: string }) {
+  const id = workId ?? STARTER_PACKAGE_ID;
+  if (
+    !APPROVED_DOWNLOAD_MANIFEST.packages.some((entry) => entry.packageId === id)
+  ) {
+    return (
+      <Text style={styles.body} testID="review-online-only">
+        Review audio · online listening only.
+      </Text>
+    );
+  }
+  return <AvailableDownloadControl workId={workId} />;
+}
+
+function AvailableDownloadControl({ workId }: { workId?: string }) {
   const downloads = getPwaOfflineDownloads();
   const shell = getPwaShellReadiness();
   const shellState = useSyncExternalStore(

@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="en">
+  <meta charset="utf-8" /><title>FLAC clock continuity gate</title>
+  <style>
+    body {
+      font: 18px system-ui;
+      max-width: 860px;
+      margin: 32px auto;
+      padding: 16px;
+      background: #f6f1e8;
+      color: #172320;
+    }
+    button {
+      font: inherit;
+      padding: 16px;
+    }
+    pre {
+      white-space: pre-wrap;
+    }
+  </style>
+  <h1>FLAC · real audio-clock continuity</h1>
+  <p>
+    Local diagnostic. No speaker output, no upload, no iPhone listening claim.
+  </p>
+  <button id="run">Check loop and window joins</button>
+  <pre id="result">Ready</pre>
+  <script type="importmap">
+    {
+      "imports": {
+        "@wasm-audio-decoders/common": "/modules/@wasm-audio-decoders/common/index.js",
+        "codec-parser": "/modules/codec-parser/index.js",
+        "@eshaz/web-worker": "/modules/@eshaz/web-worker/browser.js",
+        "simple-yenc": "/modules/simple-yenc/dist/esm.js"
+      }
+    }
+  </script>
+  <script type="module">
+    import { FLACDecoderWebWorker } from "/modules/@wasm-audio-decoders/flac/index.js";
+    import { ClockedWavSource } from "/clock-source.js";
+    import { FlacWindowReader } from "/flac-reader.js";
+    import { createDecoder } from "/flac-client.js";
+    const compiledWorker =
+      new URL(location.href).searchParams.get("compiled") === "1";
+    const output = document.getElementById("result"),
+      button = document.getElementById("run");
+    const sleep = () => new Promise((resolve) => setTimeout(resolve, 16));
+    function assert(value, message) {
+      if (!value) throw Error(message);
+    }
+    async function baseline(item, window, decoder) {
+      const [lo, hi] = window.range;
+      const response = await fetch("/audio/" + item.file, {
+        headers: { Range: "bytes=" + lo + "-" + hi },
+      });
+      assert(response.status === 206, "Reference Range failed");
+      const bytes = new Uint8Array(await response.arrayBuffer());
+      await decoder.reset();
+      const result = await decoder.decodeFrames(
+        window.entries.map((e) => bytes.subarray(e[1] - lo, e[1] - lo + e[2])),
+      );
+      assert(
+        result.errors?.length === 0 &&
+          result.sampleRate === 48000 &&
+          result.bitDepth === 24 &&
+          result.channelData.length === 2,
+        "Reference decode failed",
+      );
+      const skip = window.startFrame - window.entries[0][0],
+        pcm = new Uint8Array(window.frames * 6);
+      const channels = [
+        new Float32Array(window.frames),
+        new Float32Array(window.frames),
+      ];
+      for (let c = 0; c < 2; c++)
+        for (let i = 0; i < window.frames; i++) {
+          const n = Math.round(result.channelData[c][skip + i] * 8388607),
+            p = i * 6 + c * 3;
+          assert(
+            Number.isInteger(n) && n >= -8388608 && n <= 8388607,
+            "Invalid reference PCM",
+          );
+          pcm[p] = n & 255;
+          pcm[p + 1] = (n >> 8) & 255;
+          pcm[p + 2] = (n >> 16) & 255;
+          channels[c][i] = n / 8388608;
+        }
+      const hash = [
+        ...new Uint8Array(await crypto.subtle.digest("SHA-256", pcm)),
+      ]
+        .map((n) => n.toString(16).padStart(2, "0"))
+        .join("");
+      assert(
+        hash === window.sha256,
+        "Reference differs from verified complete PCM baseline",
+      );
+      return channels;
+    }
+    async function compareIdleReuse(item, index) {
+      if (!compiledWorker) return null;
+      const rows = [];
+      for (const reuse of [false, true]) {
+        let opens = 0,
+          closes = 0;
+        const reads = [],
+          timings = [];
+        const source = new ClockedWavSource(
+          new OfflineAudioContext(2, 1, 48000),
+          undefined,
+          () => {
+            const reader = new FlacWindowReader(
+              async () => index,
+              () => {
+                opens++;
+                const decoder = createDecoder();
+                return {
+                  decode: (...args) => decoder.decode(...args),
+                  close: () => {
+                    closes++;
+                    decoder.close();
+                  },
+                };
+              },
+            );
+            return {
+              open: (...args) => reader.open(...args),
+              close: () => reader.close(),
+              read: async (...args) => {
+                const pcm = await reader.read(...args);
+                const digest = [];
+                for (const channel of pcm)
+                  digest.push(
+                    [
+                      ...new Uint8Array(
+                        await crypto.subtle.digest("SHA-256", channel),
+                      ),
+                    ]
+                      .map((n) => n.toString(16).padStart(2, "0"))
+                      .join(""),
+                  );
+                reads.push({ start: args[0], frames: args[1], digest });
+                return pcm;
+              },
+            };
+          },
+        );
+        source.src = "/audio/" + item.file;
+        try {
+          for (const frame of [
+            0,
+            Math.floor(index.totalFrames / 2),
+            index.totalFrames - 5 * 48000,
+          ]) {
+            source.pause();
+            // Baseline reconstructs the previous unconditional pause teardown.
+            if (!reuse) source.releasePcmReader();
+            const started = performance.now();
+            await source.prepareAt(frame / 48000);
+            timings.push({ frame, ms: performance.now() - started });
+            assert(
+              source.readyState === 3 && !source.error,
+              "Seek was not ready",
+            );
+          }
+        } finally {
+          source.pause();
+          source.releasePcmReader();
+        }
+        rows.push({ reuse, opens, closes, timings, reads });
+      }
+      assert(
+        rows[0].opens === 3 && rows[1].opens === 1,
+        "Reader startup not reduced",
+      );
+      assert(
+        rows.every((row) => row.closes === row.opens),
+        "Leaked worker",
+      );
+      assert(
+        JSON.stringify(rows[0].reads) === JSON.stringify(rows[1].reads),
+        "Reused decoder changed PCM",
+      );
+      return {
+        scope:
+          "Local paused seeks; includes HTTP, worker and PCM hashing; not iPhone latency",
+        rows,
+      };
+    }
+    async function run(item) {
+      const index = await (await fetch("/index/" + item.file)).json();
+      const idleReuse = await compareIdleReuse(item, index);
+      const referenceDecoder = new FLACDecoderWebWorker();
+      await referenceDecoder.ready;
+      let source;
+      const disposals = [];
+      try {
+        const first = await baseline(item, item.windows[0], referenceDecoder);
+        const last = await baseline(item, item.windows[3], referenceDecoder);
+        const context = new OfflineAudioContext(2, 6 * 48000, 48000),
+          referenceContext = new OfflineAudioContext(2, 6 * 48000, 48000);
+        const errors = [];
+        source = new ClockedWavSource(
+          context,
+          (...args) => fetch(...args),
+          () =>
+            new FlacWindowReader(
+              async () => index,
+              () => {
+                if (compiledWorker) return createDecoder();
+                const decoder = new FLACDecoderWebWorker();
+                return {
+                  async decode(frames, signal) {
+                    assert(!signal.aborted, "Aborted decode");
+                    await decoder.ready;
+                    await decoder.reset();
+                    return decoder.decodeFrames(frames);
+                  },
+                  close() {
+                    disposals.push(decoder.ready.then(() => decoder.free()));
+                  },
+                };
+              },
+              (...args) => fetch(...args),
+            ),
+        );
+        source.addEventListener("error", () =>
+          errors.push(source.error?.message),
+        );
+        source.src = "/audio/" + item.file;
+        source.currentTime = index.totalFrames / 48000 - 0.25;
+        await source.prepareForPlayback();
+        const deadline = performance.now() + 10000;
+        while (source.seeking) {
+          assert(performance.now() < deadline, "Seek timed out");
+          await sleep();
+        }
+        source.output.connect(context.destination);
+        await source.playAt(0.06);
+        // Test-only observation of the scheduler: rendering starts only after its
+        // finite lookahead is filled. This is not a realtime/network starvation test.
+        while (source.filling || source.scheduledUntil < 6) {
+          assert(!errors.length, errors.join(";"));
+          assert(performance.now() < deadline, "Preload timed out");
+          await sleep();
+        }
+        const actual = await context.startRendering();
+        source.pause();
+        for (const [samples, when, offset, duration] of [
+          [last, 0.06, 7.75, 0.25],
+          [first, 0.31, 0, 5.69],
+        ]) {
+          const buffer = referenceContext.createBuffer(
+            2,
+            samples[0].length,
+            48000,
+          );
+          buffer.copyToChannel(samples[0], 0);
+          buffer.copyToChannel(samples[1], 1);
+          const node = referenceContext.createBufferSource();
+          node.buffer = buffer;
+          node.connect(referenceContext.destination);
+          node.start(when, offset, duration);
+        }
+        const expected = await referenceContext.startRendering();
+        let maximum = 0,
+          differing = 0;
+        for (let c = 0; c < 2; c++)
+          for (let i = 0; i < actual.length; i++) {
+            const error = Math.abs(
+              actual.getChannelData(c)[i] - expected.getChannelData(c)[i],
+            );
+            assert(Number.isFinite(error), "Nonfinite render");
+            maximum = Math.max(maximum, error);
+            if (error > 1e-7) differing++;
+          }
+        assert(!errors.length, errors.join(";"));
+        assert(maximum < 1e-7, "Loop/window render mismatch");
+        return {
+          file: item.file,
+          framesCompared: actual.length * 2,
+          maxAbsoluteError: maximum,
+          samplesAbove1e7: differing,
+          loopAtSeconds: 0.31,
+          windowJoinAtSeconds: 2.31,
+          pass: true,
+          idleReuse,
+        };
+      } finally {
+        source?.pause();
+        source?.releasePcmReader();
+        await referenceDecoder.free();
+        await Promise.all(disposals);
+      }
+    }
+    button.onclick = async () => {
+      button.disabled = true;
+      try {
+        const cases = await (await fetch("/cases.json")).json(),
+          rows = [];
+        for (const item of cases) {
+          output.textContent = "Rendering " + item.file;
+          rows.push(await run(item));
+        }
+        const report = {
+          status: "PASS",
+          compiledWorker,
+          scope:
+            "Real ClockedWavSource + FlacWindowReader + " +
+            (compiledWorker ? "production minified worker" : "ESM lab worker") +
+            ", OfflineAudioContext. Not iPhone, realtime starvation, or complete PWA export.",
+          userAgent: navigator.userAgent,
+          rows,
+        };
+        const saved = await fetch("/clock-result", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(report),
+        });
+        assert(saved.ok, "Report rejected");
+        output.textContent = JSON.stringify(report, null, 2);
+      } catch (error) {
+        output.textContent = "FAIL: " + error.message;
+      } finally {
+        button.disabled = false;
+      }
+    };
+  </script>
+</html>
