@@ -25,6 +25,25 @@ import {
 import { createCurrentPwaPreview } from "../../scripts/current-pwa-preview.mjs";
 
 const projectRoot = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
+const realCatalogRoot = join(projectRoot, "public", "audio-catalog");
+const realCatalogManifestPath = join(
+  projectRoot,
+  "docs",
+  "M4_LOCAL_LISTENING_MANIFEST.json",
+);
+const realCatalogManifest = JSON.parse(
+  readFileSync(realCatalogManifestPath, "utf8"),
+);
+const realCatalogReview = JSON.parse(
+  readFileSync(join(projectRoot, "src/content/hathaAudioFiles.json"), "utf8"),
+);
+const realCatalogFiles = [
+  ...realCatalogManifest.files,
+  ...realCatalogReview.files,
+];
+const realCatalogFilesPresent = realCatalogFiles.filter((file) =>
+  lstatSync(join(realCatalogRoot, file.filename), { throwIfNoEntry: false }),
+).length;
 
 class CapturedResponse extends Writable {
   headers = new Map();
@@ -486,45 +505,43 @@ test("a disappearing file returns 500 instead of hanging or leaking its path", a
   assert.equal(res.body.toString(), "Resource could not be read.");
 });
 
-test("all 45 real catalog files pass HEAD and byte-identical first/last Range responses without listening", async () => {
-  const audioCatalogRoot = join(projectRoot, "public", "audio-catalog");
-  const manifestPath = join(
-    projectRoot,
-    "docs",
-    "M4_LOCAL_LISTENING_MANIFEST.json",
-  );
-  const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
-  const review = JSON.parse(
-    readFileSync(join(projectRoot, "src/content/hathaAudioFiles.json"), "utf8"),
-  );
-  const preview = createPwaPreviewHandler({
-    artifactRoot: join(projectRoot, "dist", "m5-pwa"),
-    audioCatalogRoot,
-    manifestPath,
-    additionalAudioFiles: review.files,
-  });
-  assert.equal(preview.audioCount, 45);
-  for (const file of [...manifest.files, ...review.files]) {
-    const url = `/audio-catalog/${file.filename}`;
-    const head = await request(preview.handler, url, { method: "HEAD" });
-    assert.equal(head.statusCode, 200, file.filename);
-    assert.equal(head.headers.get("content-length"), String(file.bytes));
-    const descriptor = openSync(join(audioCatalogRoot, file.filename), "r");
-    try {
-      for (const start of [0, file.bytes - 16]) {
-        const expected = Buffer.alloc(16);
-        readSync(descriptor, expected, 0, 16, start);
-        const res = await request(preview.handler, url, {
-          headers: { range: `bytes=${start}-${start + 15}` },
-        });
-        assert.equal(res.statusCode, 206, file.filename);
-        assert.deepEqual(res.body, expected, file.filename);
+test(
+  "all 45 real catalog files pass HEAD and byte-identical first/last Range responses without listening",
+  {
+    skip:
+      realCatalogFilesPresent === 0 &&
+      "Local catalog fixtures are not available in a clean CI checkout",
+  },
+  async () => {
+    const preview = createPwaPreviewHandler({
+      artifactRoot: join(projectRoot, "dist", "m5-pwa"),
+      audioCatalogRoot: realCatalogRoot,
+      manifestPath: realCatalogManifestPath,
+      additionalAudioFiles: realCatalogReview.files,
+    });
+    assert.equal(preview.audioCount, 45);
+    for (const file of realCatalogFiles) {
+      const url = `/audio-catalog/${file.filename}`;
+      const head = await request(preview.handler, url, { method: "HEAD" });
+      assert.equal(head.statusCode, 200, file.filename);
+      assert.equal(head.headers.get("content-length"), String(file.bytes));
+      const descriptor = openSync(join(realCatalogRoot, file.filename), "r");
+      try {
+        for (const start of [0, file.bytes - 16]) {
+          const expected = Buffer.alloc(16);
+          readSync(descriptor, expected, 0, 16, start);
+          const res = await request(preview.handler, url, {
+            headers: { range: `bytes=${start}-${start + 15}` },
+          });
+          assert.equal(res.statusCode, 206, file.filename);
+          assert.deepEqual(res.body, expected, file.filename);
+        }
+      } finally {
+        closeSync(descriptor);
       }
-    } finally {
-      closeSync(descriptor);
     }
-  }
-});
+  },
+);
 
 test("launcher rejects unsupported exposure options and invalid ports before binding", () => {
   for (const args of [

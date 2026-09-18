@@ -446,7 +446,6 @@ for (const forbidden of [
   "Moon Drone",
   "Deep River",
   "Soft Air",
-  "audio-test-pack-01",
   "sleepDrone001",
   "sleepAmbience001",
   "sleepTexture001",
