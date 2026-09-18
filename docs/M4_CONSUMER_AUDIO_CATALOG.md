@@ -1,6 +1,26 @@
 # M4 Consumer Audio Catalog
 
-Stato: `LOCALHOST_CATALOG_READY — ECLYPSIS AND NIRVANA WAVES REMOVED`
+## Stato corrente e ambito storico — C1 / AG03, 14 settembre 2026
+
+[F] Questo documento conserva il catalogo M4 storico. Le 48 entità e i timer
+15/30/60 riportati sotto non descrivono il prodotto corrente. Oggi le sei
+attività seguono attività → Play, timer facoltativo con durate pertinenti fra
+10/20/30/45/60/90; la pratica Hatha completa rimane separata.
+
+[F] Il kit Android esterno corrente contiene 47 registrazioni (13 musiche,
+8 Hatha, 24 naturali/Elemental, 2 texture non classificate): 45 FLAC e 2 WAV,
+2.434.210.564 byte. Gli otto noise restano generati a runtime. Nel solo
+`preview-android` gli audio esterni vengono risolti da copie private verificate,
+non dal percorso incorporato `expo-asset`. iOS e delivery remota non abilitati.
+Riferimenti: `src/content/nativeAudioManifest.json`,
+[kit Android](ANDROID_CONSUMER_OFFLINE_KIT.md),
+[architettura corrente](ARCHITECTURE.md). La PWA privata .26 ha 45 FLAC remoti;
+le due texture restano local-only. Non equiparare gli inventari delle superfici.
+
+[U] Prove AVD/localhost non certificano ascolto, Bluetooth, background o telefono
+reale. I capitoli seguenti sono cronologia M4, non nuovi esiti di test.
+
+Stato storico: `LOCALHOST_CATALOG_READY — ECLYPSIS AND NIRVANA WAVES REMOVED`
 
 ## Confine di prodotto
 

@@ -1,10 +1,11 @@
 import { type ReactNode, useEffect, useRef } from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import type { ConsumerOutcomeId } from "@/content/productShell";
-import { OUTCOME_ARTWORK } from "@/design/outcomeArtwork";
+import { M6_PLAYER_PAINTING } from "@/design/shellArtwork";
 import { editorial } from "@/design/editorialTheme";
 import { fonts, spacing } from "@/design/theme";
 import { PlaybackTransport } from "./PlaybackTransport";
+import { VolumeRange } from "./VolumeRange";
 import { consumerPlaybackError } from "@/audio/consumerPlaybackError";
 
 export function formatPlaybackTime(milliseconds: number): string {
@@ -26,6 +27,7 @@ interface ConsumerPlaybackSurfaceProps {
   onStop: () => void;
   onVolumeChange?: (volume: number) => void;
   options?: ReactNode;
+  secondaryOptions?: ReactNode;
   outcome: ConsumerOutcomeId | null;
   playPauseTestID?: string;
   remainingMs: number;
@@ -37,6 +39,7 @@ interface ConsumerPlaybackSurfaceProps {
   onRetry?: () => void;
   hideTransport?: boolean;
   previewTransport?: boolean;
+  preparedSessionNote?: string;
 }
 
 export function ConsumerPlaybackSurface({
@@ -53,6 +56,7 @@ export function ConsumerPlaybackSurface({
   onStop,
   onVolumeChange,
   options,
+  secondaryOptions,
   outcome,
   playPauseTestID,
   remainingMs,
@@ -64,6 +68,7 @@ export function ConsumerPlaybackSurface({
   onRetry,
   hideTransport = false,
   previewTransport = false,
+  preparedSessionNote,
 }: ConsumerPlaybackSurfaceProps) {
   const volumePercent = Math.round(volume * 100);
   const lastAudibleVolume = useRef(volume > 0 ? volume : 0.8);
@@ -72,18 +77,23 @@ export function ConsumerPlaybackSurface({
   }, [volume]);
 
   return (
-    <View testID="consumer-playback-surface">
+    <View testID="consumer-playback-surface" style={styles.surface}>
       {outcome ? (
-        <Image
-          accessible={false}
-          accessibilityIgnoresInvertColors
-          resizeMode="cover"
-          source={OUTCOME_ARTWORK[outcome]}
+        <View
+          pointerEvents="none"
           style={[
             styles.artwork,
             variant === "session" && styles.sessionArtwork,
           ]}
-        />
+        >
+          <Image
+            accessible={false}
+            accessibilityIgnoresInvertColors
+            resizeMode="cover"
+            source={M6_PLAYER_PAINTING}
+            style={{ width: "100%", height: "100%" }}
+          />
+        </View>
       ) : null}
       {contextLabel ? (
         <Text style={styles.functionLabel}>{contextLabel}</Text>
@@ -132,6 +142,11 @@ export function ConsumerPlaybackSurface({
 
       {!hideTransport && (
         <View style={styles.transport}>
+          {preparedSessionNote ? (
+            <Text style={styles.preparedNote} accessibilityLiveRegion="polite">
+              {preparedSessionNote}
+            </Text>
+          ) : null}
           <PlaybackTransport
             previewOnly={previewTransport}
             canPlay={canPlay}
@@ -140,84 +155,74 @@ export function ConsumerPlaybackSurface({
             onPlayPause={onPlayPause}
             onStop={onStop}
             playPauseTestID={playPauseTestID}
+            primaryLabel={preparedSessionNote ? "Start new session" : undefined}
+            playPauseAccessibilityLabel={
+              preparedSessionNote ? "Start new session" : undefined
+            }
           />
         </View>
       )}
 
-      {options}
+      <View style={styles.controls}>
+        {options}
 
-      {onVolumeChange ? (
-        <View
-          accessibilityLabel={`Main volume ${volumePercent} percent`}
-          style={styles.volumePanel}
-        >
-          <Text style={styles.volumeLabel}>MAIN VOLUME · {volumePercent}%</Text>
-          <View style={styles.volumeRow}>
-            <VolumeButton
-              disabled={volumeDisabled}
-              label="Lower volume"
-              onPress={() => onVolumeChange(Math.max(0, volume - 0.1))}
-              text="−"
-            />
-            <Pressable
-              accessibilityLabel={volumePercent === 0 ? "Unmute" : "Mute"}
-              accessibilityRole="button"
-              accessibilityState={{ disabled: volumeDisabled }}
-              disabled={volumeDisabled}
-              onPress={() =>
-                onVolumeChange(
-                  volumePercent === 0 ? lastAudibleVolume.current : 0,
-                )
-              }
-              style={[styles.muteButton, volumeDisabled && styles.disabled]}
-            >
-              <Text style={styles.secondaryText}>
-                {volumePercent === 0 ? "Unmute" : "Mute"}
-              </Text>
-            </Pressable>
-            <VolumeButton
-              disabled={volumeDisabled}
-              label="Raise volume"
-              onPress={() => onVolumeChange(Math.min(1, volume + 0.1))}
-              text="+"
-            />
+        {onVolumeChange ? (
+          <View
+            accessibilityLabel={`Main volume ${volumePercent} percent`}
+            style={styles.volumePanel}
+          >
+            <Text style={styles.volumeLabel}>
+              MAIN VOLUME · {volumePercent}%
+            </Text>
+            <View style={styles.volumeRow}>
+              <VolumeRange
+                disabled={volumeDisabled}
+                label="Main volume"
+                value={volume}
+                onChange={onVolumeChange}
+              />
+              <Pressable
+                accessibilityLabel={volumePercent === 0 ? "Unmute" : "Mute"}
+                accessibilityRole="button"
+                accessibilityState={{ disabled: volumeDisabled }}
+                disabled={volumeDisabled}
+                onPress={() =>
+                  onVolumeChange(
+                    volumePercent === 0 ? lastAudibleVolume.current : 0,
+                  )
+                }
+                style={[styles.muteButton, volumeDisabled && styles.disabled]}
+              >
+                <Text style={styles.secondaryText}>
+                  {volumePercent === 0 ? "Unmute" : "Mute"}
+                </Text>
+              </Pressable>
+            </View>
           </View>
-        </View>
-      ) : null}
+        ) : null}
 
-      <Text style={styles.note}>{note}</Text>
+        {secondaryOptions}
+        <Text style={styles.note}>{note}</Text>
+      </View>
     </View>
   );
 }
 
-function VolumeButton({
-  disabled,
-  label,
-  onPress,
-  text,
-}: {
-  disabled: boolean;
-  label: string;
-  onPress: () => void;
-  text: string;
-}) {
-  return (
-    <Pressable
-      accessibilityLabel={label}
-      accessibilityRole="button"
-      accessibilityState={{ disabled }}
-      disabled={disabled}
-      onPress={onPress}
-      style={[styles.volumeButton, disabled && styles.disabled]}
-    >
-      <Text style={styles.volumeGlyph}>{text}</Text>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
-  artwork: { height: 110, width: "100%" },
-  sessionArtwork: { height: 110 },
+  surface: { position: "relative" },
+  artwork: {
+    position: "absolute",
+    top: -72,
+    left: -22,
+    right: -22,
+    height: 844,
+    width: undefined,
+  },
+  sessionArtwork: { height: 844 },
+  controls: {
+    marginTop: 160,
+    paddingTop: 12,
+  },
   functionLabel: {
     color: editorial.mineralBlue,
     fontFamily: fonts.sansSemiBold,
@@ -228,11 +233,11 @@ const styles = StyleSheet.create({
   title: {
     color: editorial.ink,
     fontFamily: fonts.serif,
-    fontSize: 34,
-    lineHeight: 38,
+    fontSize: 30,
+    lineHeight: 35,
     marginTop: spacing.sm,
   },
-  sessionTitle: { fontSize: 32, lineHeight: 36 },
+  sessionTitle: { fontSize: 30, lineHeight: 35 },
   gate: {
     color: editorial.gold,
     fontFamily: fonts.sansSemiBold,
@@ -245,7 +250,8 @@ const styles = StyleSheet.create({
     fontFamily: fonts.serif,
     fontSize: 58,
     lineHeight: 64,
-    marginTop: spacing.md,
+    marginTop: 30,
+    textAlign: "center",
   },
   nowPanel: {
     borderLeftColor: editorial.jade,
@@ -266,6 +272,13 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
   transport: { marginTop: spacing.md },
+  preparedNote: {
+    color: editorial.inkMuted,
+    fontFamily: fonts.sans,
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: spacing.sm,
+  },
   secondaryButton: {
     alignItems: "center",
     borderColor: editorial.lineStrong,
@@ -292,10 +305,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   volumePanel: {
-    borderTopColor: editorial.line,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    marginTop: spacing.xl,
-    paddingTop: spacing.md,
+    marginTop: spacing.md,
   },
   volumeLabel: {
     color: editorial.inkMuted,
@@ -320,8 +330,8 @@ const styles = StyleSheet.create({
   muteButton: {
     alignItems: "center",
     borderColor: editorial.lineStrong,
-    borderWidth: StyleSheet.hairlineWidth,
-    flex: 1,
+    borderWidth: 0,
+    minWidth: 64,
     justifyContent: "center",
     minHeight: 48,
   },

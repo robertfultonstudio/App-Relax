@@ -6,6 +6,7 @@ import type {
 } from "@/domain/sessions/types";
 import { editorial } from "@/design/editorialTheme";
 import { fonts, spacing } from "@/design/theme";
+import { VolumeRange } from "./VolumeRange";
 
 const FAMILIES = [
   { label: "Ocean waves", value: "sea" },
@@ -39,15 +40,20 @@ export function SessionNatureControl({
   useEffect(() => {
     if (level > 0) lastAudibleLevel.current = level;
   }, [level]);
-  const changeVolume = (delta: number) =>
-    onLevelChange(Number(Math.min(1, Math.max(0, level + delta)).toFixed(1)));
 
   return (
-    <View style={styles.root} testID="session-nature-control">
-      <Text style={styles.label}>NATURAL AMBIENCE</Text>
-      <Text accessibilityLiveRegion="polite" style={styles.title}>
-        {title}
-      </Text>
+    <View
+      style={[styles.root, hideFamilyChoice && styles.compactRoot]}
+      testID="session-nature-control"
+    >
+      {!hideFamilyChoice && (
+        <>
+          <Text style={styles.label}>NATURAL AMBIENCE</Text>
+          <Text accessibilityLiveRegion="polite" style={styles.title}>
+            {title}
+          </Text>
+        </>
+      )}
       {!hideFamilyChoice && (
         <View
           accessibilityLabel="Natural ambience sound"
@@ -91,11 +97,11 @@ export function SessionNatureControl({
         accessibilityLabel={`Natural ambience volume ${volumePercent} percent`}
         style={styles.volumeRow}
       >
-        <VolumeButton
-          disabled={volumeDisabled || level <= 0}
-          label="Lower natural ambience volume"
-          onPress={() => changeVolume(-0.1)}
-          text="−"
+        <VolumeRange
+          disabled={volumeDisabled}
+          label="Natural ambience volume"
+          value={level}
+          onChange={onLevelChange}
         />
         <Pressable
           accessibilityLabel={
@@ -114,53 +120,20 @@ export function SessionNatureControl({
             {level === 0 ? "Unmute" : "Mute"}
           </Text>
         </Pressable>
-        <VolumeButton
-          disabled={volumeDisabled || level >= 1}
-          label="Raise natural ambience volume"
-          onPress={() => changeVolume(0.1)}
-          text="+"
-        />
       </View>
     </View>
   );
 }
 
-function VolumeButton({
-  disabled,
-  label,
-  onPress,
-  text,
-}: {
-  disabled: boolean;
-  label: string;
-  onPress: () => void;
-  text: string;
-}) {
-  return (
-    <Pressable
-      accessibilityLabel={label}
-      accessibilityRole="button"
-      accessibilityState={{ disabled }}
-      disabled={disabled}
-      onPress={onPress}
-      style={[styles.volumeButton, disabled && styles.disabled]}
-    >
-      <Text style={styles.volumeGlyph}>{text}</Text>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
   root: {
-    borderLeftColor: editorial.mineralBlue,
-    borderLeftWidth: 2,
     marginTop: spacing.lg,
-    paddingLeft: spacing.md,
   },
+  compactRoot: { marginTop: 4 },
   label: {
     color: editorial.inkFaint,
     fontFamily: fonts.sansSemiBold,
-    fontSize: 10,
+    fontSize: 14,
     letterSpacing: 0.9,
   },
   title: {
@@ -173,22 +146,22 @@ const styles = StyleSheet.create({
   option: {
     alignItems: "center",
     borderColor: editorial.lineStrong,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     flex: 1,
     justifyContent: "center",
     minHeight: 48,
   },
-  optionSelected: { backgroundColor: editorial.ink },
+  optionSelected: { borderBottomWidth: 2, borderColor: editorial.lavender },
   optionText: {
     color: editorial.ink,
     fontFamily: fonts.sansSemiBold,
     fontSize: 13,
   },
-  selectedText: { color: editorial.paperLight },
+  selectedText: { color: editorial.ink },
   volumeLabel: {
     color: editorial.inkMuted,
     fontFamily: fonts.sansSemiBold,
-    fontSize: 11,
+    fontSize: 14,
     letterSpacing: 0.8,
     marginTop: spacing.md,
   },
@@ -209,8 +182,8 @@ const styles = StyleSheet.create({
   muteButton: {
     alignItems: "center",
     borderColor: editorial.lineStrong,
-    borderWidth: StyleSheet.hairlineWidth,
-    flex: 1,
+    borderWidth: 0,
+    minWidth: 64,
     justifyContent: "center",
     minHeight: 48,
   },

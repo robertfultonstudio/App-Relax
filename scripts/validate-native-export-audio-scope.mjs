@@ -1,24 +1,16 @@
-import { createHash } from "node:crypto";
+import { Buffer } from "node:buffer";
 import {
-  createReadStream,
   existsSync,
   lstatSync,
   readFileSync,
   readdirSync,
   statSync,
 } from "node:fs";
-import { dirname, extname, join, relative, resolve, sep } from "node:path";
-import { fileURLToPath } from "node:url";
+import { extname, join, relative, resolve, sep } from "node:path";
 
-const projectRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const exportDirectories = process.argv.slice(2);
 const maximumExportBytes = 512 * 1024 * 1024;
 const maximumSingleFileBytes = 100 * 1024 * 1024;
-const expectedAudioSources = [
-  "assets/audio/test-pack-01/SLEEP_AMBIENCE_001.wav",
-  "assets/audio/test-pack-01/SLEEP_DRONE_001.wav",
-  "assets/audio/test-pack-01/SLEEP_TEXTURE_001.wav",
-];
 
 function assert(condition, message) {
   if (!condition) {
@@ -46,32 +38,7 @@ function listFiles(directory) {
   });
 }
 
-function sha256(filePath) {
-  return new Promise((resolveHash, rejectHash) => {
-    const hash = createHash("sha256");
-    const stream = createReadStream(filePath);
-
-    stream.on("data", (chunk) => hash.update(chunk));
-    stream.on("error", rejectHash);
-    stream.on("end", () => resolveHash(hash.digest("hex")));
-  });
-}
-
-async function describeFile(filePath) {
-  const stats = statSync(filePath);
-  return {
-    bytes: stats.size,
-    extension: extname(filePath).slice(1).toLowerCase(),
-    filePath,
-    sha256: await sha256(filePath),
-  };
-}
-
-async function validateExport(
-  directoryArgument,
-  expectedByHash,
-  expectedAudioBytes,
-) {
+async function validateExport(directoryArgument) {
   const exportRoot = resolve(directoryArgument);
   assert(existsSync(exportRoot), `Export inesistente: ${exportRoot}`);
   assert(
@@ -122,65 +89,39 @@ async function validateExport(
   );
 
   const platform = platformKeys[0];
+  const bundlePath = resolve(
+    exportRoot,
+    metadata.fileMetadata[platform].bundle,
+  );
+  assert(
+    bundlePath.startsWith(`${exportRoot}${sep}`),
+    "Bundle path escapes export",
+  );
+  const bundle = readFileSync(bundlePath);
+  for (const marker of [
+    "./audio-test.tsx",
+    "./session/[sessionId].tsx",
+    "./category/[categoryId].tsx",
+    "Engine room.",
+    "AUDIO QA WORKBENCH",
+    "@app-relax/qa-workbench-draft",
+  ]) {
+    assert(
+      !bundle.includes(Buffer.from(marker)),
+      `Technical marker in ${platform} bundle: ${marker}`,
+    );
+  }
   const audioAssets = (metadata.fileMetadata[platform].assets ?? []).filter(
     (asset) => ["wav", "flac"].includes(asset.ext),
   );
-  const extensionCounts = audioAssets.reduce((counts, asset) => {
-    counts[asset.ext] = (counts[asset.ext] ?? 0) + 1;
-    return counts;
-  }, {});
-
   assert(
-    audioAssets.length === expectedAudioSources.length,
-    `Attesi ${expectedAudioSources.length} asset audio Metro, trovati ${audioAssets.length}`,
-  );
-  assert(
-    extensionCounts.wav === 3 && (extensionCounts.flac ?? 0) === 0,
-    `Attesi 3 WAV e nessun FLAC, trovati ${extensionCounts.wav ?? 0} WAV e ${extensionCounts.flac ?? 0} FLAC`,
-  );
-
-  const exportedAudio = [];
-  for (const asset of audioAssets) {
-    const assetPath = resolve(exportRoot, asset.path);
-    assert(
-      assetPath.startsWith(`${exportRoot}${sep}`),
-      `Percorso asset fuori dall'export: ${asset.path}`,
-    );
-    assert(existsSync(assetPath), `Asset Metro mancante: ${asset.path}`);
-
-    const description = await describeFile(assetPath);
-    const expected = expectedByHash.get(description.sha256);
-    assert(expected, `Asset audio non autorizzato nell'export: ${asset.path}`);
-    assert(
-      description.bytes === expected.bytes,
-      `Dimensione alterata per ${asset.path}: ${description.bytes} != ${expected.bytes}`,
-    );
-    assert(
-      asset.ext === expected.extension,
-      `Estensione metadata errata per ${asset.path}: ${asset.ext} != ${expected.extension}`,
-    );
-    exportedAudio.push(description);
-  }
-
-  const exportedHashes = exportedAudio.map((item) => item.sha256).sort();
-  const expectedHashes = [...expectedByHash.keys()].sort();
-  assert(
-    JSON.stringify(exportedHashes) === JSON.stringify(expectedHashes),
-    "L'export non contiene esattamente i tre asset AUDIO TEST PACK 01 autorizzati",
-  );
-
-  const exportedAudioBytes = exportedAudio.reduce(
-    (total, item) => total + item.bytes,
-    0,
-  );
-  assert(
-    exportedAudioBytes === expectedAudioBytes,
-    `Peso audio inatteso: ${exportedAudioBytes} != ${expectedAudioBytes}`,
+    audioAssets.length === 0,
+    `Attesi zero asset audio Metro nel consumer, trovati ${audioAssets.length}`,
   );
 
   return {
-    audioBytes: exportedAudioBytes,
-    audioFiles: exportedAudio.length,
+    audioBytes: 0,
+    audioFiles: 0,
     files: files.length,
     outputBytes,
     platform,
@@ -192,30 +133,9 @@ assert(
   "Uso: node scripts/validate-native-export-audio-scope.mjs <ios-export-dir> <android-export-dir>",
 );
 
-const expectedDescriptions = [];
-for (const sourcePath of expectedAudioSources) {
-  const absolutePath = join(projectRoot, sourcePath);
-  assert(existsSync(absolutePath), `Asset autorizzato mancante: ${sourcePath}`);
-  expectedDescriptions.push(await describeFile(absolutePath));
-}
-
-const expectedByHash = new Map(
-  expectedDescriptions.map((description) => [description.sha256, description]),
-);
-assert(
-  expectedByHash.size === expectedAudioSources.length,
-  "Gli asset audio autorizzati devono avere hash distinti",
-);
-const expectedAudioBytes = expectedDescriptions.reduce(
-  (total, item) => total + item.bytes,
-  0,
-);
-
 const results = [];
 for (const exportDirectory of exportDirectories) {
-  results.push(
-    await validateExport(exportDirectory, expectedByHash, expectedAudioBytes),
-  );
+  results.push(await validateExport(exportDirectory));
 }
 assert(
   JSON.stringify(results.map(({ platform }) => platform).sort()) ===
@@ -226,6 +146,6 @@ assert(
 for (const result of results) {
   console.log(
     `PASS native export ${result.platform}: ${result.files} file, ${result.outputBytes} byte totali, ` +
-      `${result.audioFiles} audio autorizzati (${result.audioBytes} byte), catalogo localhost assente`,
+      `${result.audioFiles} asset audio (${result.audioBytes} byte), catalogo localhost assente`,
   );
 }

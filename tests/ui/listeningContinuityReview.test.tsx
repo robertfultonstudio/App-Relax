@@ -249,10 +249,12 @@ it.each(["single", "nature"] as const)(
     await screen.rerender(content());
     await waitFor(() =>
       expect(
-        screen.getByRole("button", { name: "Play this sound" }),
+        screen.getByRole("button", { name: "Start new session" }),
       ).toBeEnabled(),
     );
     expect(mockParams.duration).toBe("45");
+    expect(screen.getByText("New session ready")).toBeTruthy();
+    expect(screen.getByText("Paused · 19:52 left · Return →")).toBeTruthy();
     expect(
       screen.getByRole("button", { name: "Resume current session" }),
     ).toBeEnabled();
@@ -291,7 +293,14 @@ it("UI02 handles missing route details and explicit Off without inheriting old r
   expect(screen.getByTestId("current-session-bar")).toBeTruthy();
   await waitFor(() =>
     expect(mockAudio.controller.prepareSelection).toHaveBeenLastCalledWith(
-      expect.objectContaining({ kind: "single" }),
+      expect.objectContaining({
+        kind: "adaptive",
+        program: expect.objectContaining({
+          plan: expect.objectContaining({
+            natureMix: expect.objectContaining({ enabled: false }),
+          }),
+        }),
+      }),
     ),
   );
 });

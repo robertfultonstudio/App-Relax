@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "eslint": [],
+  "prettier": ["docs/ANDROID_APK_D112.md"],
+  "coverage": {
+    "statements": 79.03,
+    "branches": 74.29,
+    "functions": 76.14,
+    "lines": 81.35
+  }
+}

@@ -51,6 +51,8 @@ export class AdaptiveNativePlayback {
   private sessionBus: GainNode | null = null;
   private natureBus: GainNode | null = null;
   private primaryBus: GainNode | null = null;
+  private changingNature = false;
+  private skippedNatureIndexes = new Set<number>();
 
   constructor(
     private readonly context: AudioContext,
@@ -69,7 +71,12 @@ export class AdaptiveNativePlayback {
     this.validate(program);
     try {
       for (const workId of new Set(
-        program.plan.segments.map((segment) => segment.workId),
+        program.plan.segments
+          .filter(
+            (s) =>
+              s.lane !== "nature" || program.plan.natureMix?.enabled !== false,
+          )
+          .map((segment) => segment.workId),
       )) {
         const file = await this.resolver.acquire(workId);
         if (!file)
@@ -164,7 +171,179 @@ export class AdaptiveNativePlayback {
     if (!this.program?.plan.natureMix)
       throw new Error("This session has no nature lane.");
     this.natureLevel = this.level(level);
-    this.ramp(this.natureBus, this.natureLevel * 0.5, fadeMs);
+    this.ramp(
+      this.natureBus,
+      this.program.plan.natureMix.enabled === false
+        ? 0
+        : this.natureLevel * 0.5,
+      fadeMs,
+    );
+  }
+
+  /** Transaction on the nature lane only. Music keeps its original native
+   * nodes, clock, automation and notification session. One temporary decoder
+   * (four maximum) is permitted to verify the replacement before retiring it. */
+  async replaceNatureFamily(
+    next: AdaptiveSessionProgram,
+    signal: AbortSignal,
+  ): Promise<void> {
+    const previous = this.program;
+    if (
+      !previous?.plan.natureMix ||
+      !next.plan.natureMix ||
+      !this.running ||
+      this.changingNature
+    )
+      throw new Error("Live ambience is unavailable for this session.");
+    const music = (p: AdaptiveSessionProgram) =>
+      JSON.stringify({
+        id: p.plan.id,
+        seed: p.plan.seed,
+        length: p.plan.totalDurationSeconds,
+        trim: p.plan.compositeHeadroomTrimDb,
+        segments: p.plan.segments.filter((s) => s.lane !== "nature"),
+        transitions: p.plan.transitions.filter((t) => t.lane !== "nature"),
+      });
+    if (music(previous) !== music(next))
+      throw new Error("Ambience must preserve music and the session clock.");
+    this.validate(next);
+    const generation = this.generation;
+    const acquired: string[] = [];
+    let staged: Deck | undefined;
+    let committed = false;
+    this.changingNature = true;
+    const assertCurrent = () => {
+      if (
+        signal.aborted ||
+        !this.running ||
+        generation !== this.generation ||
+        this.program !== previous
+      )
+        throw new Error("Ambience change cancelled.");
+    };
+    const wait = (ms: number) =>
+      new Promise<void>((resolve, reject) => {
+        const cancel = () => {
+          clearTimeout(timer);
+          signal.removeEventListener("abort", cancel);
+          reject(new Error("Ambience change cancelled."));
+        };
+        const timer = setTimeout(() => {
+          signal.removeEventListener("abort", cancel);
+          resolve();
+        }, ms);
+        signal.addEventListener("abort", cancel, { once: true });
+        if (signal.aborted) cancel();
+      });
+    try {
+      assertCurrent();
+      if (next.plan.natureMix.enabled !== false) {
+        for (const id of next.plan.natureMix.natureWorkIds) {
+          if (this.files.has(id)) continue;
+          const file = await this.resolver.acquire(id);
+          if (!file)
+            throw new Error("Download this ambience first. Music continues.");
+          try {
+            assertVerifiedNativeAudioFile(file, id);
+            assertCurrent();
+          } catch (error) {
+            await file.release();
+            throw error;
+          }
+          this.files.set(id, file);
+          acquired.push(id);
+        }
+        // A family change is never allowed to weaken the overlap peak bound.
+        const position = this.positionSeconds() + 0.5;
+        const targets = next.plan.segments.filter(
+          (s) =>
+            s.lane === "nature" &&
+            s.startSeconds <= position &&
+            s.endSeconds > position,
+        );
+        targets.sort((a, b) => b.startSeconds - a.startSeconds);
+        if (!targets.length)
+          throw new Error(
+            "No ambience is available at this position. Music continues.",
+          );
+        for (const deck of [...this.decks.values()])
+          if (
+            deck.segment.lane === "nature" &&
+            deck.segment.startSeconds > this.positionSeconds()
+          )
+            this.retire(deck);
+        const target = targets[0];
+        const temp = {
+          ...target,
+          index:
+            Math.max(
+              ...previous.plan.segments.map((s) => s.index),
+              ...next.plan.segments.map((s) => s.index),
+            ) + 1,
+        };
+        await this.prepare(temp, position, generation, next);
+        assertCurrent();
+        staged = this.decks.get(temp.index)!;
+        // Stop-before-start on the nature bus avoids summing old/new families.
+        this.ramp(this.natureBus, 0, 250);
+        await wait(250);
+        assertCurrent();
+        this.schedule(staged, position, next, target);
+        for (const deck of [...this.decks.values()])
+          if (deck !== staged && deck.segment.lane === "nature")
+            this.retire(deck);
+        this.decks.delete(temp.index);
+        staged.segment = target;
+        this.decks.set(target.index, staged);
+        this.skippedNatureIndexes = new Set(
+          targets.slice(1).map((segment) => segment.index),
+        );
+      } else {
+        this.ramp(this.natureBus, 0, 250);
+        await wait(250);
+        assertCurrent();
+        for (const deck of [...this.decks.values()])
+          if (deck.segment.lane === "nature") this.retire(deck);
+      }
+      this.program = next;
+      committed = true;
+      this.ramp(
+        this.natureBus,
+        next.plan.natureMix.enabled === false ? 0 : this.natureLevel * 0.5,
+        1200,
+      );
+      const retained = new Set(
+        next.plan.segments
+          .filter(
+            (s) =>
+              s.lane !== "nature" || next.plan.natureMix?.enabled !== false,
+          )
+          .map((s) => s.workId),
+      );
+      for (const [id, file] of this.files)
+        if (!retained.has(id)) {
+          this.files.delete(id);
+          await Promise.resolve(file.release()).catch(() => undefined);
+        }
+    } finally {
+      if (!committed) {
+        if (staged) this.retire(staged);
+        for (const id of acquired) {
+          const file = this.files.get(id);
+          this.files.delete(id);
+          await Promise.resolve(file?.release()).catch(() => undefined);
+        }
+        if (this.program === previous)
+          this.ramp(
+            this.natureBus,
+            previous.plan.natureMix.enabled === false
+              ? 0
+              : this.natureLevel * 0.5,
+            250,
+          );
+      }
+      this.changingNature = false;
+    }
   }
 
   async stop(): Promise<void> {
@@ -174,6 +353,7 @@ export class AdaptiveNativePlayback {
     for (const preparation of this.preparations) preparation.abort();
     this.preparations.clear();
     this.clearGraph();
+    this.skippedNatureIndexes.clear();
     this.program = null;
     this.offsetSeconds = 0;
     const files = [...this.files.values()];
@@ -332,6 +512,7 @@ export class AdaptiveNativePlayback {
   }
 
   private async prepareAt(positionSeconds: number): Promise<void> {
+    this.skippedNatureIndexes.clear();
     const program = this.program;
     if (!program || !Number.isFinite(positionSeconds))
       throw new Error("Invalid native seek position.");
@@ -350,9 +531,10 @@ export class AdaptiveNativePlayback {
     this.sessionBus.gain.value = 0;
     this.sessionBus.connect(this.destination);
     this.natureBus = this.context.createGain();
-    this.natureBus.gain.value = program.plan.natureMix
-      ? this.natureLevel * 0.5
-      : 0;
+    this.natureBus.gain.value =
+      program.plan.natureMix && program.plan.natureMix.enabled !== false
+        ? this.natureLevel * 0.5
+        : 0;
     this.natureBus.connect(this.sessionBus);
     this.primaryBus = this.context.createGain();
     this.primaryBus.gain.value = program.plan.natureMix ? 0.5 : 1;
@@ -361,7 +543,10 @@ export class AdaptiveNativePlayback {
     if (generation !== this.generation)
       throw new Error("Native preparation cancelled.");
     const candidates = program.plan.segments
-      .filter((segment) => segment.endSeconds > target)
+      .filter(
+        (segment) =>
+          this.enabledSegment(segment) && segment.endSeconds > target,
+      )
       .sort((a, b) => a.startSeconds - b.startSeconds || a.index - b.index);
     const active = candidates.filter(
       (segment) => segment.startSeconds <= target,
@@ -384,8 +569,8 @@ export class AdaptiveNativePlayback {
     segment: AdaptiveSessionSegment,
     position: number,
     generation: number,
+    program = this.program!,
   ): Promise<void> {
-    const program = this.program!;
     const work = program.works.find(
       (candidate) => candidate.id === segment.workId,
     )!;
@@ -467,19 +652,24 @@ export class AdaptiveNativePlayback {
     this.tick();
   }
 
-  private schedule(deck: Deck): void {
-    const { segment } = deck;
-    const position = Math.max(this.offsetSeconds, segment.startSeconds);
+  private schedule(
+    deck: Deck,
+    atPosition?: number,
+    program = this.program!,
+    segment = deck.segment,
+  ): void {
+    const position =
+      atPosition ?? Math.max(this.offsetSeconds, segment.startSeconds);
     const startsAt = this.originSeconds + position;
     if (startsAt < this.context.currentTime - 0.05)
       throw new Error(
         "Native preload missed the scheduled transition; playback stopped.",
       );
-    const work = this.program!.works.find(
+    const work = program.works.find(
       (candidate) => candidate.id === segment.workId,
     )!;
     const base = dbToLinear(work.playbackGainDb + segment.playbackTrimDb);
-    const transitions = this.program!.plan.transitions.filter(
+    const transitions = program.plan.transitions.filter(
       (transition) =>
         transition.incomingSegmentIndex === segment.index ||
         transition.outgoingSegmentIndex === segment.index,
@@ -584,7 +774,11 @@ export class AdaptiveNativePlayback {
     const pending = program.plan.segments
       .filter(
         (segment) =>
-          segment.endSeconds > position && !this.decks.has(segment.index),
+          this.enabledSegment(segment) &&
+          !(this.changingNature && segment.lane === "nature") &&
+          !this.skippedNatureIndexes.has(segment.index) &&
+          segment.endSeconds > position &&
+          !this.decks.has(segment.index),
       )
       .sort((a, b) => a.startSeconds - b.startSeconds || a.index - b.index);
     const next = pending[0];
@@ -607,6 +801,13 @@ export class AdaptiveNativePlayback {
     }
     if (this.decks.get(deck.segment.index) === deck)
       this.decks.delete(deck.segment.index);
+  }
+
+  private enabledSegment(segment: AdaptiveSessionSegment): boolean {
+    return (
+      segment.lane !== "nature" ||
+      this.program?.plan.natureMix?.enabled !== false
+    );
   }
 
   private clearGraph(): void {
@@ -632,7 +833,11 @@ export class AdaptiveNativePlayback {
   }
 
   private maxDecks(): number {
-    return this.program?.plan.natureMix ? 3 : 2;
+    if (this.changingNature) return 4;
+    return this.program?.plan.natureMix &&
+      this.program.plan.natureMix.enabled !== false
+      ? 3
+      : 2;
   }
   private clearTimer(): void {
     if (this.timer) clearTimeout(this.timer);

@@ -8,11 +8,17 @@ export function NatureAmbienceChoice({
   value,
   onChange,
   disabled = false,
+  offDisabled = false,
+  changing = false,
+  onCancel,
   disabledMessage = "Stop to change the ambience. Its volume and mute stay available while listening.",
 }: {
   value: NatureAmbienceFamily | null;
   onChange: (family: NatureAmbienceFamily | null) => void;
   disabled?: boolean;
+  offDisabled?: boolean;
+  changing?: boolean;
+  onCancel?: () => void;
   disabledMessage?: string;
 }) {
   return (
@@ -39,40 +45,49 @@ export function NatureAmbienceChoice({
           ] as const
         ).map((option) => (
           <Pressable
-            {...(disabled
+            {...(disabled || changing || (offDisabled && option.value === null)
               ? {}
               : radioKeyboard<NatureAmbienceFamily | null>(
-                  [null, "rain", "sea"],
+                  offDisabled ? ["rain", "sea"] : [null, "rain", "sea"],
                   option.value,
                   onChange,
                 ))}
             key={option.label}
             accessibilityRole="radio"
             accessibilityLabel={`Ambience ${option.label}`}
-            accessibilityState={{ checked: value === option.value, disabled }}
+            accessibilityState={{
+              checked: value === option.value,
+              disabled:
+                disabled || changing || (offDisabled && option.value === null),
+            }}
             aria-checked={value === option.value}
-            disabled={disabled}
-            onPress={() => onChange(option.value)}
-            style={{
+            disabled={
+              disabled || changing || (offDisabled && option.value === null)
+            }
+            onPress={() => {
+              if (option.value !== value) onChange(option.value);
+            }}
+            style={({ pressed }) => ({
               flex: 1,
               minHeight: 48,
               paddingHorizontal: 6,
               justifyContent: "center",
               alignItems: "center",
-              borderWidth: 1,
-              borderColor: editorial.inkMuted,
-              backgroundColor:
-                value === option.value ? editorial.ink : "transparent",
-              opacity: disabled ? 0.6 : 1,
-            }}
+              borderBottomWidth: value === option.value ? 2 : 0,
+              borderColor: editorial.lavender,
+              backgroundColor: pressed ? "#DAD7E2" : "transparent",
+              opacity:
+                disabled || changing || (offDisabled && option.value === null)
+                  ? 0.6
+                  : 1,
+            })}
           >
             <Text
               style={{
                 fontFamily: fonts.sans,
                 fontSize: 15,
                 textAlign: "center",
-                color:
-                  value === option.value ? editorial.paperLight : editorial.ink,
+                color: editorial.ink,
               }}
             >
               {option.label}
@@ -80,6 +95,25 @@ export function NatureAmbienceChoice({
           </Pressable>
         ))}
       </View>
+      {changing && (
+        <Text
+          accessibilityLiveRegion="polite"
+          style={{ color: editorial.inkMuted, fontSize: 14 }}
+        >
+          Preparing ambience… Music keeps playing. You can cancel this change;
+          Stop ends playback.
+        </Text>
+      )}
+      {changing && onCancel && (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Cancel ambience change"
+          onPress={onCancel}
+          style={{ minHeight: 44, justifyContent: "center" }}
+        >
+          <Text style={{ color: editorial.ink }}>Cancel ambience change</Text>
+        </Pressable>
+      )}
       {disabled && (
         <Text
           style={{

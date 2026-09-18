@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "provenance": "docs/M6_APP_INTEGRATION.md",
+  "assets": [
+    {
+      "key": "home",
+      "file": "home.jpg",
+      "width": 853,
+      "height": 1844,
+      "bytes": 433618,
+      "sha256": "838f4a15202ade5d2f65ae7141e4d7ce19d63d2c7ae58a771e615b7d51f2a517"
+    },
+    {
+      "key": "player",
+      "file": "player.jpg",
+      "width": 853,
+      "height": 1844,
+      "bytes": 449640,
+      "sha256": "89a937acbc05b7bad87175272e1f71b2483fac3350fa27722e90dede72d5b96d"
+    }
+  ]
+}

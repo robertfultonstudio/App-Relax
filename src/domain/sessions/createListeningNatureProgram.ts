@@ -14,7 +14,7 @@ export function createListeningNatureProgram(
   work: ConsumerAudioWork,
   outcome: ConsumerOutcomeId,
   duration: SessionDurationMinutes,
-  family: NatureAmbienceFamily,
+  family: NatureAmbienceFamily | null,
   musicGuardSeconds = 0,
 ): AdaptiveSessionProgram {
   if (work.sourceKind !== "file" || soundFamilyFor(work) !== "music")
@@ -74,10 +74,12 @@ export function createListeningNatureProgram(
   const result = attachCoordinatedNatureBed(
     program,
     seed,
-    family,
+    family ?? "rain",
     undefined,
     musicGuardSeconds,
   );
+  result.plan.natureMix!.enabled = family !== null;
+  if (family === null) result.plan.id += ":off";
   if (!auditPlanAccelerated(result).pass)
     throw new Error("Music and nature timeline failed safety checks.");
   return result;

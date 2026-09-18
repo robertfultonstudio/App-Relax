@@ -46,7 +46,9 @@ describe("persistent current listening bar", () => {
     mockPath = "/outcome/yoga";
     mockParams = { duration: "90" };
     const screen = await render(<CurrentSessionBar />);
-    expect(screen.getByText("29:00 · 30 min · Player & review →")).toBeTruthy();
+    expect(
+      screen.getByText("29:00 left · 30 min · Player & review →"),
+    ).toBeTruthy();
     await fireEvent.press(
       screen.getByRole("button", { name: "Return to current session" }),
     );
@@ -106,7 +108,11 @@ describe("persistent current listening bar", () => {
       expect(screen.getByTestId("current-session-bar")).toBeTruthy();
       expect(screen.queryByText("Pink Noise")).toBeNull();
       expect(screen.getByText("Massage")).toBeTruthy();
-      expect(screen.getByText("89:00 · Return →")).toBeTruthy();
+      expect(
+        screen.getByText(
+          `${status === "paused" ? "Paused · " : ""}89:00 left · Return →`,
+        ),
+      ).toBeTruthy();
       await fireEvent.press(
         screen.getByRole("button", { name: "Return to current session" }),
       );

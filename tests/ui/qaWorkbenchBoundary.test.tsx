@@ -292,15 +292,21 @@ describe("QA Workbench boundary", () => {
   it("does not let volume controls change a hidden previously loaded program", async () => {
     const screen = await render(<AdaptiveQaWorkbench localPlaybackAvailable />);
     expect(
-      screen.getByLabelText("Lower volume").props.accessibilityState,
+      screen.getByLabelText("Main volume").props.accessibilityState,
     ).toMatchObject({ disabled: true });
-    await fireEvent.press(screen.getByLabelText("Lower volume"));
+    await fireEvent(
+      screen.getByLabelText("Main volume"),
+      "accessibilityAction",
+      {
+        nativeEvent: { actionName: "decrement" },
+      },
+    );
     expect(mockController.setVolume).not.toHaveBeenCalled();
 
     await fireEvent.press(screen.getByLabelText("Play"));
     await waitFor(() =>
       expect(
-        screen.getByLabelText("Lower volume").props.accessibilityState,
+        screen.getByLabelText("Main volume").props.accessibilityState,
       ).toMatchObject({ disabled: false }),
     );
   });

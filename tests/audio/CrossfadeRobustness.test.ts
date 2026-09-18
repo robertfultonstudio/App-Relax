@@ -5,6 +5,8 @@ import {
 } from "@/domain/sessions/workbench";
 import { crossfadeProgram } from "../fixtures/crossfadeProgram";
 import { adaptiveWebHarness } from "../fakes/AdaptiveWebHarness";
+import { createWholeFileReviewProgram } from "@/domain/sessions/createWholeFileReviewProgram";
+import { replaceCoordinatedNatureBed } from "@/domain/sessions/continuumPlanner";
 
 describe("track-independent crossfade scheduler", () => {
   let h: ReturnType<typeof adaptiveWebHarness>;
@@ -17,6 +19,62 @@ describe("track-independent crossfade scheduler", () => {
     await h.playback.dispose();
     h.restore();
     jest.useRealTimers();
+  });
+
+  it("runs the actual 90-minute Hatha plan after a live family change through every source boundary and one end", async () => {
+    const original = createWholeFileReviewProgram({
+      outcome: "yoga",
+      durationMinutes: 90,
+      mode: "sound-only",
+      soundKind: "music",
+      seed: "D115-full-session",
+      includeNatureBed: true,
+      natureFamily: "rain",
+      allowProvisionalMetadata: true,
+    });
+    const next = replaceCoordinatedNatureBed(original, "sea");
+    await h.playback.load(original);
+    await h.playback.start(original, 0.8);
+    const change = h.playback.replaceNatureFamily(
+      next,
+      new AbortController().signal,
+    );
+    await jest.advanceTimersByTimeAsync(4001);
+    await change;
+    const checkpoints = [
+      ...new Set(
+        next.plan.segments.flatMap((s) => [s.startSeconds, s.endSeconds]),
+      ),
+    ]
+      .filter((seconds) => seconds > h.playback.positionSeconds())
+      .sort((a, b) => a - b);
+    for (const seconds of checkpoints) {
+      await jest.advanceTimersByTimeAsync(
+        Math.max(0, Math.ceil(seconds * 1000) - Date.now()),
+      );
+      const actualSeconds = Date.now() / 1000;
+      const expected = next.plan.segments
+        .filter(
+          (s) =>
+            actualSeconds >= s.startSeconds && actualSeconds < s.endSeconds,
+        )
+        .map((s) => `fixture://${s.workId}`)
+        .sort();
+      expect(
+        h.media
+          .filter((m) => !m.paused)
+          .map((m) => m.src)
+          .sort(),
+      ).toEqual(expected);
+      expect(h.media.filter((m) => !m.paused).length).toBeLessThanOrEqual(3);
+      expect(h.handlers.error).not.toHaveBeenCalled();
+    }
+    expect(h.handlers.ended).toHaveBeenCalledTimes(1);
+    expect(jest.getTimerCount()).toBe(0);
+    await h.playback.dispose();
+    expect(h.releases.every((release) => release.mock.calls.length === 1)).toBe(
+      true,
+    );
   });
 
   it("clears a QA loop and seeks atomically, without rebuilding at the old position", async () => {
@@ -32,6 +90,67 @@ describe("track-independent crossfade scheduler", () => {
     expect(rebuild).toHaveBeenCalledWith(100);
     await h.playback.configureAudition(null);
     expect(rebuild).toHaveBeenCalledTimes(1);
+    expect(h.handlers.error).not.toHaveBeenCalled();
+  });
+
+  it("changes audition sides and exits without a seek, source reload or timer reset", async () => {
+    const program = crossfadeProgram();
+    const transition = program.plan.transitions[0];
+    await h.playback.load(program);
+    await h.playback.start(program, 0.8, transition.startSeconds + 45);
+    const position = h.playback.positionSeconds();
+    const prepare = jest.spyOn(h.playback, "prepareForUserGesture");
+    const plays = h.media.map((m) => m.play.mock.calls.length);
+    const musicalAutomation = h.gainFor(program.works[0].id)!.gain
+      .setValueCurveAtTime.mock.calls.length;
+    for (const mode of ["outgoing", "incoming", "both"] as const) {
+      await h.playback.configureAudition(
+        createTransitionAudition(program.plan, 0, 30, mode),
+        { preservePosition: true, loop: false },
+      );
+      expect(h.playback.positionSeconds()).toBe(position);
+      expect(
+        h.auditionGainFor(program.works[0].id)!.gain.linearRampToValueAtTime,
+      ).toHaveBeenLastCalledWith(
+        mode === "incoming" ? 0 : 1,
+        Date.now() / 1000 + 0.02,
+      );
+    }
+    await h.playback.configureAudition(null);
+    expect(prepare).not.toHaveBeenCalled();
+    expect(h.media.map((m) => m.play.mock.calls.length)).toEqual(plays);
+    expect(
+      h.gainFor(program.works[0].id)!.gain.setValueCurveAtTime,
+    ).toHaveBeenCalledTimes(musicalAutomation);
+    await jest.advanceTimersByTimeAsync(
+      (program.plan.totalDurationSeconds - position) * 1000,
+    );
+    expect(h.handlers.ended).toHaveBeenCalledTimes(1);
+    expect(h.handlers.error).not.toHaveBeenCalled();
+  });
+
+  it("Exit loop cancels the repeat boundary without restarting the audible decks", async () => {
+    const program = crossfadeProgram();
+    const audition = createTransitionAudition(program.plan, 0, 30, "both");
+    await h.playback.load(program);
+    await h.playback.start(program, 0.8, audition.startSeconds);
+    await h.playback.configureAudition(audition, {
+      preservePosition: true,
+      loop: true,
+    });
+    await jest.advanceTimersByTimeAsync(10_000);
+    const prepare = jest.spyOn(h.playback, "prepareForUserGesture");
+    const position = h.playback.positionSeconds();
+    await h.playback.configureAudition(null);
+    expect(h.playback.positionSeconds()).toBe(position);
+    expect(prepare).not.toHaveBeenCalled();
+    await jest.advanceTimersByTimeAsync(
+      (audition.endSeconds - position + 1) * 1000,
+    );
+    expect(h.playback.positionSeconds()).toBeCloseTo(
+      audition.endSeconds + 1,
+      6,
+    );
     expect(h.handlers.error).not.toHaveBeenCalled();
   });
 
@@ -216,7 +335,9 @@ describe("track-independent crossfade scheduler", () => {
           ["outgoing", "incoming"] as const
         ).entries()) {
           const gain = h.gainFor(program.works[index].id)!.gain;
-          const value = gain.setValueAtTime.mock.lastCall![0];
+          const value =
+            gain.setValueAtTime.mock.lastCall![0] *
+            h.auditionGainFor(program.works[index].id)!.gain.value;
           if (mode !== "both" && direction !== mode) expect(value).toBe(0);
           else expect(value).toBeGreaterThan(0);
         }

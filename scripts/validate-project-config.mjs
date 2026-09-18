@@ -12,6 +12,7 @@ const packageJson = JSON.parse(
 );
 const easJson = JSON.parse(readFileSync(join(projectRoot, "eas.json"), "utf8"));
 const easIgnore = readFileSync(join(projectRoot, ".easignore"), "utf8");
+const gitIgnore = readFileSync(join(projectRoot, ".gitignore"), "utf8");
 const iphonePreviewLauncher = readFileSync(
   join(projectRoot, "scripts", "start-iphone-web-preview.mjs"),
   "utf8",
@@ -33,7 +34,7 @@ function assert(condition, message) {
 }
 
 assert(
-  packageJson.dependencies.expo === "~57.0.22",
+  packageJson.dependencies.expo === "~57.0.23",
   "Expo SDK 57 must remain pinned",
 );
 assert(
@@ -55,14 +56,26 @@ for (const requiredIgnore of [
   "*.p12",
   "*.pem",
   ".env.*",
+  ".npmrc",
+  "/.codex/",
+  "*.keystore",
+  "google-services.json",
+  "GoogleService-Info.plist",
+  "/credentials/",
+  "/secrets/",
   "/output/",
   "/tmp/",
   "/.vscode/",
+  "/.github/",
+  "/quality/",
   "/AGENTS.md",
+  "/CHANGELOG.md",
   "/README.md",
   "/STATO.md",
   "/scripts/",
+  "/tooling/",
   "/public/audio-catalog/",
+  "/assets/audio/test-pack-01/",
   "/public-pwa/",
   "/src/app-qa/",
   "/src/app-pwa/",
@@ -76,6 +89,25 @@ for (const requiredIgnore of [
   );
 }
 
+for (const requiredIgnore of [
+  ".env",
+  ".env.*",
+  ".npmrc",
+  ".codex/",
+  "*.keystore",
+  "google-services.json",
+  "GoogleService-Info.plist",
+  "/credentials/",
+  "/secrets/",
+  "/public/audio-catalog/**",
+  "!/public/audio-catalog/README.md",
+]) {
+  assert(
+    gitIgnore.split("\n").includes(requiredIgnore),
+    `.gitignore must contain ${requiredIgnore}`,
+  );
+}
+
 assert(
   easJson.cli?.requireCommit === false,
   "requireCommit must stay false for the validated EAS_NO_VCS build path",
@@ -85,6 +117,11 @@ assert(
   packageJson.scripts["qa:validate-boundary"] ===
     "node scripts/validate-workbench-boundary.mjs",
   "QA boundary validator script is missing",
+);
+assert(
+  packageJson.scripts["admission:validate"] ===
+    "node scripts/validate-repository-admission.mjs",
+  "repository admission validator script is missing",
 );
 assert(
   packageJson.scripts["qa:validate-exports"] ===
@@ -220,6 +257,15 @@ for (const [profileName, profile] of Object.entries(easJson.build ?? {})) {
 }
 
 const appleIdentifier = appConfig.ios?.bundleIdentifier;
+for (const permission of [
+  "android.permission.READ_EXTERNAL_STORAGE",
+  "android.permission.WRITE_EXTERNAL_STORAGE",
+]) {
+  assert(
+    appConfig.android?.blockedPermissions?.includes(permission),
+    `legacy broad storage permission must be blocked: ${permission}`,
+  );
+}
 const androidIdentifier = appConfig.android?.package;
 const identifierPattern = /^[a-z][a-z0-9]*(\.[a-z][a-z0-9]*){2,}$/;
 assert(
@@ -263,8 +309,10 @@ assert(
       "development-android",
       "development-ios",
       "preview-android",
+      "production-android",
+      "production-ios",
     ]),
-  "expected the two development profiles and one Android preview profile",
+  "expected development, preview, and production profiles",
 );
 
 const android = await EasJsonUtils.getBuildProfileAsync(
@@ -281,6 +329,16 @@ const previewAndroid = await EasJsonUtils.getBuildProfileAsync(
   accessor,
   Platform.ANDROID,
   "preview-android",
+);
+const productionAndroid = await EasJsonUtils.getBuildProfileAsync(
+  accessor,
+  Platform.ANDROID,
+  "production-android",
+);
+const productionIos = await EasJsonUtils.getBuildProfileAsync(
+  accessor,
+  Platform.IOS,
+  "production-ios",
 );
 assert(
   android.developmentClient && ios.developmentClient,
@@ -322,6 +380,29 @@ assert(
   ios.image === "macos-tahoe-26.5-xcode-26.6",
   "unexpected iOS build image",
 );
+assert(
+  productionAndroid.developmentClient === false &&
+    productionIos.developmentClient === false,
+  "production profiles must embed the application",
+);
+assert(
+  productionAndroid.distribution === "store" &&
+    productionIos.distribution === "store",
+  "production profiles must target store distribution",
+);
+assert(
+  productionAndroid.node === "22.23.1" && productionIos.node === "22.23.1",
+  "production EAS Node versions must be pinned",
+);
+assert(
+  productionAndroid.image === "ubuntu-26.04-jdk-17-ndk-r27b-sdk-57" &&
+    productionAndroid.buildType === "app-bundle",
+  "Android production must use the pinned image and AAB output",
+);
+assert(
+  productionIos.image === "macos-tahoe-26.5-xcode-26.6",
+  "iOS production must use the pinned Xcode image",
+);
 
 const projectId = appConfig.extra?.eas?.projectId;
 assert(
@@ -334,7 +415,7 @@ assert(
 );
 assert(appConfig.slug === "app-relax", "unexpected EAS project slug");
 console.log(
-  `Project config: PASS (SDK 57, ${appleIdentifier}, RNAA plugin, safe public-mobile exports, dev-client and standalone preview profiles).`,
+  `Project config: PASS (SDK 57, ${appleIdentifier}, RNAA plugin, safe public-mobile exports, development, preview, and store profiles).`,
 );
 console.log(
   `EAS project: @${appConfig.owner}/${appConfig.slug} (${projectId}).`,

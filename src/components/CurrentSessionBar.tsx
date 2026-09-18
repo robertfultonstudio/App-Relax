@@ -51,13 +51,18 @@ export function CurrentSessionBar() {
           Number(params.duration ?? selection.request.durationMinutes) ===
             selection.request.durationMinutes &&
           (params.nature ??
-            selection.program.plan.natureMix?.selectedFamily) ===
-            selection.program.plan.natureMix?.selectedFamily
+            (selection.program.plan.natureMix?.enabled === false
+              ? "off"
+              : selection.program.plan.natureMix?.selectedFamily)) ===
+            (selection.program.plan.natureMix?.enabled === false
+              ? "off"
+              : selection.program.plan.natureMix?.selectedFamily)
         : Number(params.duration) === selection.request.durationMinutes &&
           params.sound === selection.request.soundKind &&
           (params.nature ?? "sea") ===
             (selection.request.soundKind === "music" &&
-            !selection.program.plan.natureMix
+            (!selection.program.plan.natureMix ||
+              selection.program.plan.natureMix.enabled === false)
               ? "off"
               : selection.request.natureFamily);
   if (path === url.split("?")[0] && sameDetails) return null;
@@ -86,7 +91,8 @@ export function CurrentSessionBar() {
           )}
         </Text>
         <Text style={styles.detail}>
-          {formatPlaybackTime(snapshot.remainingMs)} ·{" "}
+          {snapshot.status === "paused" ? "Paused · " : ""}
+          {formatPlaybackTime(snapshot.remainingMs)} left ·{" "}
           {hasSessionReview
             ? `${selection.request.durationMinutes} min · Player & review →`
             : "Return →"}
@@ -98,7 +104,13 @@ export function CurrentSessionBar() {
         canStop
         isPlaying={playing}
         busy={snapshot.status === "preparing"}
-        primaryLabel={snapshot.status === "error" ? "Retry" : undefined}
+        primaryLabel={
+          snapshot.status === "error"
+            ? "Retry"
+            : snapshot.status === "paused"
+              ? "Resume"
+              : undefined
+        }
         playPauseAccessibilityLabel={
           snapshot.status === "error"
             ? "Review playback error"

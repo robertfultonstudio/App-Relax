@@ -79,6 +79,20 @@ In caso di conflitto, fermarsi, registrare il conflitto e non inventare una solu
 - Non dichiarare background audio o qualita sonora validati senza prove su telefono reale.
 - Usare le etichette `[F]`, `[I]`, `[U]`; quando manca evidenza scrivere `NON DETERMINATO — EVIDENZA INSUFFICIENTE`.
 - Nessun nuovo Mac o altro acquisto hardware e un prerequisito di progetto.
+- **Consegna PWA remota obbligatoria:** quando l'utente chiede una PWA App Relax,
+  la sua consegna o il suo aggiornamento, usare il progetto Sites privato stabile
+  gia esistente e lo stesso URL, salvo diversa istruzione esplicita. Una PWA
+  lasciata soltanto su localhost/LAN e un export, non una consegna. La consegna
+  deve essere installabile da Safari su iPhone tramite Condividi > Aggiungi alla
+  schermata Home > Apri come app: HTTPS, manifest con `start_url`/`scope` radice
+  e `display: standalone`, apple-touch-icon e metadati Apple, service worker
+  funzionante e verifica che autenticazione o redirect non impediscano l'avvio
+  standalone. Non chiamarla app nativa o App Store. La consegna non e completa
+  finche deploy remoto, URL cliccabile e accesso owner-only invariato non sono
+  verificati. Se manca il telefono, richiedere il test fisico all'utente e
+  mantenere quel gate `NON DETERMINATO — EVIDENZA INSUFFICIENTE`. Restano
+  separati e invariati i gate per costi, audio/upload, account, APK/EAS,
+  commit/push e ampliamento degli accessi.
 
 ## Scelta dinamica di strumenti, plugin e skill
 

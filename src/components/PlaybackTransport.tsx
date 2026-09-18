@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
 import { editorial } from "@/design/editorialTheme";
 import { fonts } from "@/design/theme";
 
@@ -50,7 +51,9 @@ export function PlaybackTransport({
             pressed && styles.pressed,
           ]}
         >
-          <TransportSymbol kind="stop" />
+          <View style={styles.stopDisc}>
+            <TransportSymbol kind="stop" />
+          </View>
           <Text style={styles.stopLabel}>Stop</Text>
         </Pressable>
       )}
@@ -76,7 +79,9 @@ export function PlaybackTransport({
           pressed && styles.pressed,
         ]}
       >
-        <TransportSymbol kind={isPlaying ? "pause" : "play"} light />
+        <View style={styles.playDisc}>
+          <TransportSymbol kind={isPlaying ? "pause" : "play"} light />
+        </View>
         <Text style={styles.playLabel}>
           {primaryLabel ??
             (previewOnly
@@ -96,6 +101,19 @@ export function PlaybackTransport({
       style={styles.footer}
       testID="fixed-player-controls"
     >
+      <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+        <LinearGradient
+          testID="transport-pastel-wash"
+          colors={["#ECE4E2", "#DCD4E5", "#ECE4E2"]}
+          start={{ x: 0, y: 0.5 }}
+          end={{ x: 1, y: 0.5 }}
+          style={StyleSheet.absoluteFill}
+        />
+        <LinearGradient
+          colors={["rgba(236,228,226,0)", "#ECE4E2"]}
+          style={styles.feather}
+        />
+      </View>
       {controls}
     </SafeAreaView>
   ) : (
@@ -135,33 +153,61 @@ export function TransportSymbol({
 
 const styles = StyleSheet.create({
   footer: {
-    backgroundColor: editorial.paperLight,
-    borderTopWidth: 1,
-    borderColor: editorial.lineStrong,
+    backgroundColor: "#ECE4E2",
+    borderTopWidth: 0,
     paddingHorizontal: 18,
     paddingTop: 8,
     paddingBottom: 8,
   },
-  row: { flexDirection: "row", gap: 12 },
-  button: {
-    minHeight: 52,
+  feather: {
+    position: "absolute",
+    top: -24,
+    left: 0,
+    right: 0,
+    height: 24,
+  },
+  row: {
     flexDirection: "row",
+    gap: 28,
+    justifyContent: "space-evenly",
+    alignItems: "center",
+  },
+  button: {
+    minHeight: 56,
+    flexDirection: "column",
     gap: 8,
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
+    borderWidth: 0,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
   stop: {
-    flex: 1,
-    backgroundColor: editorial.paperLight,
+    minWidth: 88,
+    backgroundColor: "transparent",
     borderColor: editorial.lineStrong,
   },
   play: {
-    flex: 1.65,
-    backgroundColor: editorial.ink,
-    borderColor: editorial.ink,
+    minWidth: 112,
+    backgroundColor: "transparent",
+    borderColor: editorial.lavender,
+  },
+  playDisc: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: editorial.lavender,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stopDisc: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    borderWidth: 1,
+    borderColor: editorial.lavender,
+    alignItems: "center",
+    justifyContent: "center",
   },
   stopLabel: {
     fontFamily: fonts.sansSemiBold,
@@ -173,7 +219,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.sansSemiBold,
     fontSize: 16,
     flexShrink: 1,
-    color: editorial.paperLight,
+    color: editorial.lavender,
   },
   symbol: {
     width: 20,

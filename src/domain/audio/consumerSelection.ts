@@ -26,9 +26,16 @@ export function consumerSelectionKey(selection: ConsumerSelection): string {
 }
 
 export function consumerSelectionUrl(selection: ConsumerSelection): string {
+  const nature =
+    selection.kind === "adaptive" && selection.request.soundKind === "nature"
+      ? selection.request.natureFamily
+      : selection.kind === "adaptive" &&
+          selection.program.plan.natureMix?.enabled !== false
+        ? (selection.program.plan.natureMix?.selectedFamily ?? "off")
+        : "off";
   if (selection.kind === "adaptive" && selection.program.plan.listeningWorkId)
-    return `/listen/${selection.program.plan.listeningWorkId}?outcome=${selection.request.outcome}&duration=${selection.request.durationMinutes}&nature=${selection.program.plan.natureMix?.selectedFamily ?? "off"}`;
+    return `/listen/${selection.program.plan.listeningWorkId}?outcome=${selection.request.outcome}&duration=${selection.request.durationMinutes}&nature=${nature}`;
   return selection.kind === "single"
     ? `/listen/${selection.program.work.id}?outcome=${selection.outcome}&duration=${selection.durationMinutes}`
-    : `/adaptive-session/${selection.request.outcome}?duration=${selection.request.durationMinutes}&sound=${selection.request.soundKind}&nature=${selection.request.soundKind === "music" && !selection.program.plan.natureMix ? "off" : selection.request.natureFamily}&active=1`;
+    : `/adaptive-session/${selection.request.outcome}?duration=${selection.request.durationMinutes}&sound=${selection.request.soundKind}&nature=${nature}&active=1`;
 }

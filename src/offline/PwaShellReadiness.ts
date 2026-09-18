@@ -1,5 +1,7 @@
+import { pwaShellPolicy, type PwaShellPolicy } from "./pwaShellPolicy";
+
 export type ShellReadiness =
-  "unchecked" | "checking" | "ready" | "reopen" | "unavailable";
+  "unchecked" | "checking" | "ready" | "reopen" | "unavailable" | "online-only";
 
 export interface ShellReadinessPort {
   prepare(): Promise<{ controlled: boolean; complete: boolean }>;
@@ -11,7 +13,12 @@ export class PwaShellReadiness {
   private listeners = new Set<() => void>();
   private running: Promise<void> | null = null;
 
-  constructor(private readonly port: ShellReadinessPort | null) {}
+  constructor(
+    private readonly port: ShellReadinessPort | null,
+    private readonly policy: PwaShellPolicy = "offline-shell",
+  ) {
+    if (policy === "online-only") this.state = "online-only";
+  }
 
   getSnapshot = () => this.state;
   getServerSnapshot = (): ShellReadiness => "unchecked";
@@ -23,6 +30,10 @@ export class PwaShellReadiness {
   };
 
   check = (): Promise<void> => {
+    if (this.policy === "online-only") {
+      this.set("online-only");
+      return Promise.resolve();
+    }
     if (this.running) return this.running;
     if (!this.port) {
       this.set("unavailable");
@@ -95,6 +106,9 @@ export async function prepareBrowserShell(
   origin: string,
   verify: (worker: ServiceWorker) => Promise<boolean> = verifyShell,
 ) {
+  // Defence in depth: even a direct call cannot reinstall the private worker.
+  if (pwaShellPolicy(origin) === "online-only")
+    return { controlled: false, complete: false };
   // Same registration as the early document bootstrap; no takeover/reload.
   await deadline(container.register("/sw.js", { scope: "/" }), 15000);
   const registration = await deadline(container.ready, 45000);
@@ -128,5 +142,12 @@ function browserPort(): ShellReadinessPort | null {
 
 let instance: PwaShellReadiness | null = null;
 export function getPwaShellReadiness() {
-  return (instance ??= new PwaShellReadiness(browserPort()));
+  const policy =
+    typeof window === "undefined"
+      ? "offline-shell"
+      : pwaShellPolicy(window.location.origin);
+  return (instance ??= new PwaShellReadiness(
+    policy === "online-only" ? null : browserPort(),
+    policy,
+  ));
 }

@@ -394,7 +394,12 @@ export function isEmbeddedWork(work: ConsumerAudioWork): boolean {
   );
 }
 
+export function isAudioTestPackWork(work: ConsumerAudioWork): boolean {
+  return work.familyId === "audio-test-pack-01";
+}
+
 export function isPlayableWork(work: ConsumerAudioWork): boolean {
+  if (isAudioTestPackWork(work)) return false;
   if (isNativeCatalogPreview()) {
     return (
       isEmbeddedWork(work) ||
@@ -422,6 +427,7 @@ export function isPlayableWork(work: ConsumerAudioWork): boolean {
 }
 
 export function isPlayableWorkOnWeb(work: ConsumerAudioWork): boolean {
+  if (isAudioTestPackWork(work)) return false;
   return (
     isEmbeddedWork(work) ||
     work.availability === "generated-runtime" ||
@@ -430,6 +436,7 @@ export function isPlayableWorkOnWeb(work: ConsumerAudioWork): boolean {
 }
 
 export function isVisibleConsumerWork(work: ConsumerAudioWork): boolean {
+  if (isAudioTestPackWork(work)) return false;
   if (isNativeCatalogPreview()) return isPlayableWork(work);
   if (work.deliveryScope) return isPlayableWork(work);
   return (

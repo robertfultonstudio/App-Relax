@@ -1,11 +1,21 @@
 import { type Href, useRouter } from "expo-router";
-import { useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useEffect, useMemo, useState } from "react";
+import {
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { useAudioSession } from "@/audio/AudioProvider";
 import { PlaybackCancelledError } from "@/audio/AudioSessionController";
 import { consumerPlaybackError } from "@/audio/consumerPlaybackError";
 import { usePreparedSelection } from "@/audio/usePreparedSelection";
-import { chooseAutomaticWork } from "@/content/automaticListening";
+import {
+  chooseAutomaticWork,
+  previousListeningWorkId,
+} from "@/content/automaticListening";
+import { loadLastListening } from "@/state/lastListeningPersistence";
 import type { ConsumerOutcomeId } from "@/content/productShell";
 import { getSessionPolicy } from "@/content/sessionPolicies";
 import {
@@ -24,6 +34,7 @@ import {
 } from "@/domain/audio/consumerSelection";
 import { SessionDurationPicker } from "./SessionDurationPicker";
 import { NatureAmbienceChoice } from "./NatureAmbienceChoice";
+import { TransportSymbol } from "./PlaybackTransport";
 import { editorial } from "@/design/editorialTheme";
 import { fonts } from "@/design/theme";
 import {
@@ -35,7 +46,7 @@ export type ListeningNatureFactory = (
   work: ConsumerAudioWork,
   outcome: ConsumerOutcomeId,
   duration: SessionDurationMinutes,
-  family: NatureAmbienceFamily,
+  family: NatureAmbienceFamily | null,
 ) => AdaptiveSessionProgram;
 
 export function ImmediateSessionSetup({
@@ -56,14 +67,26 @@ export function ImmediateSessionSetup({
   const [error, setError] = useState<string | null>(null);
   const [nature, setNature] = useState<NatureAmbienceFamily | null>(null);
   const [selectionAttempt, setSelectionAttempt] = useState(0);
-  const [work] = useState(() => {
-    const previous = controller.getConsumerSelection();
-    return chooseAutomaticWork(
-      outcome,
-      Math.random(),
-      previous?.kind === "single" ? previous.program.work.id : undefined,
-    );
-  });
+  const [work, setWork] = useState<ConsumerAudioWork | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    const sample = Math.random();
+    void loadLastListening()
+      .catch(() => null)
+      .then((saved) => {
+        if (!cancelled)
+          setWork(
+            chooseAutomaticWork(
+              outcome,
+              sample,
+              previousListeningWorkId(controller.getConsumerSelection(), saved),
+            ),
+          );
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [controller, outcome]);
   const natureAvailable = Boolean(
     createNatureProgram && work && soundFamilyFor(work) === "music",
   );
@@ -76,18 +99,18 @@ export function ImmediateSessionSetup({
     if (!work) return { selection: null, error: null };
     try {
       const selection: ConsumerSelection =
-        nature && createNatureProgram && natureAvailable
+        createNatureProgram && natureAvailable
           ? {
               kind: "adaptive",
               program: createNatureProgram(work, outcome, duration, nature),
               request: {
                 listeningWorkId: work.id,
-                includeNatureBed: true,
+                includeNatureBed: nature !== null,
                 outcome,
                 durationMinutes: duration,
                 mode: "sound-only",
                 soundKind: "music",
-                natureFamily: nature,
+                natureFamily: nature ?? "rain",
               },
             }
           : {
@@ -180,15 +203,18 @@ export function ImmediateSessionSetup({
         }}
         disabled={!prepared.ready || starting}
         onPress={start}
-        style={[
+        style={({ pressed }) => [
           styles.primary,
           (!prepared.ready || starting) && styles.disabled,
+          pressed && { opacity: 0.75, transform: [{ scale: 0.96 }] },
         ]}
         testID="start-immediate-session"
       >
-        <Text style={styles.primaryText}>
-          {starting ? "Starting…" : "▶  Play"}
-        </Text>
+        {starting ? (
+          <ActivityIndicator color={editorial.paperLight} />
+        ) : (
+          <TransportSymbol kind="play" light />
+        )}
       </Pressable>
       <Text accessibilityLiveRegion="polite" style={styles.status}>
         {failure
@@ -255,7 +281,9 @@ const styles = StyleSheet.create({
   },
   primary: {
     backgroundColor: editorial.ink,
-    minHeight: 56,
+    height: 68,
+    width: 68,
+    borderRadius: 34,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 24,

@@ -14,8 +14,10 @@ expo-env.d.ts
 .kotlin/
 *.orig.*
 *.jks
+*.keystore
 *.p8
 *.p12
+*.pfx
 *.key
 *.mobileprovision
 
@@ -30,9 +32,20 @@ yarn-error.*
 # macOS
 .DS_Store
 *.pem
+*.cer
 
-# local env files
-.env*.local
+# Local environment, service configuration and private agent state.
+# No synthetic credential example is currently required by this repository.
+.env
+.env.*
+.npmrc
+.codex/
+google-services.json
+GoogleService-Info.plist
+credentials*.json
+service-account*.json
+/credentials/
+/secrets/
 
 # typescript
 *.tsbuildinfo
@@ -49,10 +62,13 @@ example
 
 # Test output
 /coverage/
+/quality/reports/
+/release/
 
 # Large local-only listening catalog served by the localhost preview.
-# Metadata and preparation instructions remain tracked; audio bytes do not.
-/public/audio-catalog/*.wav
-/public/audio-catalog/*.flac
+# Fail closed for every present and future format. Only the reviewed README is
+# admitted; future metadata needs an explicit path-level exception and review.
+/public/audio-catalog/**
+!/public/audio-catalog/README.md
 # Reproducible PWA-only decoder; generated from pinned sources before export.
 /public-pwa/flac-decoder.worker.min.js

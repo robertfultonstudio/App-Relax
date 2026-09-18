@@ -7,6 +7,13 @@ import type {
 
 export type AuditionMode = "outgoing" | "incoming" | "both";
 
+export interface AdaptiveAuditionOptions {
+  /** Change the audition mix without seeking or restarting the sources. */
+  preservePosition?: boolean;
+  /** Auditioning one side need not imply repeating the window. */
+  loop?: boolean;
+}
+
 export interface TransitionAudition {
   transitionIndex: number;
   startSeconds: number;

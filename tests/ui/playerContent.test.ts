@@ -7,7 +7,7 @@ describe("M3 technical audio player", () => {
     "..",
     "..",
     "src",
-    "app",
+    "app-qa",
     "session",
     "[sessionId].tsx",
   );

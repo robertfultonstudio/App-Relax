@@ -4,6 +4,7 @@ import {
 } from "react-native-audio-api";
 import { ReactNativeAudioDriver } from "@/audio/reactNativeAudioApi/ReactNativeAudioDriver";
 import { DEEP_SLEEP_432 } from "@/presets/deepSleep432";
+import { STEM_ASSETS } from "@/audio/reactNativeAudioApi/stemAssets";
 import { getConsumerWork } from "@/content/consumerCatalog";
 import { createSingleTrackProgram } from "@/domain/audio/consumerTypes";
 import { createAdaptiveSessionProgram } from "@/domain/sessions/continuumPlanner";
@@ -104,6 +105,23 @@ async function flushMicrotasks(count = 12) {
 }
 
 describe("ReactNativeAudioDriver lifecycle", () => {
+  it("rejects a technical preset on the consumer driver before touching current playback", async () => {
+    const driver = new ReactNativeAudioDriver();
+    const stop = jest.spyOn(driver, "stop");
+    await expect(driver.loadPreset(DEEP_SLEEP_432)).rejects.toThrow(
+      "Technical playback is unavailable",
+    );
+    expect(stop).not.toHaveBeenCalled();
+  });
+
+  it("accepts the same loaded technical preset when the QA registry is explicitly injected", async () => {
+    const driver = new ReactNativeAudioDriver(undefined, {}, STEM_ASSETS);
+    injectLoadedContext(driver);
+    const stop = jest.spyOn(driver, "stop");
+    await expect(driver.loadPreset(DEEP_SLEEP_432)).resolves.toBeUndefined();
+    expect(stop).not.toHaveBeenCalled();
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
   });

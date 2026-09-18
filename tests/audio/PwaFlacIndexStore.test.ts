@@ -83,3 +83,129 @@ it("rejects unapproved, changed metadata and aborted loads", async () => {
   expect(fetcher).not.toHaveBeenCalled();
   await expect(store.get("rain.flac", signal())).rejects.toThrow("differs");
 });
+
+it("shares one cold index request across preparation and source open", async () => {
+  let ready!: (value: Response) => void;
+  const fetcher = jest.fn(
+    () =>
+      new Promise<Response>((resolve) => {
+        ready = resolve;
+      }),
+  );
+  const store = new PwaFlacIndexStore(fetcher as typeof fetch, [approved]);
+  const first = store.get("rain.flac", signal());
+  const second = store.get("rain.flac", signal());
+  expect(fetcher).toHaveBeenCalledTimes(1);
+  ready(response());
+  expect(await first).toEqual(index);
+  expect(await second).toEqual(index);
+  expect(await store.get("rain.flac", signal())).toEqual(index);
+  expect(fetcher).toHaveBeenCalledTimes(1);
+});
+
+it("cancels only the withdrawing consumer, not another reader of the shared index", async () => {
+  let ready!: (value: Response) => void;
+  const fetcher = jest.fn(
+    (_url: unknown, _init?: RequestInit) =>
+      new Promise<Response>((resolve) => {
+        ready = resolve;
+      }),
+  );
+  const store = new PwaFlacIndexStore(fetcher as typeof fetch, [approved]);
+  const cancel = new AbortController();
+  const first = store.get("rain.flac", cancel.signal);
+  const second = store.get("rain.flac", signal());
+  cancel.abort();
+  await expect(first).rejects.toThrow("cancelled");
+  expect(fetcher.mock.calls[0]![1]!.signal!.aborted).toBe(false);
+  ready(response());
+  await expect(second).resolves.toEqual(index);
+  expect(fetcher).toHaveBeenCalledTimes(1);
+});
+
+it("aborts the request when all consumers leave and lets a fresh caller retry", async () => {
+  const fetcher = jest.fn(
+    (_url: unknown, init?: RequestInit) =>
+      new Promise<Response>((_resolve, reject) => {
+        init!.signal!.addEventListener(
+          "abort",
+          () => reject(new Error("request aborted")),
+          { once: true },
+        );
+      }),
+  );
+  const store = new PwaFlacIndexStore(fetcher as typeof fetch, [approved]);
+  const cancel = new AbortController();
+  const load = store.get("rain.flac", cancel.signal);
+  cancel.abort();
+  await expect(load).rejects.toThrow("cancelled");
+  expect(fetcher.mock.calls[0]![1]!.signal!.aborted).toBe(true);
+  fetcher.mockResolvedValueOnce(response());
+  await expect(store.get("rain.flac", signal())).resolves.toEqual(index);
+  expect(fetcher).toHaveBeenCalledTimes(2);
+});
+
+it("shares an integrity failure without poisoning the next attempt", async () => {
+  let ready!: (value: Response) => void;
+  const fetcher = jest.fn(
+    () =>
+      new Promise<Response>((resolve) => {
+        ready = resolve;
+      }),
+  );
+  const store = new PwaFlacIndexStore(fetcher as typeof fetch, [approved]);
+  const first = store.get("rain.flac", signal());
+  const second = store.get("rain.flac", signal());
+  ready(response(bytes.slice(1)));
+  await expect(first).rejects.toThrow("integrity");
+  await expect(second).rejects.toThrow("integrity");
+  fetcher.mockResolvedValueOnce(response());
+  await expect(store.get("rain.flac", signal())).resolves.toEqual(index);
+  expect(fetcher).toHaveBeenCalledTimes(2);
+});
+
+it("ignores an abandoned fetch completing after a new load of the same index begins", async () => {
+  let finishOld!: (value: Response) => void;
+  let finishNew!: (value: Response) => void;
+  // Simulate a transport that cannot cancel a response already in flight.
+  const fetcher = jest
+    .fn()
+    .mockImplementationOnce(
+      () =>
+        new Promise<Response>((resolve) => {
+          finishOld = resolve;
+        }),
+    )
+    .mockImplementationOnce(
+      () =>
+        new Promise<Response>((resolve) => {
+          finishNew = resolve;
+        }),
+    );
+  const store = new PwaFlacIndexStore(fetcher as typeof fetch, [approved]);
+  const firstAbort = new AbortController();
+  const secondAbort = new AbortController();
+  const first = store.get("rain.flac", firstAbort.signal);
+  const second = store.get("rain.flac", secondAbort.signal);
+  firstAbort.abort();
+  secondAbort.abort();
+  await expect(first).rejects.toThrow("cancelled");
+  await expect(second).rejects.toThrow("cancelled");
+  const replacement = store.get("rain.flac", signal());
+  expect(fetcher).toHaveBeenCalledTimes(2);
+  finishOld(response());
+  for (let i = 0; i < 20; i++) await Promise.resolve();
+  let joinedFinished = false;
+  const joined = store.get("rain.flac", signal());
+  void joined.then(() => {
+    joinedFinished = true;
+  });
+  for (let i = 0; i < 20; i++) await Promise.resolve();
+  expect(joinedFinished).toBe(false); // The abandoned response did not populate cache.
+  expect(fetcher).toHaveBeenCalledTimes(2); // Its cleanup did not remove the replacement load.
+  finishNew(response());
+  await expect(replacement).resolves.toEqual(index);
+  await expect(joined).resolves.toEqual(index);
+  await expect(store.get("rain.flac", signal())).resolves.toEqual(index);
+  expect(fetcher).toHaveBeenCalledTimes(2);
+});

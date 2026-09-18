@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "assets": [
+    {
+      "file": "ZenOldMincho-Latin-Regular.ttf",
+      "bytes": 111784,
+      "sha256": "cd9759af96831b640783e2f5f949b6861075d579525220a65dd3a731408cc878",
+      "sourceUrl": "https://github.com/google/fonts/blob/92345ac0dbb28d27dbd32f3a782e84c55eaac214/ofl/zenoldmincho/ZenOldMincho-Regular.ttf",
+      "sourceSha256": "4c051a78a21c4e8e9dccf1c754776d33f356b8cc6ef95d9b64761b9bae814b84",
+      "license": "ZenOldMincho-OFL.txt",
+      "weight": 400,
+      "coverage": "Available codepoints below U+3000; static, subset derivative"
+    },
+    {
+      "file": "HankenGrotesk-Latin-Regular.ttf",
+      "bytes": 53656,
+      "sha256": "0c2ae3fb52a1d4dccbcc6908fe127c4d8f108b81b6781478a2d946ef7d09a9fa",
+      "sourceUrl": "https://github.com/google/fonts/blob/92345ac0dbb28d27dbd32f3a782e84c55eaac214/ofl/hankengrotesk/HankenGrotesk[wght].ttf",
+      "sourceSha256": "813b3f8fa0965405669a89b38e51bbefd95eef6b8e20d1cb2d8c10cce062662f",
+      "license": "HankenGrotesk-OFL.txt",
+      "weight": 400,
+      "coverage": "Available codepoints below U+3000; static, subset derivative"
+    },
+    {
+      "file": "HankenGrotesk-Latin-Medium.ttf",
+      "bytes": 53604,
+      "sha256": "4d1494b2a9fe92306775868d1905a3eae475a0748a6888270cce3d160fe15dc4",
+      "sourceUrl": "https://github.com/google/fonts/blob/92345ac0dbb28d27dbd32f3a782e84c55eaac214/ofl/hankengrotesk/HankenGrotesk[wght].ttf",
+      "sourceSha256": "813b3f8fa0965405669a89b38e51bbefd95eef6b8e20d1cb2d8c10cce062662f",
+      "license": "HankenGrotesk-OFL.txt",
+      "weight": 500,
+      "coverage": "Available codepoints below U+3000; static, subset derivative"
+    },
+    {
+      "file": "HankenGrotesk-Latin-SemiBold.ttf",
+      "bytes": 53588,
+      "sha256": "81b83ed9244a3e94357196bb67543adc5bf2f8c956032771fdcbe2441127f959",
+      "sourceUrl": "https://github.com/google/fonts/blob/92345ac0dbb28d27dbd32f3a782e84c55eaac214/ofl/hankengrotesk/HankenGrotesk[wght].ttf",
+      "sourceSha256": "813b3f8fa0965405669a89b38e51bbefd95eef6b8e20d1cb2d8c10cce062662f",
+      "license": "HankenGrotesk-OFL.txt",
+      "weight": 600,
+      "coverage": "Available codepoints below U+3000; static, subset derivative"
+    },
+    {
+      "file": "HankenGrotesk-Latin-Italic.ttf",
+      "bytes": 57064,
+      "sha256": "5916dd963eb5554fb8f77fe3cf104984a27c722c577517d678a0494fafaf40dc",
+      "sourceUrl": "https://github.com/google/fonts/blob/92345ac0dbb28d27dbd32f3a782e84c55eaac214/ofl/hankengrotesk/HankenGrotesk-Italic[wght].ttf",
+      "sourceSha256": "ae5731726ff75301a3cb63f2e98d1babc77d55ab09fb8e229ca75f5bd46fbe32",
+      "license": "HankenGrotesk-OFL.txt",
+      "weight": 400,
+      "coverage": "Available codepoints below U+3000; static, subset derivative"
+    }
+  ]
+}

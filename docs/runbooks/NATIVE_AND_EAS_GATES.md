@@ -1,7 +1,14 @@
 # Runbook build native ed EAS
 
-Stato: development client e preview Android standalone verificati su emulatore; installazione fisica aperta; iOS, push, submission e costi non autorizzati
-Ultima verifica operativa: 11 agosto 2026
+Stato corrente C1 / AG03, 14 settembre 2026: APK Android preview1.0.3/4 con
+adapter nativo/import privato47/47 verificati su AVD; test fisico aperto, iOS e
+delivery remota non abilitati. [Prove D-103](../ANDROID_APK_D103_PREFLIGHT.md),
+[kit/import corrente](../ANDROID_CONSUMER_OFFLINE_KIT.md).
+APK1.0.3 non contiene D-106/D-107 della sola PWA review .26. Nessuna nuova
+build è autorizzata da questo aggiornamento documentale.
+
+Le versioni, tabelle e prove seguenti conservano la cronologia dell'11 agosto
+2026, non un controllo toolchain rieseguito oggi.
 
 ## Obiettivo economico
 

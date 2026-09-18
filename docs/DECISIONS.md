@@ -1,5 +1,412 @@
 # Decision log
 
+### D-118 — destinazione PWA stabile e installazione iPhone obbligatoria
+
+17 settembre 2026. Decisione esplicita e perentoria dell'utente.
+
+[F] Ogni futura richiesta di consegna o aggiornamento della PWA App Relax usa,
+salvo nuova istruzione esplicita, il Site privato esistente
+`https://app-relax-private-review.robfulton.chatgpt.site/`. Un export locale o
+una preview localhost/LAN non costituisce consegna. Il deploy deve mantenere
+lo stesso progetto, URL e audience owner-only e concludersi con link cliccabile.
+
+[F] Il contratto di consegna comprende installabilita da Safari su iPhone con
+Condividi > Aggiungi alla schermata Home > Apri come app: HTTPS, manifest con
+`start_url` e `scope` radice, `display: standalone`, icona Apple e metadati
+Apple, service worker attivo e nessun redirect/autenticazione incompatibile
+con l'avvio standalone. Non e una distribuzione App Store o un'app nativa.
+
+[U] Se il telefono non e disponibile, la prova fisica installazione/apertura,
+audio, touch, background e offline resta `NON DETERMINATO — EVIDENZA
+INSUFFICIENTE` e va richiesta all'utente dopo il deploy. La regola non amplia
+autorizzazioni per costi, upload audio, account, APK/EAS, commit/push o accessi.
+
+[F] Prima applicazione della regola: esportazione validata marker
+`PLAYER-REVIEW.32-WELCOME-LIVE-LOCAL` pubblicata come Sites41 sul Site stabile,
+stato `succeeded`. Accesso invariato owner-only (un account, zero gruppi e
+zero ospiti), richiesta anonima 401. Browser autenticato: nuova Welcome e
+passaggio a `/moments` visibili; manifest standalone, service worker, icona e
+meta Apple presenti. Worker, catalogo e 45 registrazioni invariati. Il commit
+e push necessari appartengono soltanto al checkout Sites isolato; nessun
+commit/push del repository canonico, costo, upload audio, APK o EAS.
+
+### D-117 — Welcome distinta e ambiente modificabile durante il playback
+
+17 settembre 2026. Richiesta esplicita dell'utente dopo la revisione M6.
+
+[F] `/` diventa un ingresso pittorico con CTA verso `/moments`; le sei attività
+restano al secondo livello. Immagine approvata esistente, movimento finito
+solo dell'artwork, feedback al tocco e Reduce Motion; nessun filtro sul testo.
+Il vecchio `▶ Play` è sostituito da un controllo circolare con simbolo disegnato,
+label accessibile e indicazione del caricamento. Nessuna nuova dipendenza.
+
+[F] I programmi musicali delle factory consumer riservano una corsia natura
+disattivata anche con Off: metadata, non decoder né download nascosti.
+La musica conserva sorgenti, automazioni, seed e orologio. Rain e Ocean sono
+alternative nella stessa corsia indipendente, non due ambienti sommabili.
+Durante un cambio famiglia il solo ambiente esce brevemente, poi entra il
+nuovo: non attende la fine di una dissolvenza editoriale lunga. Se il secondo
+passaggio fallisce, stato reale Off e musica continua; Stop/Pause/volume non
+sono accodati al caricamento. Il margine di picco della musica è riservato già
+all'avvio: attivare l'ambiente non ne cambia il volume.
+
+[F] Figma: riferimento esistente `m09OI6AzKuOlFyTDLgxQ4o`, nodo `3:3`,
+verificato in lettura; GitHub canonico verificato in lettura. Expo e sorgenti
+RN Audio API effettive usati per i controlli. Supabase non presente: non introdotto.
+
+[U] Nessun progetto/token/SDK Sentry disponibile; non inventare un controllo
+Sentry. Nessun Android fisico collegato durante l'implementazione: test
+software del driver e concorrenza PCM nel browser non provano comportamento
+nativo sul telefono. Gate aperti e evidenze in `docs/M6_LIVE_AMBIENCE_WELCOME.md`.
+Questa richiesta non viene usata per inferire build cloud, commit o deploy.
+
+### D-116 — chiusura M6 e pubblicazione privata esplicitamente autorizzata
+
+17 settembre2026. «Ok, vai avanti fino a che non hai finito M6» prosegue la
+chiusura locale del gate patch Expo già segnalato. Installata soltanto57.0.23,
+senza script lifecycle/globali/migrazioneSDK; Doctor20/20 e install check verdi.
+103 suite/761 test e55 tooling PASS, audio compreso. Nessuna modifica ai
+master o nuova funzione audio. Il validatore font entra nella CI esistente.
+
+[F] Sul dubbio di sfocatura: testo reale opacity1, nessunfilter/textShadow/
+transform e font custom locale. Scatti diagnostici CDP incoerenti scartati
+come prova; screenshot nativi del browser acquisiti e confrontati con fonte
+approvata. Non si dichiara risolta la percezione su iPhone senza il test umano.
+
+[F] Risposta esplicita alla richiesta separata di pubblicazione:
+«Sì, aggiorna la PWA privata a costo zero». Autorizza il solo Site esistente,
+owner-only, nessun costo o nuova infrastruttura. Il checkout Sites isolato è
+stato pubblicato nel normale workflow; nessun commit/push del repo canonico.
+Sites40 succeeded, ambiente6 invariato. Il catalogo45 file e il Worker non
+cambiano. Report `M6_CLOSEOUT.md`; prova iPhone e commit canonico restano separati.
+
+### D-116 — feedback successivo su trasporto, tab e font
+
+16 settembre 2026. L'utente chiede di sostituire la barra bianca con pastello
+leggermente contrastante e bordi sfumati, senza sfumare i tab o compromettere
+l'accessibilità. Implementazione locale: lavanda/cipria sul solo fondo,
+simboli opachi, Stop delimitato; tab con contorno e selezione giada.
+Zen Old Mincho nei titoli e Hanken Grotesk nel testo operativo, derivati
+statici OFL locali con provenienza e hash. Nessun cambio audio o catalogo.
+103 suite/760 test PASS; nuova prova estetica sottoposta all'utente.
+Questo feedback non autorizza commit, pubblicazione o patch dipendenze.
+
+### D-116 — esecuzione dopo approvazione 1–2
+
+16 settembre2026. «Prosegui e concludi M6» autorizza l'integrazione locale
+del prototipo approvato nell'app, non commit, EAS, pubblicazione o nuovi costi.
+Riferimenti Figma consolidati come raster dichiarati, non falsi componenti.
+Due dipinti applicativi senza testo, font locali Regular, target reali,
+trasporto persistente e volumi separati. Timer facoltativo dopo i volumi
+per non sottrarre spazio ai controlli urgenti. Controller e audio invariati
+in questo intervento; preservato il worktree preesistente.
+
+[F] 102 suite/758 test e controlli locali descritti in `M6_APP_INTEGRATION.md`.
+QA visiva locale superata; versione online non sostituita. [U] Expo Doctor
+richiede57.0.23: chiesta approvazione della sola patch, nessuna esclusione
+del controllo. La richiesta di non fermarsi non estende permessi esterni.
+
+## D-116 — design prima del codice, M6 subordinata a M5
+
+16 settembre 2026. Nuovo mandato `Product Design System & Consumer Experience
+Reconstruction`, distinto dalle sei fasi interne D-115.
+
+[F] Ordine vincolante: audit Product Design → Figma realmente autenticato →
+riferimenti ImageToCode separati e ispezionati → varianti 12ui senza costi/upload
+non approvati → approvazione umana → sola successiva implementazione Expo.
+Preservare consumer-paper, motore, catalogo, controlli di review e worktree.
+Nessun commit, deploy, EAS/APK, push, PR, credenziale o nuovo audio.
+
+[F] Audit locale raccolto in `M6_PRODUCT_DESIGN_RECONSTRUCTION.md`; otto
+screenshot nuovi, non concept. Figma risponde con errore di autenticazione
+anche al retry richiesto; nessun file reale usato. Stop obbligatorio al gate.
+[U] Direzione visuale, riferimenti e piano componenti restano da produrre dopo
+lo sblocco, non sono approvati implicitamente dal brief.
+
+[F] Successivo «completa M6»: autenticazione sbloccata, file Figma
+`m09OI6AzKuOlFyTDLgxQ4o` creato. Sei raster image-first generati e ispezionati,
+con specifica e piano route/componenti in `M6_VISUAL_REVIEW.md`. Sono proposte,
+non implementazione. File Figma ancora vuoto; editor browser segnala WebGL
+non disponibile. Nessuna impostazione di sistema cambiata.
+[F] Dry-run12ui: quattro varianti fino a0,122 USD; conversione separata0,55 USD.
+Al momento del preflight nessuna generazione12ui/upload/account/costo avviato.
+
+[F] Successivi «Autorizzo» e «fatto»: autorizzate quattro varianti Home con
+tetto0,122 USD, esclusa conversione. Collegamento account completato; eseguito
+un solo run draft `crt-fa836794bdaa7e9f3239bc61f4f63a21a2e9579c`.
+Ledger: sponsored, chargedMicros0; nessuna conversione richiesta o avviata.
+Caricato solo riferimento Home, non audio/repository. Quattro immagini
+ispezionate; formato orizzontale non conforme al mobile e B priva di Relax.
+Conservate come esplorazioni non approvate, nessuna modifica UI né rigenerazione.
+Report `M6_12UI_VARIANTS.md`; approvazione visuale e consolidamento Figma aperti.
+
+[F] Feedback successivo: le varianti risultano troppo simili e web-like.
+Ritirata raccomandazione C. Su «continua», esplorate due coppie mobile Home/player:
+accessi pittorici diretti oppure scelta attività e Play nella medesima Home.
+Generazione integrata, nessuna nuova chiamata a pagamento12ui o conversione.
+Report `M6_MOBILE_V2.md`; nessuna modifica all'app. Fermata Product Design prima
+del prototipo navigabile in attesa della scelta visuale. Difetti raster annotati,
+non approvazione né prova funzionale.
+
+[F] Scelta successiva «1-2»: autorizzato il prototipo locale della prima coppia,
+non una conversione12ui a pagamento né pubblicazione. Implementazione separata
+in `output/m6-mobile-prototype`, starter Product Design mobile-app con runtime
+intatto. Pitture ripulite dal testo tramite Image Gen; testo, controlli e stati
+sono elementi interattivi reali. Hatha usa un orologio anziché il loto vietato.
+Ocean waves, mute e volumi hanno stati espliciti. Riproduzione solo simulata;
+nessun catalogo caricato, audio modificato, deploy, commit, push o build cloud.
+Il gate successivo è la revisione umana dell'anteprima, prima dell'integrazione
+nel prodotto. QA e limiti sono nel `design-qa.md` del prototipo.
+
+## D-115 — sei milestone locali, solo PWA; transazione ambiente recuperabile
+
+16 settembre2026. Prompt diretto di revisione: correggere codice, testare,
+misurare e documentare; non riconsegnare la baseline APK. Questo ciclo
+autorizza il percorso PWA locale, non EAS, export nativi, deploy o commit.
+
+[F] Il cambio live Rain/Ocean conserva musica, seed, posizione e timer.
+La nuova automazione audio deve riuscire prima di ritirare la vecchia corsia.
+Fallimento recuperabile: ambiente precedente mantenuto e retry esplicito.
+Ogni cambio elimina i vecchi timer naturali senza toccare quelli musicali.
+Non introdurre layering libero, nuove registrazioni o decoder alternativi.
+
+[F] M1→M6 separate: audio, prestazioni, strumenti review, Home mobile,
+selezione musicale per attività, gate integrato. Una milestone verde non
+certifica le successive; telefono e pubblicazione restano gate separati.
+Stato/evidenza in `PWA_D115_REVISION.md`.
+
+[F] Successivo ordine diretto «aggiorna PWA»: autorizzata e completata la sola
+pubblicazione privata M1 (Sites39). Nessuna autorizzazione inferita per APK,
+nuovo audio o commit/push canonico. M2–M6 restano milestone locali separate.
+
+[F] Consolidamento locale M2–M5: la barra review si ancora sopra Play/Stop,
+con misurazione del footer e portale DOM esclusivamente PWA. Le liste tecniche
+restano in disclosure; nessun controllo è esportato nel consumer.
+Home usa sei righe editoriali con artwork esistenti, senza titoli musicali.
+Le raccolte `ACTIVITY_MUSIC_POOLS` sono proposta editoriale provvisoria:
+una scelta musicale per sessione, nessun fallback implicito a onde/pioggia.
+Il precedente ascolto è riconosciuto anche da programma musica+natura e
+persistenza; retry e variazioni timer conservano la stessa opera.
+
+[U] M6: nuova patch Expo57.0.23 richiesta dal Doctor online, non installata
+(runtime corrente57.0.22). Il mandato esclude installazioni: gate esplicito
+prima di mutare dipendenze. Figma richiesto successivamente dall'utente:
+tre tentativi whoami non oltrepassano l'autenticazione; plugin installato e
+abilitato non significa account collegato. Nessun falso audit Figma.
+
+## D-114 — branch brevi, PR coerenti e worktree su bisogno reale
+
+15 settembre2026. Mandato: mantenere `main` stabile, isolare feature/fix e
+supportare lavoro parallelo senza adottare Git Flow dogmatico.
+
+[F] Adottare trunk-based development: ogni cambiamento destinato a `main` passa
+per PR, squash merge predefinito e branch cancellato dopo il merge. Una nuova PR
+nasce quando cambiano obiettivo, rischio, reviewer, release o momento di merge;
+correzioni dello stesso risultato restano nella PR esistente. Nessun branch
+permanente `develop` o di ambiente.
+
+[F] Target review400 righe/15 file; oltre1.200 righe o35 file il gate richiede
+label maintainer `large-pr-approved` e motivazione di non separabilità. Naming e
+descrizione sono controllati da un workflow read-only; CI completa e review
+umana restano gate distinti.
+
+[F] Il worktree serve solo per due stati di filesystem simultanei, fix urgente,
+esperimenti o agenti paralleli su checkout distinti. Il solo fatto di creare un
+branch non giustifica un worktree. Un branch non può essere condiviso da due
+worktree; rimozione e prune sono parte della chiusura.
+
+[U] Applicazione remota, baseline PR e branch protection restano non verificate
+e richiedono un'azione esterna separata. Nessun commit/push eseguito.
+
+## D-113 — CI/CD tracciabile, backend rinviato fino al requisito
+
+15 settembre2026. Mandato: configurare una pipeline di produzione completa,
+quality ratchet, release/rollback e definire il confine infrastrutturale senza
+introdurre prematuramente un server.
+
+[F] GitHub Actions è l'orchestratore di PR/release; EAS è il builder e submitter
+nativo. CI parallela static/test/security, poi export mobile/Web e gate
+aggregato. ESLint/Prettier e coverage possono soltanto restare uguali o
+migliorare. Le action esterne sono fissate a SHA; dipendenze/runtime/builder,
+versione e build number sono controllati dal repository.
+
+[F] Un tag annotato esatto su commit `main` già verde avvia build Android/iOS
+separate. Ogni artefatto conserva hash, ricevuta EAS, commit e fingerprint;
+GitHub Release resta draft e submission è bloccata da environment con reviewer.
+La promozione pubblica resta umana dopo device/ascolto/diritti/store review.
+Nessuna esecuzione esterna è autorizzata o implicita da questa configurazione.
+
+[F] M5 conserva UI, planner, graph audio, timer, verifica, import e offline nel
+client. Il primo incremento ragionevole, quando si distribuiscono gli audio, è
+object storage+CDN+manifest; auth/database/entitlement entrano solo con account,
+contenuti protetti o ricavi. Un servizio custom resta rinviato a un limite
+misurato dei managed. Decisione completa in `BACKEND_BOUNDARY.md`.
+
+[U] Protezioni GitHub remote, credenziali, costo di delivery, domanda, traffico,
+build/store e rollback reale: `NON DETERMINATO — EVIDENZA INSUFFICIENTE`.
+
+## D-112 — una APK consumer aggiornata, a costo zero
+
+14 settembre2026. Ordine diretto «prepara un Apk Aggiornata» supera il solo
+blocco build Android, non autorizza PWA, iOS/store, push o commit canonico.
+Una1.0.4/code5, profilo preview-android esistente e firma congelata.
+
+[F] Includere C1/C2 consumer già verificati, mantenere2 WAV incorporati e
+kit47 esterno read-only; non gonfiare APK/EAS col catalogo. Le funzionalità
+review Web e cambio Rain/Ocean in Play non vengono dichiarate native.
+Preflight748 test e quota live Free/costo0 passati; singolo job
+`46e4258b-7b54-4738-b3d8-ea19d996c587`. Nessun retry automatico.
+Ricevuta `ANDROID_APK_D112.md`; ispezione APK e gate fisico separati.
+
+[F] Chiusa la singola build alle15:57:56 UTC: APK1.0.4/5,239954542B,
+audit PASS e quattro smoke nativi su AVD PASS, import47/47 conservato.
+Consegna per prova fisica autorizzata, non approvazione sonora. Costo finale0,
+Free Android4/15, nessun nuovo job o commit. Dettagli/hash nella ricevuta.
+
+## D-111 — pubblicare soltanto la PWA privata già verificata
+
+14 settembre 2026. Autorizzazione diretta «Aggiorna solo Pwa», poi «continua».
+
+[F] Riutilizzare `dist/c2-pwa` byte per byte, mantenendo il marker
+`PLAYER-REVIEW.28-C2-LOCAL`: non ricostruire o rinominare il candidato dopo
+il collaudo. Pubblicare solo shell e runtime sul sito privato esistente,
+con access policy revision1/environment6 e catalogo45 FLAC invariati.
+La nuova Sites38 è riuscita il 14 settembre alle14:30:27 UTC.
+
+[F] Il commit/push del checkout Sites isolato serve alla pubblicazione
+esplicitamente richiesta e non autorizza commit/push della repository canonica.
+Nessuna EAS/APK, nuova dipendenza, nuovo audio, acquisto o risorsa esterna.
+Ricevuta, hash distinti degli archivi e prove in `PWA_PRIVATE_D111.md`.
+
+[U] Nessuna approvazione sonora o prova fisica viene dedotta dalla consegna.
+Latenza iPhone, background e long-run restano gate separati.
+
+## D-110 — C3, identità e prove ripetibili senza fingere il telefono
+
+14 settembre2026. C2 accettata da Work; mandato limitato a verifiche locali e
+preparazione dei gate AG05/06/07/08/09/18. Nessuna modifica audio o app in C3.
+
+[F] Congelare il seed C3-20260914 e associare frame/marker alle opere esatte;
+distinguere hash del WAV master da hash/byte FLAC realmente distribuito.
+Inventario naturali brevi con conteggio dei confini, mai giudizio automatico
+di monotonia o suono. Registro fisico inizialmente vuoto e casi identificati.
+
+[F] Verifica browser solo dell'export riconosciuto: vecchia cache localhost
+non cancellata, usato127.0.0.1 separato. Seek locale95→11ms ripetuto non vale
+come tempo al suono o latenza iPhone. Pinch200 non vale come reflow/accessibilità
+integrale. Nessun nuovo giro completo senza modifica/fallimento/concern concreto.
+
+[U] Lo strato indipendente è consegnabile; non attendere ascolto o telefono per
+il report, ma non chiudere i rispettivi gate. Report e limiti in
+`C3_LOCAL_AND_DEVICE_REVIEW.md`; C4 resta fuori dal repository in Work.
+
+## D-109 — C2, separazione tecnica senza perdere audio consumer
+
+14 settembre2026. Mandato esplicito successivo a C1: correggere localmente
+AG10/AG17 e proseguire C3 eseguibile. Nessun commit/build/deploy autorizzato.
+
+[F] Trasferire Audio Test/category/session nella sola radice QA; iniettare
+la registry tecnica esclusivamente dalle factory QA, mantenendo il catalogo
+nativo anche nella QA autorizzata. Consumer conserva Drone/Ambience condivisi;
+non spostare i due file nel kit47 né inventare delivery. Texture e registry
+tecnica escluse da EAS, sorgenti originali intatte. I metadata storici della
+texture restano leciti come provenienza, non come byte audio incluso.
+
+[F] Audit deve fallire su npm/ENOLOCK, report mancante, errore o esposizione
+mutata. Nessun nuovo advisory accettato; solo le due eccezioni1.2.1 attraverso
+Metro. SAF non richiede permessi storage generali: bloccarli in configurazione;
+bloccare overlay soltanto preview-android, preservando development client.
+Manifest definitivo e APK restano gate successivi. Nessuna ABI rimossa.
+
+[F] Copy visibile “playlist” sostituito contestualmente con session; nessun
+editor nuovo, replace globale o riscrittura della ricerca. Local review28.
+743 test e prove complete in `C2_BUNDLE_SECURITY_REVIEW.md`.
+[U] Nuovo export non corregge l'APK1.0.3 né pubblica la PWA; nulla di ciò
+costituisce approvazione musicale, diritti o prova fisica.
+
+## D-108 — C1, chiarezza senza cambiare il contratto di ascolto
+
+14 settembre 2026. Mandato Strategy autorizzato: AG01/AG03 e precisazione AG02,
+soltanto locale; nessuna nuova pubblicazione, build, commit o funzione C2–C4.
+
+[F] `online-only` è uno stato/capability distinto da errore offline:
+Settings sul solo host privato non chiama preparazione o retry della shell.
+Anche `prepareBrowserShell` rifiuta la registrazione su quell'host. Bootstrap
+e readiness condividono l'identità dell'host; update già online-first conserva
+le sue regressioni. Audio salvato, cache e preferenze non vengono cancellati.
+Gli altri host mantengono il percorso shell precedente, verificato separatamente.
+
+[F] Preparare una durata diversa non sostituisce la sessione: nuovo copy
+`New session ready` / `Start new session`, nota esplicita e barra corrente
+`Paused · … left` / `Resume`. Handler, timer assoluto, start esplicito e audio
+rimangono invariati. La precisazione non riapre UI02 come perdita dei controlli.
+
+[F] AG03 aggiorna il sommario corrente attività→Play/timer facoltativo/Hatha
+separato e adapter/import Android concreti; iOS, delivery remota e prove fisiche
+restano distinti. Documenti storici conservati con avviso di supersessione.
+
+[F] 736 test/97 suite PASS sul candidato locale .27-C1-LOCAL; confronto reale
+nel browser e limiti in `C1_LOCAL_COHERENCE_REVIEW.md`. Online ancora .26,
+APK1.0.3 invariata; nessuna approvazione sonora o latenza iPhone certificata.
+
+## D-107 — trasporto adiacente e clock reale nella review
+
+14 settembre 2026. Robert richiede barra sotto le micro-sequenze, linea
+sincrona con il gesto e maggiore fluidità/meno attesa. Si conserva l'estetica
+esistente e il catalogo; modifica limitata alla PWA privata.
+
+[F] Un solo stato preview lega diagramma, thumb e tempo. Il gesto muove
+immediatamente la linea ma invia il seek soltanto al rilascio. Errore/annullo
+ripristinano la posizione reale. AudioSessionController espone una lettura
+del clock senza mutare timer/snapshot; nessun accesso audio diretto dalla UI.
+Campionamento visibile massimo 30fps, 500ms con Reduce Motion, sospeso fuori
+schermo. Liste marker e audit separati dal cursore per ridurre lavoro UI.
+
+[F] Preparazione e apertura concorrenti condividono il fetch dell'indice
+FLAC verificato; cancellazione indipendente e retry preservati. Nessun aumento
+dei budget cache né download integrale/precaricamento indiscriminato.
+
+[F] 730 test app, 17 hosting e validatori locali PASS. Sites37 pubblicata
+owner-only, source isolato `2999ae4604c62e3d91b687f88a0a51fce26bd413`.
+Nessun nuovo commit canonico o build APK. Prove: `PWA_PRIVATE_D107_TIMELINE.md`.
+
+[U] Latenza cold, fluidità e qualità su iPhone: NON DETERMINATO — EVIDENZA
+INSUFFICIENTE fino alla prova del telefono. Nessuna promessa di latenza zero.
+
+## D-106 — rendere controllabile la review e conservare prima il baseline
+
+14 settembre 2026. Robert richiede commit prima di ogni modifica, Rain/Ocean
+durante Play, fade d'ingresso e controlli touch/loop/giunzioni affidabili.
+
+[F] Baseline protetto dal commit selettivo `53b506b`; nessun push GitHub.
+La scelta supera Stop-to-change soltanto per Rain↔Ocean nel driver web
+compatibile: stesso programma musicale, seed, volume e deadline. L'ambiente
+usa fade lineare4s fuori dagli incroci; max4 deck/max3 sorgenti udibili.
+Se Ocean ha meno opere di Rain, si ricostruisce soltanto il calendario
+naturale, senza inventare tracce o indebolire l'anti-ripetizione.
+
+[F] Modalità QA entrante/uscente usa un gain distinto dall'inviluppo musicale.
+La ripetizione QA legge la posizione effettiva del motore; la sessione normale
+conserva il timer assoluto. Exit ripristina entrambe le parti senza seek.
+I marker sono tempi esatti, mentre i lead-in hanno comandi Preview separati.
+Lo slider conserva il gesto locale e la coda mantiene soltanto l'ultima
+intenzione pendente; Stop annulla attese audio senza attendere la rete.
+
+[F] Sites36 / PLAYER-REVIEW.25 pubblicata sul sito esistente owner-only,
+source isolato `b5850c1ed9a14687c42fc55aa73e61a7b3d997a5`, environment6.
+720 test app e17 hosting PASS. Nessun nuovo audio, servizio o APK/EAS.
+I cambi successivi al baseline non sono committati nella repository app.
+
+[F] La prova ospitata .24 ha smentito il solo risultato locale del cambio
+ambiente su rete lenta. La .25 usa un anchor futuro comune (2s di anticipo)
+senza allargare la tolleranza: se manca la deadline non altera il vecchio gain.
+Il riuso foreground dei range verificati conserva il budget LRU8MiB; non
+significa latenza zero dopo eviction o per sorgenti ancora non caricate.
+
+[U] Non equivale ad approvazione sonora, latenza zero o test touch iPhone
+superato: `NON DETERMINATO — EVIDENZA INSUFFICIENTE` fino alla nuova prova.
+Prove e limiti in `PWA_PRIVATE_D106_TOUCH_REVIEW.md`.
+
 ## D-105 — correggere la review privata dopo il test negativo sul telefono
 
 14 settembre 2026. Robert segnala silenzio, controlli sviluppatore assenti

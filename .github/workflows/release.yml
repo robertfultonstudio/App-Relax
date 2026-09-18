@@ -1,0 +1,183 @@
+name: Production release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CI: "1"
+  NODE_VERSION: 22.23.1
+
+jobs:
+  release-preflight:
+    name: Release preflight
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - run: corepack enable && corepack prepare pnpm@11.16.0 --activate
+      - run: pnpm install --frozen-lockfile
+      - name: Verify immutable release identity
+        run: |
+          test -z "$(git status --porcelain)"
+          node scripts/release/version.mjs check "$GITHUB_REF_NAME"
+      - name: Require a successful CI run for this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          count=$(gh run list --workflow ci.yml --branch main --commit "$GITHUB_SHA" --status success --json databaseId --jq length)
+          test "$count" -gt 0
+      - name: Require release commit on main
+        run: git fetch origin main && git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+
+  native-build:
+    name: EAS ${{ matrix.platform }} build
+    needs: [release-preflight]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    environment:
+      name: eas-production-${{ matrix.platform }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: android
+            profile: production-android
+            extension: aab
+          - platform: ios
+            profile: production-ios
+            extension: ipa
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - run: corepack enable && corepack prepare pnpm@11.16.0 --activate
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm eas:tool:install
+      - name: Build signed native artifact
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EAS_NO_VCS: "1"
+        run: |
+          mkdir -p release
+          tooling/eas/node_modules/.bin/eas build --platform "${{ matrix.platform }}" --profile "${{ matrix.profile }}" --non-interactive --wait --json > "release/eas-${{ matrix.platform }}-raw.json"
+          node scripts/release/eas-build-metadata.mjs "release/eas-${{ matrix.platform }}-raw.json" "${{ matrix.platform }}" "release/eas-${{ matrix.platform }}-metadata.json"
+          artifact_url=$(node -e 'const x=require("./release/eas-${{ matrix.platform }}-metadata.json"); process.stdout.write(x.artifactUrl)')
+          curl --proto '=https' --tlsv1.2 --fail --location "$artifact_url" --output "release/app-relax-${GITHUB_REF_NAME}.${{ matrix.extension }}"
+          node scripts/release/eas-build-receipt.mjs "release/eas-${{ matrix.platform }}-metadata.json" "release/eas-${{ matrix.platform }}-receipt.json"
+      - name: Hash and describe the artifact
+        run: >-
+          pnpm release:manifest --require-clean --output "release/${{ matrix.platform }}-manifest.json"
+          "release/app-relax-${GITHUB_REF_NAME}.${{ matrix.extension }}"
+          "release/eas-${{ matrix.platform }}-receipt.json"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: release-${{ matrix.platform }}
+          path: |
+            release/app-relax-${{ github.ref_name }}.${{ matrix.extension }}
+            release/eas-${{ matrix.platform }}-receipt.json
+            release/${{ matrix.platform }}-manifest.json
+          if-no-files-found: error
+          retention-days: 90
+
+  github-release:
+    name: Immutable draft release
+    needs: [native-build]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - run: corepack enable && corepack prepare pnpm@11.16.0 --activate
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          pattern: release-*
+          path: release
+          merge-multiple: true
+      - name: Create deterministic source archive and checksums
+        run: |
+          version=${GITHUB_REF_NAME#v}
+          git archive --format=tar --prefix="app-relax-${version}/" "$GITHUB_SHA" | gzip -n > "release/app-relax-${GITHUB_REF_NAME}-source.tar.gz"
+          node scripts/release/version.mjs notes "$version" > release/RELEASE_NOTES.md
+          (cd release && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS)
+      - name: Create draft GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh release create "$GITHUB_REF_NAME" --verify-tag --draft
+          --title "App Relax $GITHUB_REF_NAME" --notes-file release/RELEASE_NOTES.md
+          release/*.aab release/*.ipa release/*-source.tar.gz
+          release/*-receipt.json release/*-manifest.json release/SHA256SUMS
+
+  submit-android:
+    name: Submit Android internal draft
+    needs: [github-release]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    environment:
+      name: store-android
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - run: corepack enable && corepack prepare pnpm@11.16.0 --activate
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm eas:tool:install
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: release-android
+          path: release
+      - name: Submit reviewed Android build
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          build_id=$(node -e 'const x=require("./release/eas-android-receipt.json"); process.stdout.write(x.id)')
+          tooling/eas/node_modules/.bin/eas submit --platform android --profile production-android --id "$build_id" --non-interactive --wait
+
+  submit-ios:
+    name: Submit iOS build
+    needs: [github-release]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    environment:
+      name: store-ios
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - run: corepack enable && corepack prepare pnpm@11.16.0 --activate
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm eas:tool:install
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: release-ios
+          path: release
+      - name: Submit reviewed iOS build
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          build_id=$(node -e 'const x=require("./release/eas-ios-receipt.json"); process.stdout.write(x.id)')
+          tooling/eas/node_modules/.bin/eas submit --platform ios --profile production-ios --id "$build_id" --non-interactive --wait

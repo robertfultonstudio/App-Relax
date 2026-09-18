@@ -1,0 +1,505 @@
+{
+  "scope": "C3 repeatable technical test oracle; NOT listening or device approval",
+  "seed": "C3-20260914",
+  "sampleRateHz": 48000,
+  "sources": [
+    {
+      "id": "respiro-hatha-1-01",
+      "title": "Threshold of Breath",
+      "sourceWavFilename": "01_soglia_del_respiro_LOOP_48K24.wav",
+      "sourceWavSha256": "3714eb9736263d29e8cbfdc6857bcf64442f9776aae9377a7c93c70f46e51e49",
+      "frameCount": 22356000,
+      "delivery": {
+        "workId": "respiro-hatha-1-01",
+        "filename": "01_soglia_del_respiro_LOOP_48K24.flac",
+        "sha256": "ec941a5010790587504d80aff21122efdff0307fe59f380692b00331f9254dc0",
+        "bytes": 76206653,
+        "frames": 22356000
+      }
+    },
+    {
+      "id": "respiro-hatha-1-02",
+      "title": "Air Between Hands",
+      "sourceWavFilename": "02_aria_tra_le_mani_LOOP_48K24.wav",
+      "sourceWavSha256": "16f27071f7a0b6bdf97cf923acc625d1935d070f860b37e97862282bc59ceaac",
+      "frameCount": 27960000,
+      "delivery": {
+        "workId": "respiro-hatha-1-02",
+        "filename": "02_aria_tra_le_mani_LOOP_48K24.flac",
+        "sha256": "ea39c9c286ecdaf1d10ac85885576857d9e1a8506b62f19148b142ef38424d58",
+        "bytes": 93519303,
+        "frames": 27960000
+      }
+    },
+    {
+      "id": "respiro-hatha-1-03",
+      "title": "Wave and Ground",
+      "sourceWavFilename": "03_onda_e_appoggio_LOOP_48K24.wav",
+      "sourceWavSha256": "11dd22198bd92d6691ba0bd2a64045657822e026f20f5fea614e57bda1c1588c",
+      "frameCount": 39540000,
+      "delivery": {
+        "workId": "respiro-hatha-1-03",
+        "filename": "03_onda_e_appoggio_LOOP_48K24.flac",
+        "sha256": "c0216c897af83e18150fa6bf07fcd8b65fd8a6e662797d1e32c3e17d8dd370c4",
+        "bytes": 127641991,
+        "frames": 39540000
+      }
+    },
+    {
+      "id": "respiro-hatha-1-04",
+      "title": "Quiet Expanse",
+      "sourceWavFilename": "04_ampiezza_quieta_LOOP_48K24.wav",
+      "sourceWavSha256": "bf4618c89583845c4a484770eb80e621a92bd92cafe950bad396f52bfc9d0ff1",
+      "frameCount": 39540000,
+      "delivery": {
+        "workId": "respiro-hatha-1-04",
+        "filename": "04_ampiezza_quieta_LOOP_48K24.flac",
+        "sha256": "2966066183b4a9015394f9ce89b2e1327bba45937480453c05f8128bf44a86ea",
+        "bytes": 119588897,
+        "frames": 39540000
+      }
+    },
+    {
+      "id": "respiro-hatha-1-05",
+      "title": "Earth in Motion",
+      "sourceWavFilename": "05_terra_mobile_LOOP_48K24.wav",
+      "sourceWavSha256": "a18b6e8d85d326a893099a5ec7cc9156db00491007dc2c94c2bd9b8b0c3d699b",
+      "frameCount": 33492000,
+      "delivery": {
+        "workId": "respiro-hatha-1-05",
+        "filename": "05_terra_mobile_LOOP_48K24.flac",
+        "sha256": "c1e223caa8446e2d15cf97c045007934af6015872158a803762a9051492a69fd",
+        "bytes": 118442374,
+        "frames": 33492000
+      }
+    },
+    {
+      "id": "respiro-hatha-1-06",
+      "title": "Long Exhale",
+      "sourceWavFilename": "06_lungo_espiro_LOOP_48K24.wav",
+      "sourceWavSha256": "8c3fb52c0f94900f0d6d684113666f7ef15fee85ab74592b90e39cab3b32fb42",
+      "frameCount": 28080000,
+      "delivery": {
+        "workId": "respiro-hatha-1-06",
+        "filename": "06_lungo_espiro_LOOP_48K24.flac",
+        "sha256": "d0aef061e274028cb5d1d8bfe09ed0fb13de414db6f916447c5bf3f94ec1e0c1",
+        "bytes": 97158109,
+        "frames": 28080000
+      }
+    },
+    {
+      "id": "respiro-hatha-1-07",
+      "title": "Lingering Space",
+      "sourceWavFilename": "07_spazio_che_resta_LOOP_48K24.wav",
+      "sourceWavSha256": "21a350449143f797eb659da0964c747b847efbd987c3cd450a706f9bbfac81db",
+      "frameCount": 22080000,
+      "delivery": {
+        "workId": "respiro-hatha-1-07",
+        "filename": "07_spazio_che_resta_LOOP_48K24.flac",
+        "sha256": "d69380e14a82bfdfd783b5cc005e9c61faa4198d92c7b16530c850c4a45d3caa",
+        "bytes": 79177382,
+        "frames": 22080000
+      }
+    },
+    {
+      "id": "respiro-hatha-1-08",
+      "title": "Space Unfolding",
+      "sourceWavFilename": "08_riaprire_lo_spazio_LOOP_48K24.wav",
+      "sourceWavSha256": "47cfdaa456cad4e959b0bed2c0b9404094b055c11757f85d00d41685d60ef61a",
+      "frameCount": 11076000,
+      "delivery": {
+        "workId": "respiro-hatha-1-08",
+        "filename": "08_riaprire_lo_spazio_LOOP_48K24.flac",
+        "sha256": "b1a968a1332543237d46aed751b6fb803cb98ebffbe4345e912f347fc609d54f",
+        "bytes": 38588643,
+        "frames": 11076000
+      }
+    }
+  ],
+  "cases": [
+    {
+      "durationMinutes": 30,
+      "ids": [
+        "respiro-hatha-1-02",
+        "respiro-hatha-1-04",
+        "respiro-hatha-1-05",
+        "respiro-hatha-1-08"
+      ],
+      "segments": [
+        [0, 27960000],
+        [19404000, 58944000],
+        [50388000, 83880000],
+        [75324000, 86400000]
+      ],
+      "joins": [
+        {
+          "fromId": "respiro-hatha-1-02",
+          "toId": "respiro-hatha-1-04",
+          "startFrame": 19404000,
+          "endFrame": 27960000
+        },
+        {
+          "fromId": "respiro-hatha-1-04",
+          "toId": "respiro-hatha-1-05",
+          "startFrame": 50388000,
+          "endFrame": 58944000
+        },
+        {
+          "fromId": "respiro-hatha-1-05",
+          "toId": "respiro-hatha-1-08",
+          "startFrame": 75324000,
+          "endFrame": 83880000
+        }
+      ],
+      "loopFrames": [],
+      "loops": []
+    },
+    {
+      "durationMinutes": 45,
+      "ids": [
+        "respiro-hatha-1-02",
+        "respiro-hatha-1-03",
+        "respiro-hatha-1-04",
+        "respiro-hatha-1-05",
+        "respiro-hatha-1-07",
+        "respiro-hatha-1-08"
+      ],
+      "segments": [
+        [0, 27960000],
+        [19142400, 58682400],
+        [49864800, 89404800],
+        [80587200, 114079200],
+        [105261600, 127341600],
+        [118524000, 129600000]
+      ],
+      "joins": [
+        {
+          "fromId": "respiro-hatha-1-02",
+          "toId": "respiro-hatha-1-03",
+          "startFrame": 19142400,
+          "endFrame": 27960000
+        },
+        {
+          "fromId": "respiro-hatha-1-03",
+          "toId": "respiro-hatha-1-04",
+          "startFrame": 49864800,
+          "endFrame": 58682400
+        },
+        {
+          "fromId": "respiro-hatha-1-04",
+          "toId": "respiro-hatha-1-05",
+          "startFrame": 80587200,
+          "endFrame": 89404800
+        },
+        {
+          "fromId": "respiro-hatha-1-05",
+          "toId": "respiro-hatha-1-07",
+          "startFrame": 105261600,
+          "endFrame": 114079200
+        },
+        {
+          "fromId": "respiro-hatha-1-07",
+          "toId": "respiro-hatha-1-08",
+          "startFrame": 118524000,
+          "endFrame": 127341600
+        }
+      ],
+      "loopFrames": [],
+      "loops": []
+    },
+    {
+      "durationMinutes": 60,
+      "ids": [
+        "respiro-hatha-1-01",
+        "respiro-hatha-1-02",
+        "respiro-hatha-1-03",
+        "respiro-hatha-1-04",
+        "respiro-hatha-1-05",
+        "respiro-hatha-1-06",
+        "respiro-hatha-1-07",
+        "respiro-hatha-1-08"
+      ],
+      "segments": [
+        [0, 22356000],
+        [15024000, 42984000],
+        [35652000, 75192000],
+        [67860000, 107400000],
+        [100068000, 133560000],
+        [126228000, 154308000],
+        [146976000, 169056000],
+        [161724000, 172800000]
+      ],
+      "joins": [
+        {
+          "fromId": "respiro-hatha-1-01",
+          "toId": "respiro-hatha-1-02",
+          "startFrame": 15024000,
+          "endFrame": 22356000
+        },
+        {
+          "fromId": "respiro-hatha-1-02",
+          "toId": "respiro-hatha-1-03",
+          "startFrame": 35652000,
+          "endFrame": 42984000
+        },
+        {
+          "fromId": "respiro-hatha-1-03",
+          "toId": "respiro-hatha-1-04",
+          "startFrame": 67860000,
+          "endFrame": 75192000
+        },
+        {
+          "fromId": "respiro-hatha-1-04",
+          "toId": "respiro-hatha-1-05",
+          "startFrame": 100068000,
+          "endFrame": 107400000
+        },
+        {
+          "fromId": "respiro-hatha-1-05",
+          "toId": "respiro-hatha-1-06",
+          "startFrame": 126228000,
+          "endFrame": 133560000
+        },
+        {
+          "fromId": "respiro-hatha-1-06",
+          "toId": "respiro-hatha-1-07",
+          "startFrame": 146976000,
+          "endFrame": 154308000
+        },
+        {
+          "fromId": "respiro-hatha-1-07",
+          "toId": "respiro-hatha-1-08",
+          "startFrame": 161724000,
+          "endFrame": 169056000
+        }
+      ],
+      "loopFrames": [],
+      "loops": []
+    },
+    {
+      "durationMinutes": 90,
+      "ids": [
+        "respiro-hatha-1-01",
+        "respiro-hatha-1-02",
+        "respiro-hatha-1-03",
+        "respiro-hatha-1-04",
+        "respiro-hatha-1-05",
+        "respiro-hatha-1-06",
+        "respiro-hatha-1-07",
+        "respiro-hatha-1-08"
+      ],
+      "segments": [
+        [0, 22356000],
+        [16933714, 44893714],
+        [39471428, 118551428],
+        [113129142, 152669142],
+        [147246856, 214230856],
+        [208808570, 236888570],
+        [231466285, 253546285],
+        [248124000, 259200000]
+      ],
+      "joins": [
+        {
+          "fromId": "respiro-hatha-1-01",
+          "toId": "respiro-hatha-1-02",
+          "startFrame": 16933714,
+          "endFrame": 22356000
+        },
+        {
+          "fromId": "respiro-hatha-1-02",
+          "toId": "respiro-hatha-1-03",
+          "startFrame": 39471428,
+          "endFrame": 44893714
+        },
+        {
+          "fromId": "respiro-hatha-1-03",
+          "toId": "respiro-hatha-1-04",
+          "startFrame": 113129142,
+          "endFrame": 118551428
+        },
+        {
+          "fromId": "respiro-hatha-1-04",
+          "toId": "respiro-hatha-1-05",
+          "startFrame": 147246856,
+          "endFrame": 152669142
+        },
+        {
+          "fromId": "respiro-hatha-1-05",
+          "toId": "respiro-hatha-1-06",
+          "startFrame": 208808570,
+          "endFrame": 214230856
+        },
+        {
+          "fromId": "respiro-hatha-1-06",
+          "toId": "respiro-hatha-1-07",
+          "startFrame": 231466285,
+          "endFrame": 236888570
+        },
+        {
+          "fromId": "respiro-hatha-1-07",
+          "toId": "respiro-hatha-1-08",
+          "startFrame": 248124000,
+          "endFrame": 253546285
+        }
+      ],
+      "loopFrames": [79011428, 180738856],
+      "loops": [
+        {
+          "workId": "respiro-hatha-1-03",
+          "segmentIndex": 2,
+          "frame": 79011428
+        },
+        {
+          "workId": "respiro-hatha-1-05",
+          "segmentIndex": 4,
+          "frame": 180738856
+        }
+      ]
+    }
+  ],
+  "shortNatural": [
+    {
+      "delivery": {
+        "workId": "field-rain-002-soft-weather",
+        "filename": "FIELD_RAIN_002_SOFT_WEATHER_48K24_LOOP.flac",
+        "sha256": "9cb07fd79e1e3070749071c3faea0c6465b2d7f883d3d0c0e0cbc1e990f82a3b",
+        "bytes": 6932884,
+        "frames": 1464000
+      },
+      "family": "rain",
+      "provenanceManifest": "QA/APP_READY_AUDIO_02_MANIFEST.json",
+      "boundaries20": 39,
+      "boundaries90": 177
+    },
+    {
+      "delivery": {
+        "workId": "field-rain-003-deep-rain",
+        "filename": "FIELD_RAIN_003_DEEP_RAIN_48K24_LOOP.flac",
+        "sha256": "e99f5e1fafd8753ff8ef99844345ea7fcf13285611f29c1de6619ec89976e630",
+        "bytes": 4986863,
+        "frames": 960000
+      },
+      "family": "rain",
+      "provenanceManifest": "QA/APP_READY_AUDIO_02_MANIFEST.json",
+      "boundaries20": 59,
+      "boundaries90": 269
+    },
+    {
+      "delivery": {
+        "workId": "field-rain-004-fine-rain",
+        "filename": "FIELD_RAIN_004_FINE_RAIN_48K24_LOOP.flac",
+        "sha256": "539a9e4c88bedb111b0530fbfc42cee7eeb7086eddd7fc29f408ce454063fed5",
+        "bytes": 9982688,
+        "frames": 2112000
+      },
+      "family": "rain",
+      "provenanceManifest": "QA/APP_READY_AUDIO_02_MANIFEST.json",
+      "boundaries20": 27,
+      "boundaries90": 122
+    },
+    {
+      "delivery": {
+        "workId": "field-rain-005-misted-garden",
+        "filename": "FIELD_RAIN_005_MISTED_GARDEN_48K24_LOOP.flac",
+        "sha256": "0c53ea7b070a029033c07a7a51aa76029f35afb88857f17fbe941c398bb915a1",
+        "bytes": 10802865,
+        "frames": 2160000
+      },
+      "family": "rain",
+      "provenanceManifest": "QA/APP_READY_AUDIO_02_MANIFEST.json",
+      "boundaries20": 26,
+      "boundaries90": 119
+    },
+    {
+      "delivery": {
+        "workId": "field-rain-006-quiet-weather",
+        "filename": "FIELD_RAIN_006_QUIET_WEATHER_48K24_LOOP.flac",
+        "sha256": "964648f934d65079b3b1334de6b17b615c27a4eb816a8b501361499e2cb7c347",
+        "bytes": 4665546,
+        "frames": 984000
+      },
+      "family": "rain",
+      "provenanceManifest": "QA/APP_READY_AUDIO_02_MANIFEST.json",
+      "boundaries20": 58,
+      "boundaries90": 263
+    },
+    {
+      "delivery": {
+        "workId": "field-rain-007-rain-veil",
+        "filename": "FIELD_RAIN_007_RAIN_VEIL_48K24_LOOP.flac",
+        "sha256": "ea7ecf311822c57b7e8b7e5a65e704c3fa2d0d65b5a1070f49fadee978a850bb",
+        "bytes": 10561813,
+        "frames": 2112000
+      },
+      "family": "rain",
+      "provenanceManifest": "QA/APP_READY_AUDIO_02_MANIFEST.json",
+      "boundaries20": 27,
+      "boundaries90": 122
+    },
+    {
+      "delivery": {
+        "workId": "field-rain-008-sheltered-rain",
+        "filename": "FIELD_RAIN_008_SHELTERED_RAIN_48K24_LOOP.flac",
+        "sha256": "1c4c65f60bac8bf052bc01b4f52742553777038ae67240e4a1f8100b577c735b",
+        "bytes": 5024158,
+        "frames": 1056000
+      },
+      "family": "rain",
+      "provenanceManifest": "QA/APP_READY_AUDIO_02_MANIFEST.json",
+      "boundaries20": 54,
+      "boundaries90": 245
+    },
+    {
+      "delivery": {
+        "workId": "field-rain-009-distant-shower",
+        "filename": "FIELD_RAIN_009_DISTANT_SHOWER_48K24_LOOP.flac",
+        "sha256": "16f989baef88004d6a90c8a4955c0bec0f5d7434b1d183e8b382c6cfd93b3eff",
+        "bytes": 9995858,
+        "frames": 2064000
+      },
+      "family": "rain",
+      "provenanceManifest": "QA/APP_READY_AUDIO_02_MANIFEST.json",
+      "boundaries20": 27,
+      "boundaries90": 125
+    },
+    {
+      "delivery": {
+        "workId": "field-rain-010-low-rain",
+        "filename": "FIELD_RAIN_010_LOW_RAIN_48K24_LOOP.flac",
+        "sha256": "88ca800a745fdb1433de9bafb2c7da33d0974bb60972033110611a3950b7eef3",
+        "bytes": 2893261,
+        "frames": 720000
+      },
+      "family": "rain",
+      "provenanceManifest": "QA/APP_READY_AUDIO_02_MANIFEST.json",
+      "boundaries20": 79,
+      "boundaries90": 359
+    },
+    {
+      "delivery": {
+        "workId": "field-rain-011-rain-receding",
+        "filename": "FIELD_RAIN_011_RAIN_RECEDING_48K24_LOOP.flac",
+        "sha256": "bac948d5d0719c78b1c3507380267f926f59a12cc427db9bf1c9cc3efecc1f42",
+        "bytes": 4745722,
+        "frames": 1152000
+      },
+      "family": "rain",
+      "provenanceManifest": "QA/APP_READY_AUDIO_02_MANIFEST.json",
+      "boundaries20": 49,
+      "boundaries90": 224
+    },
+    {
+      "delivery": {
+        "workId": "night-birds-b1",
+        "filename": "night_birds_b1_LOOP_48K24.wav",
+        "sha256": "311791d39d7d4ad52420f5456b233e9f74e96f9f0f662fd273466b77c2ca253b",
+        "bytes": 9699972,
+        "frames": 1616645
+      },
+      "family": "unclassified-nature",
+      "provenanceManifest": "src/content/localNaturalAudioFiles.json",
+      "boundaries20": 35,
+      "boundaries90": 160
+    }
+  ]
+}

@@ -7,7 +7,7 @@ import type { CreateAdaptiveSessionInput } from "./types";
 export const NATIVE_DECK_PREPARATION_GUARD_SECONDS = 10;
 export function createNativePreviewProgram(input: CreateAdaptiveSessionInput) {
   return createWholeFileReviewProgram(
-    input,
+    { ...input, prepareNatureControls: true },
     NATIVE_DECK_PREPARATION_GUARD_SECONDS,
   );
 }

@@ -22,14 +22,26 @@ expo-env.d.ts
 *.keystore
 *.p8
 *.p12
+*.pfx
 *.key
 *.pem
+*.cer
 *.mobileprovision
 .env
 .env.*
+.npmrc
+/.codex/
+google-services.json
+GoogleService-Info.plist
+credentials*.json
+service-account*.json
+/credentials/
+/secrets/
 
 # local tooling and logs
 /.vscode/
+/.github/
+/quality/
 .metro-health-check*
 npm-debug.*
 yarn-debug.*
@@ -40,18 +52,22 @@ yarn-error.*
 
 # non-build repository material
 /AGENTS.md
+/CHANGELOG.md
 /README.md
 /STATO.md
 /Avvia PWA.command
 /docs/
 /scripts/
 /tests/
+/tooling/
 /eslint.config.js
 /jest.config.js
 /assets/audio/placeholders/
 /public/audio-catalog/
 /src/app-qa/
 /src/qa/
+/src/audio/reactNativeAudioApi/stemAssets.ts
+/assets/audio/test-pack-01/
 /public-pwa/
 /src/app-pwa/
 /src/pwa-review/

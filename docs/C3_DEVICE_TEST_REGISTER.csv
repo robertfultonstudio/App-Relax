@@ -1,0 +1,1 @@
+case_id,ag_id,timestamp,app_version,app_sha256,device_model,os_version,audio_route,network,cache_state,plan_id,seed,duration_minutes,work_id,delivery_sha256,marker_kind,expected_frame,actual_seconds,tap_to_state_ms,tap_to_audible_ms,seek_ready_ms,result,evidence_path,notes

@@ -51,10 +51,13 @@ function AvailableDownloadControl({ workId }: { workId?: string }) {
     () => downloads.getSnapshot(id),
     () => downloads.getServerSnapshot(id),
   );
+  const onlineOnly = shellState === "online-only";
   useEffect(() => {
     void downloads.hydrate(id);
-    void shell.check();
-  }, [downloads, id, shell]);
+  }, [downloads, id]);
+  useEffect(() => {
+    if (!onlineOnly) void shell.check();
+  }, [shell, onlineOnly]);
   const { record, busy, removed } = snapshot;
   const downloading = ["queued", "downloading", "verifying"].includes(
     record.status,
@@ -78,7 +81,11 @@ function AvailableDownloadControl({ workId }: { workId?: string }) {
   return (
     <View style={styles.panel} testID="download-control">
       <Text style={styles.heading}>
-        {workId ? "SAVE FOR OFFLINE" : "RAIN STARTER · 3 APPROVED SOUNDS"}
+        {workId
+          ? onlineOnly
+            ? "SAVE AUDIO ON THIS DEVICE"
+            : "SAVE FOR OFFLINE"
+          : "RAIN STARTER · 3 APPROVED SOUNDS"}
       </Text>
       <Text style={styles.body} accessibilityLiveRegion="polite">
         {busy
@@ -90,7 +97,7 @@ function AvailableDownloadControl({ workId }: { workId?: string }) {
           : available
             ? `Downloaded and verified · ${size(record.totalBytes)}`
             : removed
-              ? "Removed from offline listening. Undo is available until you free the space."
+              ? "Saved copy removed from listening. Undo is available until you free the space."
               : `Download only this ${workId ? "sound" : "starter"} · ${size(record.totalBytes)}`}
       </Text>
       {!workId && (
@@ -103,15 +110,18 @@ function AvailableDownloadControl({ workId }: { workId?: string }) {
         accessibilityLiveRegion="polite"
         testID="offline-shell-status"
       >
-        {shellState === "ready"
-          ? "App screens are saved. Test reopening before going offline; only verified downloads can play."
-          : shellState === "reopen"
-            ? "App screens are saved. When listening has stopped, close all App Relax tabs and reopen online, then check again."
-            : shellState === "checking" || shellState === "unchecked"
-              ? "Checking whether this app can reopen offline… Keep your connection on."
-              : "Offline reopening is not ready. Keep your connection on. Stop listening, close App Relax tabs and reopen online, then check again. Saved audio has not been removed."}
+        {onlineOnly
+          ? "This private review needs an internet connection to open. Saved audio can be reused, but does not make the app available offline. Your saved sounds and settings are unchanged."
+          : shellState === "ready"
+            ? "App screens are saved. Test reopening before going offline; only verified downloads can play."
+            : shellState === "reopen"
+              ? "App screens are saved. When listening has stopped, close all App Relax tabs and reopen online, then check again."
+              : shellState === "checking" || shellState === "unchecked"
+                ? "Checking whether this app can reopen offline… Keep your connection on."
+                : "Offline reopening is not ready. Keep your connection on. Stop listening, close App Relax tabs and reopen online, then check again. Saved audio has not been removed."}
       </Text>
-      {shellState !== "checking" &&
+      {!onlineOnly &&
+        shellState !== "checking" &&
         shellState !== "unchecked" &&
         button(
           "Check offline readiness",
@@ -157,7 +167,9 @@ function AvailableDownloadControl({ workId }: { workId?: string }) {
           : `Estimated browser space available: ${size(snapshot.freeBytes)}.`}{" "}
         {snapshot.persistent === true
           ? "Persistent browser storage granted."
-          : "The browser may clear local data. Check downloads before going offline."}{" "}
+          : onlineOnly
+            ? "The browser may clear local data. Keep your connection on."
+            : "The browser may clear local data. Check downloads before going offline."}{" "}
         No automatic catalogue download. Keep this app open until verification
         finishes.
       </Text>

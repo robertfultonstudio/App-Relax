@@ -2,3 +2,5 @@
 /public-pwa/flac-index/
 /public-pwa/flac-decoder.worker.min.js
 /public-pwa/flac-source/
+/pnpm-lock.yaml
+/tooling/eas/pnpm-lock.yaml

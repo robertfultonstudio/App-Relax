@@ -1,0 +1,12 @@
+{
+  "name": "@app-relax/eas-toolchain",
+  "version": "1.0.0",
+  "private": true,
+  "devDependencies": {
+    "eas-cli": "24.3.0"
+  },
+  "engines": {
+    "node": "22.23.1"
+  },
+  "packageManager": "pnpm@11.16.0"
+}

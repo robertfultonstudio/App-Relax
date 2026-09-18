@@ -72,12 +72,14 @@ export function reviewMarkers(program: AdaptiveSessionProgram): ReviewMarker[] {
 }
 
 export const reviewTime = (n: number) => {
-  const safe = Math.max(0, n);
-  return `${Math.floor(safe / 60)
+  // Round once in integer centiseconds: 10.29 must not render as 10.28
+  // through binary floating point, nor 59.999 as an impossible 00:59.100.
+  const centiseconds = Math.round(
+    Math.max(0, Number.isFinite(n) ? n : 0) * 100,
+  );
+  return `${Math.floor(centiseconds / 6000)
     .toString()
-    .padStart(2, "0")}:${Math.floor(safe % 60)
+    .padStart(2, "0")}:${Math.floor((centiseconds % 6000) / 100)
     .toString()
-    .padStart(2, "0")}.${Math.floor((safe % 1) * 100)
-    .toString()
-    .padStart(2, "0")}`;
+    .padStart(2, "0")}.${(centiseconds % 100).toString().padStart(2, "0")}`;
 };

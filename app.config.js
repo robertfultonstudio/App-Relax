@@ -15,6 +15,15 @@ module.exports = ({ config }) => {
 
   return {
     ...config,
+    android: {
+      ...config.android,
+      blockedPermissions: [
+        ...(config.android?.blockedPermissions ?? []),
+        ...(process.env.EAS_BUILD_PROFILE === "preview-android"
+          ? ["android.permission.SYSTEM_ALERT_WINDOW"]
+          : []),
+      ],
+    },
     web: {
       ...config.web,
       favicon:

@@ -137,8 +137,9 @@ describe("consumer product tabs", () => {
       ).toBe(true);
       const original =
         mockAudio.controller.prepareSelection.mock.calls.at(-1)![0];
-      if (original.kind !== "single")
+      if (original.kind !== "adaptive")
         throw new Error("Expected music alone by default");
+      expect(original.program.plan.natureMix?.enabled).toBe(false);
       await fireEvent.press(
         screen.getByRole("radio", { name: "Ambience Rain" }),
       );
@@ -152,7 +153,7 @@ describe("consumer product tabs", () => {
         request: {
           outcome: outcome.id,
           natureFamily: "rain",
-          listeningWorkId: original.program.work.id,
+          listeningWorkId: original.program.plan.listeningWorkId,
           includeNatureBed: true,
         },
       });
@@ -167,7 +168,7 @@ describe("consumer product tabs", () => {
         (segment) => segment.lane === "nature",
       );
       expect(nature).toHaveLength(
-        Math.max(2, Math.ceil(original.durationMinutes / 10)),
+        Math.max(2, Math.ceil(original.request.durationMinutes / 10)),
       );
       for (const segment of nature)
         expect(
@@ -175,13 +176,13 @@ describe("consumer product tabs", () => {
             selected.program.works.find((work) => work.id === segment.workId)!,
           ),
         ).toBe("rain");
-      expect(screen.queryByText(original.program.work.title)).toBeNull();
+      expect(screen.queryByText(original.program.works[0].title)).toBeNull();
       await fireEvent.press(screen.getByTestId("start-immediate-session"));
       expect(
         mockAudio.controller.startSelectionFromUserGesture,
       ).toHaveBeenCalledWith(selected);
       expect(mockPush).toHaveBeenCalledWith(
-        `/listen/${original.program.work.id}?outcome=${outcome.id}&duration=${original.durationMinutes}&nature=rain`,
+        `/listen/${original.program.plan.listeningWorkId}?outcome=${outcome.id}&duration=${original.request.durationMinutes}&nature=rain`,
       );
     },
   );

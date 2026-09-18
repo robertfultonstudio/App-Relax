@@ -90,7 +90,7 @@ export function IndividualTrackReview() {
         to its beginning.
       </Text>
       <Text style={styles.body}>
-        One file only: no added ambience or playlist transition. Listen for a
+        One file only: no added ambience or session transition. Listen for a
         click, silence or a change in level at the return. A moving counter is
         not listening approval.
       </Text>

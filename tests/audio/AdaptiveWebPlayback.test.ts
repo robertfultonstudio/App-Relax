@@ -796,10 +796,7 @@ describe("AdaptiveWebPlayback seeking", () => {
     const primaryBus = gainNodes[1];
     const natureBus = gainNodes[2];
     playback.setNatureLevel(0.7, 1800);
-    expect(primaryBus.gain.linearRampToValueAtTime).toHaveBeenCalledWith(
-      0.5,
-      1.8,
-    );
+    expect(primaryBus.gain.linearRampToValueAtTime).not.toHaveBeenCalled();
     expect(natureBus.gain.linearRampToValueAtTime).toHaveBeenCalledWith(
       0.35,
       1.8,

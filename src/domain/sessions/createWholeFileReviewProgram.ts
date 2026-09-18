@@ -31,12 +31,7 @@ export function createWholeFileReviewProgram(
 ): AdaptiveSessionProgram {
   if (input.listeningWorkId) {
     const work = getConsumerWork(input.listeningWorkId);
-    if (
-      !work ||
-      input.mode !== "sound-only" ||
-      input.soundKind !== "music" ||
-      !input.includeNatureBed
-    )
+    if (!work || input.mode !== "sound-only" || input.soundKind !== "music")
       throw new Error(
         "This saved music and ambience selection is unavailable.",
       );
@@ -44,25 +39,32 @@ export function createWholeFileReviewProgram(
       work,
       input.outcome,
       input.durationMinutes,
-      input.natureFamily ?? "sea",
+      input.includeNatureBed ? (input.natureFamily ?? "sea") : null,
       musicGuardSeconds,
     );
   }
   if (input.outcome !== "yoga" || input.soundKind !== "music") {
-    if (musicGuardSeconds === 0) return createAdaptiveSessionProgram(input);
+    if (musicGuardSeconds === 0 && !input.prepareNatureControls)
+      return createAdaptiveSessionProgram(input);
     const base = createAdaptiveSessionProgram({
       ...input,
       includeNatureBed: false,
     });
-    return input.soundKind === "music" && input.includeNatureBed !== false
-      ? attachCoordinatedNatureBed(
-          base,
-          input.seed,
-          input.natureFamily,
-          undefined,
-          musicGuardSeconds,
-        )
-      : base;
+    if (
+      input.soundKind !== "music" ||
+      (input.includeNatureBed === false && !input.prepareNatureControls)
+    )
+      return base;
+    const ready = attachCoordinatedNatureBed(
+      base,
+      input.seed,
+      input.natureFamily,
+      undefined,
+      musicGuardSeconds,
+    );
+    ready.plan.natureMix!.enabled = input.includeNatureBed !== false;
+    if (ready.plan.natureMix!.enabled === false) ready.plan.id += ":off";
+    return ready;
   }
   if (input.mode !== "sound-only")
     throw new Error("Guided recordings are unavailable.");
@@ -261,15 +263,16 @@ export function createWholeFileReviewProgram(
       metadataReviewStatus: "PROVISIONAL — QA ONLY",
     },
   };
-  const result = input.includeNatureBed
-    ? attachCoordinatedNatureBed(
-        program,
-        input.seed,
-        input.natureFamily,
-        undefined,
-        musicGuardSeconds,
-      )
-    : program;
+  if (!input.includeNatureBed && !input.prepareNatureControls) return program;
+  const result = attachCoordinatedNatureBed(
+    program,
+    input.seed,
+    input.natureFamily,
+    undefined,
+    musicGuardSeconds,
+  );
+  result.plan.natureMix!.enabled = Boolean(input.includeNatureBed);
+  if (!result.plan.natureMix!.enabled) result.plan.id += ":off";
   if (!auditPlanAccelerated(result).pass)
     throw new Error("Whole-track review failed timeline safety.");
   return result;

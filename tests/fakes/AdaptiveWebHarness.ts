@@ -132,6 +132,9 @@ export function adaptiveWebHarness(contextOffsetSeconds = 0) {
   const gainFor = (id: string) =>
     sources.find((source) => source.media.src === `fixture://${id}`)?.connect
       .mock.lastCall?.[0] as ReturnType<typeof gainNode> | undefined;
+  const auditionGainFor = (id: string) =>
+    gainFor(id)?.connect.mock.lastCall?.[0] as
+      ReturnType<typeof gainNode> | undefined;
   return {
     playback,
     media,
@@ -141,6 +144,7 @@ export function adaptiveWebHarness(contextOffsetSeconds = 0) {
     handlers,
     resolver,
     gainFor,
+    auditionGainFor,
     restore: () =>
       Object.defineProperty(globalThis, "Audio", {
         configurable: true,

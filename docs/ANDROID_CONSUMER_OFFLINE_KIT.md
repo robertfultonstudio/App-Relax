@@ -1,6 +1,16 @@
 # Android consumer offline kit — D-097
 
-14 settembre 2026 · APK1.0.3/4 per prova Android, correzione Ocean inclusa
+14 settembre 2026 · APK1.0.4/5 per prova Android, correzione Ocean inclusa
+
+[F] Versione corrente D-112: APK1.0.4/5 da239954542B, audit PASS,
+installata sopra1.0.3 su AVD API34 senza perdere47/47 audio importati.
+Avvio nativo di FLAC/WAV e Hatha90+Rain/Ocean, pausa/ripresa e Stop PASS;
+nessuna prova completa di90 minuti o approvazione sonora dedotta.
+Costo0,11 build Android Free residue al controllo finale.
+Link, SHA-256 e limiti: `ANDROID_APK_D112.md`. Il kit47 resta invariato.
+La review sviluppatore e il cambio Rain/Ocean durante Play restano PWA-only;
+su Android si preme Stop prima di cambiare ambiente. Le sezioni1.0.3 sotto
+sono cronologia, non l'identità della nuova APK.
 
 [F] D-103: nuova APK1.0.3/4 a costo zero, installazione in aggiornamento
 riuscita e47/47 importati conservati. Hatha90+Ocean supera l'avvio e la
@@ -9,9 +19,13 @@ Prove e hash in `ANDROID_APK_D103_PREFLIGHT.md`. Catalogo invariato e separato
 dall'APK. Il telefono reale deve ancora validare loop/crossfade, interruzioni
 e background. I paragrafi seguenti conservano la cronologia precedente.
 
-[F] Aggiornamento D-102: correzione Ocean verificata localmente con il
-development client, non ancora nell'APK qui descritta. Kit invariato,
-nessuna nuova build. Prove e limiti: `ANDROID_OCEAN_D102_FIX.md`.
+[F, storico] In D-102 la correzione Ocean era soltanto nel development client;
+D-103 l'ha poi inclusa in APK1.0.3/4. Kit invariato.
+Prove e limiti storici: `ANDROID_OCEAN_D102_FIX.md`.
+
+[F, storico] Distinzione C1 / AG03: APK1.0.3 non contiene D-106/D-107,
+modifiche della sola review Web .26. L'import47/47 e le prove descritte sopra
+sono su AVD, non ascolto sul telefono. iOS e delivery remota restano separati.
 
 [F] D-101: build `71e00fbe-bc05-4a61-ab70-13a2dc7d75a3` FINISHED,
 costo stimato zero, Free Android2/15 usate. Kit47/47 ricontrollato, nessun

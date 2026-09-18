@@ -7,20 +7,15 @@ import { useEffect } from "react";
 import { View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AudioProvider } from "@/audio/AudioProvider";
-import { createAudioGraphDriver } from "@/audio/createAudioDriver";
+import { createAudioGraphDriver } from "@/qa/createQaAudioDriver";
 import { colors } from "@/design/theme";
+import { fontAssets } from "@/design/fontAssets";
 
 void SplashScreen.preventAutoHideAsync();
 
 export default function QaRootLayout() {
   const pathname = usePathname();
-  const [fontsLoaded, fontError] = useFonts({
-    Manrope_400Regular: require("@expo-google-fonts/manrope/400Regular/Manrope_400Regular.ttf"),
-    Manrope_500Medium: require("@expo-google-fonts/manrope/500Medium/Manrope_500Medium.ttf"),
-    Manrope_600SemiBold: require("@expo-google-fonts/manrope/600SemiBold/Manrope_600SemiBold.ttf"),
-    Newsreader_500Medium: require("@expo-google-fonts/newsreader/500Medium/Newsreader_500Medium.ttf"),
-    Newsreader_500Medium_Italic: require("@expo-google-fonts/newsreader/500Medium_Italic/Newsreader_500Medium_Italic.ttf"),
-  });
+  const [fontsLoaded, fontError] = useFonts(fontAssets);
 
   useEffect(() => {
     if (fontsLoaded || fontError) void SplashScreen.hideAsync();

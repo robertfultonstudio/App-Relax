@@ -2,6 +2,7 @@ import {
   prepareBrowserShell,
   PwaShellReadiness,
 } from "@/offline/PwaShellReadiness";
+import { PRIVATE_REVIEW_HOST, pwaShellPolicy } from "@/offline/pwaShellPolicy";
 
 const active = {
   state: "activated",
@@ -21,6 +22,32 @@ function browser(controlled = true, waiting = false) {
 }
 
 describe("offline app readiness separate from verified audio", () => {
+  it("exposes private online-only policy without preparing, registering or retrying a shell", async () => {
+    const prepare = jest.fn();
+    const gate = new PwaShellReadiness(
+      { prepare },
+      pwaShellPolicy(`https://${PRIVATE_REVIEW_HOST}`),
+    );
+    expect(gate.getSnapshot()).toBe("online-only");
+    await gate.check();
+    await gate.check();
+    expect(prepare).not.toHaveBeenCalled();
+    expect(gate.getSnapshot()).toBe("online-only");
+    const { container } = browser();
+    const verify = jest.fn();
+    await expect(
+      prepareBrowserShell(container, `https://${PRIVATE_REVIEW_HOST}`, verify),
+    ).resolves.toEqual({ controlled: false, complete: false });
+    expect(container.register).not.toHaveBeenCalled();
+    expect(verify).not.toHaveBeenCalled();
+  });
+  it.each([
+    "http://localhost:8096",
+    "https://another.chatgpt.site",
+    `https://${PRIVATE_REVIEW_HOST}.example.org`,
+  ])("preserves ordinary shell policy for %s", (origin) => {
+    expect(pwaShellPolicy(origin)).toBe("offline-shell");
+  });
   it("does not equate an activated first install with a controlled page", async () => {
     const { container } = browser(false);
     const result = await prepareBrowserShell(

@@ -103,7 +103,15 @@ describe("M3 ritual editorial registry", () => {
 
   it("keeps prohibited claims out of public ritual and primary player copy", () => {
     const player = readFileSync(
-      join(__dirname, "..", "..", "src", "app", "session", "[sessionId].tsx"),
+      join(
+        __dirname,
+        "..",
+        "..",
+        "src",
+        "app-qa",
+        "session",
+        "[sessionId].tsx",
+      ),
       "utf8",
     );
     const publicCopy = `${JSON.stringify(RITUALS)}\n${player}`;

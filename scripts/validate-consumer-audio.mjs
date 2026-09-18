@@ -30,8 +30,18 @@ const elementalCatalog = readFileSync(
   join(root, "src", "content", "approvedElementalCatalog.ts"),
   "utf8",
 );
-const consumerAssets = readFileSync(
-  join(root, "src", "audio", "reactNativeAudioApi", "consumerAssets.ts"),
+const nativeConsumerDriver = readFileSync(
+  join(
+    root,
+    "src",
+    "audio",
+    "reactNativeAudioApi",
+    "ReactNativeAudioDriver.ts",
+  ),
+  "utf8",
+);
+const webConsumerResolver = readFileSync(
+  join(root, "src", "audio", "web", "MetroWebAudioSourceResolver.ts"),
   "utf8",
 );
 const metro = readFileSync(join(root, "metro.config.js"), "utf8");
@@ -91,18 +101,26 @@ assert(
 assert(
   catalog.includes('"soft-air"') &&
     catalog.includes('"rejected-listening"') &&
-    !consumerAssets.includes("sleepTexture001"),
-  "rejected Soft Air must not remain addressable as a consumer asset",
+    catalog.includes('"audio-test-pack-01"'),
+  "rejected Soft Air metadata must remain explicitly TEST ONLY",
 );
 assert(
   !/eclipse|eclypsis/i.test(catalog) &&
-    !/eclipse|eclypsis/i.test(consumerAssets),
-  "rejected Eclipse Veil must not remain in the consumer catalog or asset map",
+    !/eclipse|eclypsis/i.test(nativeConsumerDriver) &&
+    !/eclipse|eclypsis/i.test(webConsumerResolver),
+  "rejected Eclipse Veil must not remain in consumer runtime sources",
 );
 assert(
   !/stillwater|nirvana/i.test(catalog) &&
-    !/stillwater|nirvana/i.test(consumerAssets),
-  "removed Nirvana Waves must not remain in the consumer catalog or asset map",
+    !/stillwater|nirvana/i.test(nativeConsumerDriver) &&
+    !/stillwater|nirvana/i.test(webConsumerResolver),
+  "removed Nirvana Waves must not remain in consumer runtime sources",
+);
+assert(
+  !/consumerAssets|test-pack-01|SLEEP_(?:DRONE|AMBIENCE|TEXTURE)_001/.test(
+    `${nativeConsumerDriver}\n${webConsumerResolver}`,
+  ),
+  "consumer runtime graph must not contain ATP01 asset references",
 );
 assert(
   report.files.some(

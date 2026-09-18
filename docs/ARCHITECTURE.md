@@ -2,17 +2,25 @@
 
 ## Decisione sintetica
 
-L'app usa Expo SDK 57, React Native 0.86.3 ed Expo Router. La Home outcome-first
-offre due percorsi distinti: opere autonome M4 e sessioni adattive M5. Yoga,
-Massage, Relax, Meditation, Sleep e Focus scelgono prima la durata; Sound only
-può costruire un piano Continuum, mentre Guided resta bloccato finché non
-esistono voci registrate. Il player autonomo, le sessioni adattive e la route
+Stato corrente, 14 settembre 2026 (C1 / AG03). L'app usa Expo SDK 57,
+React Native 0.86.3 ed Expo Router. Le sei attività seguono attività → Play:
+una sola opera adatta viene scelta una volta per visita e mantenuta in loop.
+Il timer è già impostato, facoltativo e modificabile; Rain/Ocean è un'aggiunta
+esplicita. La pratica Hatha completa è un percorso separato, con sequenza
+strutturata e durate 30/45/60/90. Guided resta indisponibile finché non esistono
+registrazioni reali; nessuna scelta voce obbligatoria. Il player autonomo,
+le sessioni adattive e la route
 separata `AUDIO TEST / TEST ONLY` usano tutti `AudioSessionController`, con
 contratti distinti. Il controller resta il solo proprietario della sessione.
 `ReactNativeAudioDriver` e `WebAudioDriver` restano dietro `AudioGraphDriver` e
 `AudioEngine`.
 
 RNAA dichiara peer aperti verso React Native ma la sua matrice pubblica non documenta ancora RN 0.86. Due compilazioni EAS Android e il playback della preview standalone con Metro spento dimostrano il percorso Android corrente; compatibilita iOS e comportamento su telefono reale restano `NON DETERMINATO — EVIDENZA INSUFFICIENTE`.
+
+Il processo di sviluppo usa branch brevi e pull request verso `main`; naming,
+dimensione, sincronizzazione e worktree sono definiti nel
+[workflow Git](GIT_WORKFLOW.md). Architettura e release gate sono documentati
+in [CI/CD di produzione](CI_CD_ARCHITECTURE.md).
 
 ## Adaptive Sessions M5
 
@@ -35,12 +43,19 @@ target; un'opera che richieda un finale editoriale non può essere tagliata. Per
 i loop continui senza outro, il piano dichiara apertamente un inviluppo finale
 controllato.
 
-Il Web valida in anticipo i metadata di tutte le sorgenti, usa due deck
-HTMLAudio soltanto durante il cambio, prepara la sorgente successiva e applica
-curve Web Audio. Gli errori di una sorgente futura tornano al controller invece
-di fermare silenziosamente la sessione. Il nativo fallisce chiuso: risoluzione dei
-pacchetti scaricati, due decoder FLAC, scheduling e seek non sono ancora
-implementati o validati su telefono.
+Il Web valida i metadata e prepara la sorgente successiva dietro le interfacce
+del controller. Nella review privata i FLAC usano decoder/range lossless;
+il percorso HTMLAudio non è una garanzia di scheduling sample-accurate.
+Gli errori di una sorgente futura tornano al controller. D-106/D-107 aggiungono
+cambio ambiente live e trasporto review soltanto Web; non aggiornano l'APK.
+
+[F] Nel solo `preview-android` la factory usa concretamente
+`AdaptiveNativePlayback` e il resolver del catalogo verificato, con decoder
+coordinati, preload e seek. `NativeCatalogStore` importa via SAF da una cartella
+locale, verifica dimensione/SHA-256 e promuove copie nello storage privato.
+Il kit separato contiene 47 file (45 FLAC, 2 WAV), 2.434.210.564 byte.
+La Home richiede il kit verificato; il flag non abilita iOS o delivery remota.
+Il riferimento operativo è [Android consumer kit](ANDROID_CONSUMER_OFFLINE_KIT.md).
 
 Il manifest offline è indipendente dal catalogo e non contiene endpoint. Un
 `OfflinePackageManager` orchestra spazio sui soli byte mancanti, staging
@@ -48,11 +63,12 @@ streaming, verifica, promozione/rollback atomici, retry, rimozione e recovery
 attraverso interfacce `PackageSource`, `AudioBinaryStore` e
 `OfflineStateStore`. Lo stato `available` viene riconciliato con presenza,
 dimensione e hash dei file committed. La cartella localhost non è una delivery
-mobile; l'implementazione nativa delle porte resta assente.
+mobile. Questo contratto generico non va confuso con l'import Android concreto
+`NativeCatalogStore` / `ExpoPrivateCatalogPort`, né con un download remoto.
 
-Il Router ha due radici: `src/app` consumer per default e `src/app-qa` soltanto
-con `APP_RELAX_SURFACE=qa`. Il Workbench è in `src/qa`, non ha link consumer ed
-è escluso dall'archivio EAS.
+Il Router separa `src/app` consumer, `src/app-qa` con `APP_RELAX_SURFACE=qa`
+e `src/app-pwa` per la review privata autorizzata. Il Workbench è in `src/qa`,
+non ha link consumer ed è escluso dall'archivio EAS insieme alla review PWA.
 
 ## Moduli
 
@@ -79,29 +95,46 @@ public/audio-catalog/           byte audio localhost, ignorati da Git
 
 ## Flusso di controllo
 
+[F] Flusso corrente C1; il percorso quotidiano non impone una sequenza
+Continuum o una scelta di durata prima del Play.
+
 ```text
-Consumer tabs -> durata -> AdaptiveSessionPlan -> AudioSessionController
-                         |                            |
-                         v                            v
-                  4 fasi / 3 cambi             Web dual deck QA
+Home -> attività -> Play (timer già impostato, modifica facoltativa)
+                       | solo un'opera -> SingleTrackProgram in loop
+                       | + Rain/Ocean  -> AdaptiveSessionProgram coordinato
 
-Soundscapes -> catalogo -> SingleTrackProgram -> AudioSessionController
-                                                    |
-                                                    v
-                                      file source OPPURE noise buffer
+Hatha completo -> durata 30/45/60/90 -> AdaptiveSessionProgram
+                                      (factory della superficie abilitata)
 
-Audio Test UI -> AudioSessionController -> AudioGraphDriver -> driver di piattaforma -> graph audio
-                 |                     |
-                 v                     v
-             snapshot            eventi/lifecycle
-                 |
-                 v
-            AsyncStorage
+Settings -> preferenze -> catalogo manuale -> player dell'opera scelta
+
+ConsumerSelection (single/adaptive) -> AudioSessionController
+                                          | snapshot -> UI / persistenza
+                                          v
+                                    AudioGraphDriver
+                                          |
+                           driver di piattaforma -> graph audio
+
+Audio Test separato -> preset tecnico -> AudioSessionController
 ```
 
-La UI non conserva handle nativi. Le route consumer non possiedono
-`audioPresetId`: caricano soltanto un `SingleTrackProgram`, mai un preset o un
-mixer. Tutti i comandi sono serializzati; `play`, `stop` e cleanup sono
+[F] La UI non conserva handle nativi. Il player autonomo `/listen/[workId]`
+prepara un `SingleTrackProgram`; se viene aggiunta una famiglia naturale e la
+factory è disponibile, prepara invece un `AdaptiveSessionProgram` con
+`listeningWorkId`, musica e una sola famiglia Rain/Ocean. La route
+`/adaptive-session/[outcomeId]` prepara una selezione `kind: "adaptive"`, con
+la factory della superficie o il planner abilitato. Non è limitata al solo
+player autonomo: Hatha completo resta distinto dal loop quotidiano.
+Il percorso consumer non carica preset tecnici né un mixer multilayer.
+
+Riferimenti: `src/components/ImmediateSessionSetup.tsx` (selezione single o
+adaptive), `src/app/listen/[workId].tsx` (candidate),
+`src/app/adaptive-session/[outcomeId].tsx` (request/program) e
+`src/domain/sessions/platformSessionFactories.ts` (gate Android preview).
+La review PWA fornisce le proprie factory nei wrapper `src/app-pwa`; non
+abilita iOS o il nativo ordinario e non è l'unico driver implementato.
+
+Tutti i comandi sono serializzati; `play`, `stop` e cleanup sono
 idempotenti. Un fallimento
 durante start ferma il graph prima di pubblicare lo stato di errore.
 
@@ -213,12 +246,23 @@ La configurazione e stata verificata tramite prebuild isolato, ma lock-screen, i
 - `extra.eas.projectId` collega il progetto EAS autorizzato `@robert-fulton-studio/app-relax`.
 - Identificativo provvisorio comune: `com.robertfultonstudio.apprelax`; sintassi validata, disponibilita sugli account non verificabile senza login.
 
+La pipeline di integrazione, release e rollback è descritta in
+[`CI_CD_ARCHITECTURE.md`](CI_CD_ARCHITECTURE.md). Il confine fra capacità
+offline del client, delivery audio e futuro backend è definito in
+[`BACKEND_BOUNDARY.md`](BACKEND_BOUNDARY.md). Nessun backend runtime è parte
+della milestone M5.
+
 ## Limiti M5 dichiarati
 
 - Preview Web Audio: adatta a pianificazione, audit e ascolto locale; scheduling
   HTMLAudio non è prova sample-accurate.
-- Native adaptive playback e download reali: `NON DETERMINATO — EVIDENZA
-INSUFFICIENTE`.
+- Android preview: adapter/import implementati; APK1.0.3/4 ha prove storiche
+  AVD di import47/47, smoke FLAC/WAV e Hatha+Ocean oltre la prima giunzione,
+  non un long-run90min o un pass telefono. Vedere `ANDROID_APK_D103_PREFLIGHT.md`.
+- iOS nativo, delivery remota e comportamento/qualità su telefono reale:
+  `NON DETERMINATO — EVIDENZA INSUFFICIENTE`.
+- PWA privata .26 online-first: audio salvato non implica riapertura offline;
+  la correzione C1 delle istruzioni è locale, non pubblicata.
 - Guided: contratto/UI soltanto, senza voce fittizia.
 - Qualità di ogni transizione: gate umano distinto dall'approvazione dei file.
 

@@ -1,8 +1,17 @@
 # Test su telefono Android fisico
 
+## Runbook storico M3 — non descrive il candidato corrente
+
+C1 / AG03, 14 settembre 2026. I comandi e lo smoke seguenti appartengono alla
+prova M3 con Dev Client/Metro. Non usarli come checklist di APK1.0.3/4.
+Il percorso corrente usa import locale verificato47/47 e APK standalone:
+vedere [kit Android](../ANDROID_CONSUMER_OFFLINE_KIT.md) e
+[prove D-103](../ANDROID_APK_D103_PREFLIGHT.md). Il gate telefono reale resta
+aperto; nessuna installazione o nuova build è autorizzata da questo documento.
+
 ## Scopo e confine
 
-Questo percorso prova il checkout M3 corrente su un telefono Android via USB,
+Questo percorso storico provava il checkout M3 su un telefono Android via USB,
 usando il Dev Client gia compilato e Metro locale. Non esegue Gradle,
 `expo run:android`, EAS, upload, submission o pubblicazione.
 

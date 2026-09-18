@@ -46,6 +46,7 @@ function jpegDimensions(buffer) {
 }
 
 function validateManifest({
+  registeredDirectories = [],
   expectedCount,
   expectedHeight,
   expectedKeys,
@@ -80,7 +81,11 @@ function validateManifest({
     throw new Error(`${label} keys, files and hashes must be unique`);
   }
 
-  const expectedDirectoryEntries = ["manifest.json", ...files].sort();
+  const expectedDirectoryEntries = [
+    "manifest.json",
+    ...files,
+    ...registeredDirectories,
+  ].sort();
   const actualDirectoryEntries = readdirSync(dirname(manifestPath)).sort();
   if (
     JSON.stringify(actualDirectoryEntries) !==
@@ -148,10 +153,21 @@ validateManifest({
   expectedKeys: ["rituals-home"],
   expectedWidth: 864,
   label: "Shell background artwork",
+  registeredDirectories: ["m6"],
   manifestPath: backgroundManifestPath,
   maxBytes: 500_000,
 });
 
+validateManifest({
+  expectedCount: 2,
+  expectedHeight: 1844,
+  expectedKeys: ["home", "player"],
+  expectedWidth: 853,
+  label: "M6 painted artwork",
+  manifestPath: join(dirname(backgroundManifestPath), "m6", "manifest.json"),
+  maxBytes: 500_000,
+});
+
 console.log(
-  "Artwork validation: PASS (4 ritual JPEG + 6 outcome JPEG + 1 shell background JPEG; dimensions, size caps and hashes match).",
+  "Artwork validation: PASS (4 ritual + 6 outcome + 1 shell + 2 M6 JPEG; dimensions, size caps and hashes match).",
 );

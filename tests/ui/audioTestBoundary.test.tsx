@@ -1,5 +1,5 @@
 import { fireEvent, render } from "@testing-library/react-native";
-import AudioTestScreen from "@/app/audio-test";
+import AudioTestScreen from "@/app-qa/audio-test";
 import SettingsScreen from "@/app/settings";
 
 const mockBack = jest.fn();

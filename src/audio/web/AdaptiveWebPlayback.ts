@@ -6,7 +6,10 @@ import type {
   AdaptiveSessionSegment,
   NatureMixLevel,
 } from "@/domain/sessions/types";
-import type { TransitionAudition } from "@/domain/sessions/workbench";
+import type {
+  AdaptiveAuditionOptions,
+  TransitionAudition,
+} from "@/domain/sessions/workbench";
 import { positionMediaElement } from "./positionMediaElement";
 import {
   ClockedWavSource,
@@ -27,6 +30,8 @@ const USER_GESTURE_CONFIRMATION_TIMEOUT_MS = 10_000;
 // and buffer prime a deterministic deadline, while keeping the audible start
 // pinned to the exact session clock below.
 const CLOCKED_TRANSITION_PREPARE_LEAD_SECONDS = 1;
+const NATURE_FAMILY_FADE_SECONDS = 4;
+const NATURE_FAMILY_CLOCK_LEAD_SECONDS = 2;
 
 class StalePreparationError extends Error {
   constructor() {
@@ -51,6 +56,7 @@ interface SegmentRuntime {
   deck: MediaDeck;
   element: AudioElementPort;
   gain: GainNode;
+  auditionGain: GainNode;
   source: AudioNode;
 }
 
@@ -69,6 +75,7 @@ function resetRuntime(runtime: SegmentRuntime): void {
   runtime.element.pause();
   runtime.source.disconnect();
   runtime.gain.disconnect();
+  runtime.auditionGain.disconnect();
 }
 
 function multiplyCurve(curve: Float32Array, multiplier: number): Float32Array {
@@ -100,7 +107,9 @@ export class AdaptiveWebPlayback {
   private userGestureGeneration: number | null = null;
   private userGesturePositionSeconds: number | null = null;
   private gestureAbort: AbortController | null = null;
-  private timers: ReturnType<typeof setTimeout>[] = [];
+  private timers = new Set<ReturnType<typeof setTimeout>>();
+  private natureTimers = new Set<ReturnType<typeof setTimeout>>();
+  private boundaryTimer: ReturnType<typeof setTimeout> | null = null;
   private sessionBus: GainNode | null = null;
   private primaryBus: GainNode | null = null;
   private natureBus: GainNode | null = null;
@@ -110,10 +119,17 @@ export class AdaptiveWebPlayback {
   private volume = 0.8;
   private natureLevel: NatureMixLevel = 0;
   private audition: TransitionAudition | null = null;
+  private auditionLoop = true;
   private failureReported = false;
   private pendingStarts = 0;
   private startAbortRevision = 0;
   private awaitingInitialRunway = false;
+  private natureChangeController: AbortController | null = null;
+  private natureScheduleRevision = 0;
+  private stagedNature: {
+    program: AdaptiveSessionProgram;
+    segment: AdaptiveSessionSegment;
+  } | null = null;
 
   constructor(
     private readonly context: AudioContext,
@@ -183,6 +199,11 @@ export class AdaptiveWebPlayback {
           `An adaptive program cannot acquire more than ${maximumFiles} unique audio files.`,
         );
       for (const segment of program.plan.segments) {
+        if (
+          segment.lane === "nature" &&
+          program.plan.natureMix?.enabled === false
+        )
+          continue;
         const work = program.works.find(({ id }) => id === segment.workId);
         if (!work || work.sourceKind !== "file") {
           throw new Error(`Session source ${segment.workId} is unavailable.`);
@@ -385,6 +406,7 @@ export class AdaptiveWebPlayback {
   }
 
   async pause(): Promise<void> {
+    this.natureChangeController?.abort();
     ++this.startAbortRevision;
     if (!this.playing) {
       if (this.pendingStarts > 0) this.resetDeckAssignments();
@@ -431,6 +453,7 @@ export class AdaptiveWebPlayback {
   }
 
   async seek(positionSeconds: number, clearAudition = false): Promise<void> {
+    this.natureChangeController?.abort();
     if (!this.program) throw new Error("No adaptive session is loaded.");
     const target = this.normalizePosition(this.program, positionSeconds);
     if (clearAudition) this.audition = null;
@@ -450,10 +473,27 @@ export class AdaptiveWebPlayback {
     }
   }
 
-  async configureAudition(audition: TransitionAudition | null): Promise<void> {
+  async configureAudition(
+    audition: TransitionAudition | null,
+    options?: AdaptiveAuditionOptions,
+  ): Promise<void> {
     if (audition === null && this.audition === null) return;
     this.audition = audition;
+    this.auditionLoop = options?.loop ?? true;
     if (!this.program) return;
+    if (audition === null || options?.preservePosition) {
+      // A/B listening is a gain change, not a transport operation. Keep the
+      // clock, prepared sources and future transition envelopes untouched.
+      for (const [index, runtime] of this.runtimes) {
+        this.rampBus(
+          runtime.auditionGain,
+          this.isAuditionMuted(index) ? 0 : 1,
+          20,
+        );
+      }
+      this.scheduleBoundary();
+      return;
+    }
     const restart = this.playing;
     const position = audition?.startSeconds ?? this.positionSeconds();
     this.playing = false;
@@ -492,8 +532,449 @@ export class AdaptiveWebPlayback {
     }
     this.natureLevel = level;
     const gains = this.laneGains();
-    this.rampBus(this.primaryBus, gains.primary, fadeMs);
     this.rampBus(this.natureBus, gains.nature, fadeMs);
+  }
+
+  /** Prepare a replacement nature deck while the existing music clock runs.
+   * The four-second linear lane crossfade conserves the summed peak ceiling;
+   * it never overlaps a planned transition (three audible sources maximum). */
+  async replaceNatureFamily(
+    program: AdaptiveSessionProgram,
+    signal: AbortSignal,
+  ): Promise<void> {
+    const previous = this.program;
+    if (!previous?.plan.natureMix || !program.plan.natureMix || !this.playing)
+      throw new Error(
+        "A natural ambience family can be changed during playback only.",
+      );
+    if (this.natureChangeController)
+      throw new Error("An ambience change is already being prepared.");
+    const primary = (p: AdaptiveSessionProgram) =>
+      p.plan.segments.filter((s) => s.lane !== "nature");
+    const primaryTransitions = (p: AdaptiveSessionProgram) =>
+      p.plan.transitions.filter((t) => t.lane !== "nature");
+    if (
+      previous.plan.id !== program.plan.id ||
+      previous.plan.seed !== program.plan.seed ||
+      JSON.stringify(primary(previous)) !== JSON.stringify(primary(program)) ||
+      JSON.stringify(primaryTransitions(previous)) !==
+        JSON.stringify(primaryTransitions(program)) ||
+      previous.plan.totalDurationSeconds !== program.plan.totalDurationSeconds
+    )
+      throw new Error(
+        "A live ambience change must preserve music and the session clock.",
+      );
+    if (
+      previous.plan.natureMix.selectedFamily ===
+        program.plan.natureMix.selectedFamily &&
+      (previous.plan.natureMix.enabled !== false) ===
+        (program.plan.natureMix.enabled !== false)
+    )
+      return;
+    const controller = new AbortController();
+    const cancel = () => controller.abort();
+    signal.addEventListener("abort", cancel, { once: true });
+    if (signal.aborted) controller.abort();
+    this.natureChangeController = controller;
+    const generation = this.deckGeneration;
+    const revision = this.startAbortRevision;
+    const acquired = new Map<string, WebAudioSourceLease>();
+    let incoming: PreparedSegment | undefined;
+    let outgoing: PreparedSegment | undefined;
+    let temporaryIndex: number | undefined;
+    let committed = false;
+    const assertCurrent = () => {
+      if (
+        controller.signal.aborted ||
+        !this.playing ||
+        this.program !== previous ||
+        generation !== this.deckGeneration ||
+        revision !== this.startAbortRevision
+      )
+        throw new StalePreparationError();
+    };
+    try {
+      assertCurrent();
+      if (program.plan.natureMix.enabled === false) {
+        this.rampBus(this.natureBus, 0, 250);
+        await this.waitForNatureChange(0.25, controller.signal);
+        assertCurrent();
+        this.retireNatureLane(previous);
+        this.program = program;
+        ++this.natureScheduleRevision;
+        committed = true;
+        return;
+      }
+      for (const workId of program.plan.natureMix.natureWorkIds) {
+        if (this.sourceLeases.has(workId) || acquired.has(workId)) continue;
+        const work = program.works.find((item) => item.id === workId)!;
+        const lease = await awaitWebAudioSource(
+          () => this.resolveWorkSource(work, controller.signal),
+          controller.signal,
+        );
+        if (lease) acquired.set(workId, lease);
+        assertCurrent();
+        if (!lease)
+          throw new Error(
+            "The new ambience is not available. The current session continues.",
+          );
+      }
+      // Leave enough runway for bounded source preparation as well as the fade.
+      let windowStart = this.positionSeconds();
+      const transitionWindows =
+        previous.plan.natureMix.enabled === false
+          ? []
+          : [
+              ...previous.plan.transitions.filter((t) => t.lane === "nature"),
+              ...program.plan.transitions.filter((t) => t.lane === "nature"),
+            ];
+      for (const transition of transitionWindows.sort(
+        (a, b) => a.startSeconds - b.startSeconds,
+      ))
+        if (
+          transition.endSeconds > windowStart &&
+          transition.startSeconds < windowStart + 24
+        )
+          windowStart = transition.endSeconds + 0.1;
+      if (windowStart + 24 >= previous.plan.totalDurationSeconds)
+        throw new Error(
+          "There is not enough time to change ambience before this session ends.",
+        );
+      await this.waitForNatureChange(
+        Math.max(0, windowStart - this.positionSeconds()),
+        controller.signal,
+      );
+      assertCurrent();
+      const position = this.positionSeconds();
+      // A late join uses the incoming recording, not an already ending source.
+      const target = [...program.plan.segments]
+        .sort((a, b) => b.startSeconds - a.startSeconds)
+        .find(
+          (s) =>
+            s.lane === "nature" &&
+            s.startSeconds <= position &&
+            s.endSeconds > position,
+        );
+      const old = previous.plan.segments.find(
+        (s) =>
+          s.lane === "nature" &&
+          s.startSeconds <= position &&
+          s.endSeconds > position,
+      );
+      const oldRuntime = old && this.runtimes.get(old.index);
+      if (
+        !target ||
+        (previous.plan.natureMix.enabled !== false && (!old || !oldRuntime))
+      )
+        throw new Error("The current ambience is not ready for a live change.");
+      temporaryIndex =
+        Math.max(
+          ...previous.plan.segments.map((s) => s.index),
+          ...program.plan.segments.map((s) => s.index),
+        ) + 1;
+      const staged = { ...target, index: temporaryIndex };
+      this.stagedNature = { program, segment: staged };
+      // Reuse a future nature deck, never evict an audible or musical source.
+      if (
+        !this.availableDecks.some(
+          (deck) => deck.clockedPcm === this.usesClockedPcm(staged.index),
+        )
+      ) {
+        const future = [...this.preloaded.keys()].find((index) =>
+          previous.plan.segments.some(
+            (s) => s.index === index && s.lane === "nature",
+          ),
+        );
+        if (future !== undefined) this.releaseNaturePreload(future);
+      }
+      const lease =
+        this.sourceLeases.get(target.workId) ?? acquired.get(target.workId);
+      this.urls.set(temporaryIndex, lease!.uri);
+      incoming = await this.awaitNaturePreparation(
+        this.prepare(staged, position, generation),
+        controller.signal,
+      );
+      assertCurrent();
+      incoming.runtime.gain.gain.cancelScheduledValues(
+        this.context.currentTime,
+      );
+      incoming.runtime.gain.gain.value = 0;
+      await this.awaitNaturePreparation(
+        Promise.resolve(incoming.runtime.element.prepareForPlayback?.()),
+        controller.signal,
+      );
+      assertCurrent();
+      const scheduledStart = incoming.runtime.element.playAt
+        ? this.context.currentTime + NATURE_FAMILY_CLOCK_LEAD_SECONDS
+        : undefined;
+      const scheduledPosition =
+        scheduledStart === undefined
+          ? undefined
+          : this.positionSeconds() + NATURE_FAMILY_CLOCK_LEAD_SECONDS;
+      await this.awaitNaturePreparation(
+        this.alignIncomingToClock(
+          incoming,
+          generation,
+          revision,
+          scheduledStart,
+          scheduledPosition,
+        ),
+        controller.signal,
+      );
+      assertCurrent();
+      if (scheduledStart !== undefined) {
+        // The seek and its runway target one fixed future sample position.
+        await this.awaitNaturePreparation(
+          Promise.resolve(incoming.runtime.element.prepareForPlayback?.()),
+          controller.signal,
+        );
+        assertCurrent();
+        if (this.context.currentTime >= scheduledStart)
+          throw new Error(
+            "The new ambience missed its start time. The current ambience continues.",
+          );
+      }
+      const nowPosition = this.positionSeconds();
+      const fadePosition = scheduledPosition ?? nowPosition;
+      if (
+        transitionWindows.some(
+          (t) =>
+            t.endSeconds > nowPosition &&
+            t.startSeconds < fadePosition + NATURE_FAMILY_FADE_SECONDS,
+        ) ||
+        fadePosition + NATURE_FAMILY_FADE_SECONDS >=
+          Math.min(oldRuntime ? old!.endSeconds : Infinity, target.endSeconds)
+      )
+        throw new Error(
+          "The next transition is too close. Try the ambience change again after it finishes.",
+        );
+      // Confirm silent incoming playback before touching the audible old lane.
+      if (incoming.runtime.element.playAt)
+        await this.awaitNaturePreparation(
+          incoming.runtime.element.playAt(scheduledStart!),
+          controller.signal,
+        );
+      else
+        await this.awaitNaturePreparation(
+          incoming.runtime.element.play(),
+          controller.signal,
+        );
+      assertCurrent();
+      if (
+        scheduledStart !== undefined &&
+        this.context.currentTime >= scheduledStart
+      )
+        throw new Error(
+          "The new ambience missed its start time. The current ambience continues.",
+        );
+      if (old && oldRuntime)
+        outgoing = {
+          segment: old,
+          runtime: oldRuntime,
+          baseGain: dbToLinear(
+            previous.works.find((w) => w.id === old.workId)!.playbackGainDb +
+              old.playbackTrimDb,
+          ),
+        };
+      const now = this.context.currentTime;
+      const fadeStart = scheduledStart ?? now;
+      if (old && oldRuntime && outgoing) {
+        const oldGain = oldRuntime.gain.gain;
+        oldGain.cancelScheduledValues(now);
+        oldGain.setValueAtTime(
+          outgoing.baseGain * this.gainAt(old.index, nowPosition),
+          now,
+        );
+        oldGain.setValueAtTime(
+          outgoing.baseGain * this.gainAt(old.index, fadePosition),
+          fadeStart,
+        );
+        oldGain.linearRampToValueAtTime(
+          0,
+          fadeStart + NATURE_FAMILY_FADE_SECONDS,
+        );
+      }
+      // The prepared source starts silent. Only the ambience bus is enabled;
+      // primary sources, gain automation and session anchor are untouched.
+      if (previous.plan.natureMix.enabled === false)
+        this.rampBus(this.natureBus, this.natureLevel * 0.5, 250);
+      incoming.runtime.gain.gain.setValueAtTime(0, now);
+      incoming.runtime.gain.gain.setValueAtTime(0, fadeStart);
+      incoming.runtime.gain.gain.linearRampToValueAtTime(
+        incoming.baseGain,
+        fadeStart + NATURE_FAMILY_FADE_SECONDS,
+      );
+      await this.waitForNatureChange(
+        Math.max(
+          0,
+          fadeStart + NATURE_FAMILY_FADE_SECONDS - this.context.currentTime,
+        ),
+        controller.signal,
+      );
+      assertCurrent();
+      // Complete fallible AudioParam work while the old lane is still owned.
+      // If a browser rejects this automation, finally can restore that lane
+      // instead of committing metadata with no audible replacement.
+      incoming.runtime.auditionGain.gain.setValueAtTime(
+        this.isAuditionMuted(target.index) ? 0 : 1,
+        this.context.currentTime,
+      );
+      this.scheduleEnvelope(
+        incoming.runtime,
+        target,
+        this.positionSeconds(),
+        incoming.baseGain,
+        program,
+      );
+      // Old family callbacks must not accumulate until the end of a long
+      // session. Music callbacks and their original clock stay untouched.
+      this.retireNatureLane(previous);
+      this.program = program;
+      ++this.natureScheduleRevision;
+      for (const [workId, source] of acquired)
+        this.sourceLeases.set(workId, source);
+      for (const segment of program.plan.segments.filter(
+        (s) => s.lane === "nature",
+      ))
+        this.urls.set(
+          segment.index,
+          this.sourceLeases.get(segment.workId)!.uri,
+        );
+      this.runtimes.delete(temporaryIndex);
+      incoming.runtime.deck.segmentIndex = target.index;
+      this.runtimes.set(target.index, incoming.runtime);
+      incoming.segment = target;
+      committed = true;
+      for (const segment of program.plan.segments.filter(
+        (s) => s.lane === "nature",
+      ))
+        this.scheduleSegment(
+          segment,
+          this.positionSeconds(),
+          generation,
+          revision,
+        );
+    } finally {
+      signal.removeEventListener("abort", cancel);
+      if (!committed && incoming) {
+        incoming.runtime.element.releasePcmReader?.();
+        this.release(incoming.segment.index, incoming.runtime);
+      }
+      if (temporaryIndex !== undefined) {
+        if (!committed)
+          this.preloaded.get(temporaryIndex)?.element.releasePcmReader?.();
+        if (!committed) this.release(temporaryIndex);
+        this.releaseNaturePreload(temporaryIndex);
+        this.urls.delete(temporaryIndex);
+      }
+      if (
+        !committed &&
+        outgoing &&
+        this.playing &&
+        this.program === previous &&
+        this.runtimes.get(outgoing.segment.index) === outgoing.runtime
+      )
+        this.scheduleEnvelope(
+          outgoing.runtime,
+          outgoing.segment,
+          this.positionSeconds(),
+          outgoing.baseGain,
+        );
+      this.stagedNature = null;
+      if (this.natureChangeController === controller)
+        this.natureChangeController = null;
+      if (!committed)
+        await Promise.allSettled(
+          [...acquired.values()].map((lease) => lease.release()),
+        );
+      else {
+        const retained = new Set(
+          program.plan.segments
+            .filter(
+              (s) =>
+                s.lane !== "nature" ||
+                program.plan.natureMix?.enabled !== false,
+            )
+            .map((s) => s.workId),
+        );
+        for (const [workId, lease] of this.sourceLeases)
+          if (!retained.has(workId)) {
+            this.sourceLeases.delete(workId);
+            await Promise.resolve()
+              .then(() => lease.release())
+              .catch(() => undefined);
+          }
+      }
+      if (!committed && this.program === previous)
+        this.rampBus(this.natureBus, this.laneGains().nature, 250);
+      this.primeNextUpcoming(this.positionSeconds());
+    }
+  }
+
+  private retireNatureLane(program: AdaptiveSessionProgram): void {
+    for (const timer of this.natureTimers) {
+      clearTimeout(timer);
+      this.timers.delete(timer);
+    }
+    this.natureTimers.clear();
+    for (const segment of program.plan.segments.filter(
+      (s) => s.lane === "nature",
+    )) {
+      this.releaseNaturePreload(segment.index);
+      this.release(segment.index);
+      this.urls.delete(segment.index);
+    }
+  }
+
+  private enabledSegment(segment: AdaptiveSessionSegment): boolean {
+    return (
+      segment.lane !== "nature" ||
+      this.program?.plan.natureMix?.enabled !== false
+    );
+  }
+
+  private awaitNaturePreparation<T>(
+    promise: Promise<T>,
+    signal: AbortSignal,
+  ): Promise<T> {
+    return new Promise((resolve, reject) => {
+      const cancel = () => reject(new StalePreparationError());
+      signal.addEventListener("abort", cancel, { once: true });
+      if (signal.aborted) cancel();
+      void promise
+        .then(resolve, reject)
+        .finally(() => signal.removeEventListener("abort", cancel));
+    });
+  }
+
+  private waitForNatureChange(
+    seconds: number,
+    signal: AbortSignal,
+  ): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const cancel = () => {
+        clearTimeout(timer);
+        signal.removeEventListener("abort", cancel);
+        reject(new StalePreparationError());
+      };
+      const timer = setTimeout(() => {
+        signal.removeEventListener("abort", cancel);
+        resolve();
+      }, seconds * 1000);
+      signal.addEventListener("abort", cancel, { once: true });
+      if (signal.aborted) cancel();
+    });
+  }
+
+  private releaseNaturePreload(index: number): void {
+    this.preloadCancels.get(index)?.();
+    this.positionAborts.get(index)?.abort();
+    const deck = this.preloaded.get(index);
+    if (deck) {
+      this.preloaded.delete(index);
+      deck.element.pause();
+      this.recycleDeck(deck);
+    }
   }
 
   positionSeconds(): number {
@@ -541,6 +1022,7 @@ export class AdaptiveWebPlayback {
   }
 
   async stop(prepareForReplay = false): Promise<void> {
+    this.natureChangeController?.abort();
     ++this.startAbortRevision;
     this.sourceLoadController?.abort();
     this.gestureAbort?.abort();
@@ -748,65 +1230,64 @@ export class AdaptiveWebPlayback {
       throw error;
     }
 
-    for (const segment of program.plan.segments) {
-      if (segment.startSeconds > target) {
-        const clocked = this.canScheduleClockedTransition(segment.index);
-        const startContextSeconds = clocked
-          ? this.contextTimeAt(segment.startSeconds)
-          : undefined;
-        const activationDelay =
-          startContextSeconds === undefined
-            ? this.delayUntil(segment.startSeconds)
-            : Math.max(
-                0,
-                startContextSeconds -
-                  CLOCKED_TRANSITION_PREPARE_LEAD_SECONDS -
-                  this.context.currentTime,
-              );
-        this.schedule(activationDelay, () => {
-          if (
-            generation !== this.deckGeneration ||
-            revision !== this.startAbortRevision
-          )
-            return;
+    for (const segment of program.plan.segments)
+      this.scheduleSegment(segment, target, generation, revision);
+
+    this.scheduleBoundary();
+  }
+
+  private scheduleSegment(
+    segment: AdaptiveSessionSegment,
+    target: number,
+    generation: number,
+    revision: number,
+  ): void {
+    if (!this.enabledSegment(segment)) return;
+    const natureRevision = this.natureScheduleRevision;
+    const isCurrent = () =>
+      generation === this.deckGeneration &&
+      revision === this.startAbortRevision &&
+      (segment.lane !== "nature" ||
+        natureRevision === this.natureScheduleRevision);
+    if (segment.startSeconds > target) {
+      const clocked = this.canScheduleClockedTransition(segment.index);
+      const startContextSeconds = clocked
+        ? this.contextTimeAt(segment.startSeconds)
+        : undefined;
+      const activationDelay =
+        startContextSeconds === undefined
+          ? this.delayUntil(segment.startSeconds)
+          : Math.max(
+              0,
+              startContextSeconds -
+                CLOCKED_TRANSITION_PREPARE_LEAD_SECONDS -
+                this.context.currentTime,
+            );
+      this.schedule(
+        activationDelay,
+        () => {
+          if (!isCurrent()) return;
           void this.activate(
             segment,
             generation,
             revision,
             startContextSeconds,
           ).catch((error) => {
-            if (!isStalePreparation(error)) void this.fail(error);
+            if (isCurrent() && !isStalePreparation(error))
+              void this.fail(error);
           });
-        });
-      }
-      if (segment.endSeconds > target) {
-        this.schedule(this.delayUntil(segment.endSeconds), () => {
-          if (
-            generation === this.deckGeneration &&
-            revision === this.startAbortRevision
-          )
-            this.release(segment.index);
-        });
-      }
+        },
+        segment.lane === "nature",
+      );
     }
-
-    const stopAt =
-      this.audition?.endSeconds ?? program.plan.totalDurationSeconds;
-    if (stopAt > target) {
-      this.schedule(this.delayUntil(stopAt), () => {
-        if (
-          generation !== this.deckGeneration ||
-          revision !== this.startAbortRevision
-        )
-          return;
-        if (this.audition && this.playing) {
-          void this.restartAudition().catch((error) => {
-            if (!isStalePreparation(error)) void this.fail(error);
-          });
-        } else {
-          void this.finish();
-        }
-      });
+    if (segment.endSeconds > target) {
+      this.schedule(
+        this.delayUntil(segment.endSeconds),
+        () => {
+          if (isCurrent()) this.release(segment.index);
+        },
+        segment.lane === "nature",
+      );
     }
   }
 
@@ -957,6 +1438,8 @@ export class AdaptiveWebPlayback {
       this.playing &&
       generation === this.deckGeneration &&
       revision === this.startAbortRevision &&
+      (this.program?.plan.segments.includes(segment) ||
+        this.stagedNature?.segment === segment) &&
       (!runtime ||
         (runtime.deck.generation === generation &&
           runtime.deck.segmentIndex === segment.index))
@@ -983,11 +1466,14 @@ export class AdaptiveWebPlayback {
     generation: number,
     revision: number,
     scheduledStartContextSeconds?: number,
+    scheduledSessionPositionSeconds?: number,
   ): Promise<void> {
     const { segment, runtime } = prepared;
-    const duration = this.program?.works.find(
-      ({ id }) => id === segment.workId,
-    )?.durationSeconds;
+    const duration = (
+      this.stagedNature?.segment === segment
+        ? this.stagedNature.program
+        : this.program
+    )?.works.find(({ id }) => id === segment.workId)?.durationSeconds;
     if (!duration || duration <= 0)
       throw new Error("Incoming source duration is unavailable.");
     const abortController = new AbortController();
@@ -1008,7 +1494,7 @@ export class AdaptiveWebPlayback {
         const position =
           scheduledStartContextSeconds === undefined
             ? this.positionSeconds()
-            : segment.startSeconds;
+            : (scheduledSessionPositionSeconds ?? segment.startSeconds);
         if (position >= segment.endSeconds) return;
         const target =
           (segment.sourceEntrySeconds +
@@ -1055,7 +1541,11 @@ export class AdaptiveWebPlayback {
     if (!this.program || !this.sessionBus || !this.primaryBus) {
       throw new Error("Adaptive playback is not ready.");
     }
-    const work = this.program.works.find(({ id }) => id === segment.workId);
+    const work = (
+      this.stagedNature?.segment === segment
+        ? this.stagedNature.program
+        : this.program
+    ).works.find(({ id }) => id === segment.workId);
     const url = this.urls.get(segment.index);
     if (!work || !url)
       throw new Error(`Missing session work ${segment.workId}.`);
@@ -1100,21 +1590,22 @@ export class AdaptiveWebPlayback {
         throw new StalePreparationError();
       }
       const gain = this.context.createGain();
+      const auditionGain = this.context.createGain();
       const baseGain = dbToLinear(work.playbackGainDb + segment.playbackTrimDb);
-      gain.gain.value = this.isAuditionMuted(segment.index)
-        ? 0
-        : Math.max(
-            SILENT_GAIN,
-            baseGain * this.gainAt(segment.index, sessionPositionSeconds),
-          );
+      gain.gain.value = Math.max(
+        SILENT_GAIN,
+        baseGain * this.gainAt(segment.index, sessionPositionSeconds),
+      );
+      auditionGain.gain.value = this.isAuditionMuted(segment.index) ? 0 : 1;
       source.connect(gain);
       const output =
         (segment.lane ?? "primary") === "nature"
           ? this.natureBus
           : this.primaryBus;
       if (!output) throw new Error("Adaptive session lane is unavailable.");
-      gain.connect(output);
-      const runtime = { deck, element, source, gain };
+      gain.connect(auditionGain);
+      auditionGain.connect(output);
+      const runtime = { deck, element, source, gain, auditionGain };
       this.preloaded.delete(segment.index);
       this.runtimes.set(segment.index, runtime);
       return { segment, runtime, baseGain };
@@ -1180,6 +1671,7 @@ export class AdaptiveWebPlayback {
     }
     const initial = program.plan.segments.filter(
       (segment) =>
+        this.enabledSegment(segment) &&
         positionSeconds >= segment.startSeconds &&
         positionSeconds < segment.endSeconds,
     );
@@ -1218,8 +1710,9 @@ export class AdaptiveWebPlayback {
     segment: AdaptiveSessionSegment,
     position: number,
     baseGain: number,
+    program = this.program,
   ): void {
-    if (!this.program) return;
+    if (!program) return;
     const now = Math.max(
       this.context.currentTime,
       this.startedAtContextSeconds + position - this.sessionOffsetSeconds,
@@ -1228,18 +1721,17 @@ export class AdaptiveWebPlayback {
     // Remove old curves (including an active curve) before re-anchoring the
     // envelope to the session clock. Never stack resume automation on top.
     runtime.gain.gain.cancelScheduledValues(now);
-    if (this.isAuditionMuted(segment.index)) {
-      runtime.gain.gain.setValueAtTime(0, now);
-      return;
-    }
     runtime.gain.gain.setValueAtTime(
-      Math.max(SILENT_GAIN, baseGain * this.gainAt(segment.index, position)),
+      Math.max(
+        SILENT_GAIN,
+        baseGain * this.gainAt(segment.index, position, program),
+      ),
       now,
     );
-    const incoming = this.program.plan.transitions.find(
+    const incoming = program.plan.transitions.find(
       ({ incomingSegmentIndex }) => incomingSegmentIndex === segment.index,
     );
-    const outgoing = this.program.plan.transitions.find(
+    const outgoing = program.plan.transitions.find(
       ({ outgoingSegmentIndex }) => outgoingSegmentIndex === segment.index,
     );
     const windows = [
@@ -1274,7 +1766,11 @@ export class AdaptiveWebPlayback {
       // One composite curve per non-overlapping interval, anchored exactly
       // at the seek fraction. Incoming and final envelopes can coexist.
       const values = Float32Array.from({ length: 65 }, (_, point) =>
-        this.gainAt(segment.index, start + ((end - start) * point) / 64),
+        this.gainAt(
+          segment.index,
+          start + ((end - start) * point) / 64,
+          program,
+        ),
       );
       // Subtract session-relative positions BEFORE adding the context anchor.
       // (now + start) - position can round below now even when start===position,
@@ -1296,16 +1792,19 @@ export class AdaptiveWebPlayback {
     }
   }
 
-  private gainAt(segmentIndex: number, position: number): number {
-    if (!this.program) return 0;
-    const incoming = this.program.plan.transitions.find(
+  private gainAt(
+    segmentIndex: number,
+    position: number,
+    program = this.program,
+  ): number {
+    if (!program) return 0;
+    const incoming = program.plan.transitions.find(
       ({ incomingSegmentIndex }) => incomingSegmentIndex === segmentIndex,
     );
-    const outgoing = this.program.plan.transitions.find(
+    const outgoing = program.plan.transitions.find(
       ({ outgoingSegmentIndex }) => outgoingSegmentIndex === segmentIndex,
     );
-    if (this.isAuditionMuted(segmentIndex)) return 0;
-    const segment = this.program.plan.segments.find(
+    const segment = program.plan.segments.find(
       ({ index }) => index === segmentIndex,
     );
     let gain = 1;
@@ -1368,12 +1867,17 @@ export class AdaptiveWebPlayback {
     if (this.preloaded.has(index)) return Promise.resolve();
     const url = this.urls.get(index);
     if (!url) return Promise.resolve();
-    const segment = this.program?.plan.segments.find(
-      (candidate) => candidate.index === index,
-    );
-    const work = this.program?.works.find(
-      (candidate) => candidate.id === segment?.workId,
-    );
+    const segment =
+      this.stagedNature?.segment.index === index
+        ? this.stagedNature.segment
+        : this.program?.plan.segments.find(
+            (candidate) => candidate.index === index,
+          );
+    const work = (
+      this.stagedNature && this.stagedNature.segment === segment
+        ? this.stagedNature.program
+        : this.program
+    )?.works.find((candidate) => candidate.id === segment?.workId);
     const sourceLabel = work?.title ?? `Session source ${index}`;
     const lane = segment?.lane ?? "primary";
     const deck = this.takeDeck(index);
@@ -1499,6 +2003,7 @@ export class AdaptiveWebPlayback {
       !this.program ||
       !this.playing ||
       this.awaitingInitialRunway ||
+      this.stagedNature ||
       this.runtimes.size >= MEDIA_DECK_COUNT ||
       this.availableDecks.length === 0
     ) {
@@ -1507,6 +2012,7 @@ export class AdaptiveWebPlayback {
     const next = this.program.plan.segments
       .filter(
         (segment) =>
+          this.enabledSegment(segment) &&
           segment.startSeconds > positionSeconds &&
           !this.runtimes.has(segment.index) &&
           !this.preloaded.has(segment.index) &&
@@ -1580,13 +2086,59 @@ export class AdaptiveWebPlayback {
     this.primeNextUpcoming(this.positionSeconds());
   }
 
-  private schedule(delaySeconds: number, callback: () => void): void {
-    this.timers.push(setTimeout(callback, Math.max(0, delaySeconds * 1000)));
+  private schedule(
+    delaySeconds: number,
+    callback: () => void,
+    nature = false,
+  ): void {
+    const timer = setTimeout(
+      () => {
+        this.timers.delete(timer);
+        this.natureTimers.delete(timer);
+        callback();
+      },
+      Math.max(0, delaySeconds * 1000),
+    );
+    this.timers.add(timer);
+    if (nature) this.natureTimers.add(timer);
+  }
+
+  private scheduleBoundary(): void {
+    if (this.boundaryTimer !== null) clearTimeout(this.boundaryTimer);
+    this.boundaryTimer = null;
+    if (!this.program || !this.playing) return;
+    const generation = this.deckGeneration;
+    const revision = this.startAbortRevision;
+    const stopAt =
+      this.audition && this.auditionLoop
+        ? this.audition.endSeconds
+        : this.program.plan.totalDurationSeconds;
+    this.boundaryTimer = setTimeout(
+      () => {
+        this.boundaryTimer = null;
+        if (
+          !this.playing ||
+          generation !== this.deckGeneration ||
+          revision !== this.startAbortRevision
+        )
+          return;
+        if (this.audition && this.auditionLoop) {
+          void this.restartAudition().catch((error) => {
+            if (!isStalePreparation(error)) void this.fail(error);
+          });
+        } else void this.finish();
+      },
+      this.delayUntil(stopAt) * 1000,
+    );
   }
 
   private clearTimers(): void {
+    this.natureChangeController?.abort();
+    if (this.boundaryTimer !== null) clearTimeout(this.boundaryTimer);
+    this.boundaryTimer = null;
     for (const timer of this.timers) clearTimeout(timer);
-    this.timers = [];
+    this.timers.clear();
+    this.natureTimers.clear();
     // Timer cancellation alone cannot stop an activation already awaiting a
     // seek. Pause, Seek and every new scheduling revision all pass here.
     for (const abort of this.positionAborts.values()) abort.abort();
@@ -1638,6 +2190,10 @@ export class AdaptiveWebPlayback {
   }
 
   private workForSegment(index: number): ConsumerAudioWork | undefined {
+    if (this.stagedNature?.segment.index === index)
+      return this.stagedNature.program.works.find(
+        (work) => work.id === this.stagedNature?.segment.workId,
+      );
     const segment = this.program?.plan.segments.find(
       (item) => item.index === index,
     );
@@ -1682,7 +2238,10 @@ export class AdaptiveWebPlayback {
     for (const deck of this.decks)
       capacity.set(deck.clockedPcm, capacity.get(deck.clockedPcm)! + 1);
     return (this.program?.plan.segments ?? [])
-      .filter((segment) => segment.endSeconds > target)
+      .filter(
+        (segment) =>
+          this.enabledSegment(segment) && segment.endSeconds > target,
+      )
       .sort(
         (left, right) =>
           Math.max(target, left.startSeconds) -
@@ -1766,7 +2325,11 @@ export class AdaptiveWebPlayback {
       this.decks.add(deck);
       if (pcm)
         element.addEventListener("error", () => {
-          if (this.playing && deck.segmentIndex !== null)
+          if (
+            this.playing &&
+            deck.segmentIndex !== null &&
+            deck.segmentIndex !== this.stagedNature?.segment.index
+          )
             void this.fail(
               new Error(element.error?.message ?? "PCM playback failed."),
             );
@@ -1845,7 +2408,10 @@ export class AdaptiveWebPlayback {
     if (!this.program?.plan.natureMix) return { primary: 1, nature: 0 };
     return {
       primary: 0.5,
-      nature: this.natureLevel * 0.5,
+      nature:
+        this.program.plan.natureMix.enabled === false
+          ? 0
+          : this.natureLevel * 0.5,
     };
   }
 

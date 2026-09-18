@@ -86,7 +86,6 @@ describe("product and asset request contracts", () => {
     expect(appFiles).toEqual(
       expect.arrayContaining([
         "_layout.tsx",
-        "audio-test.tsx",
         "index.tsx",
         "legal.tsx",
         "settings.tsx",
@@ -96,11 +95,13 @@ describe("product and asset request contracts", () => {
     );
     expect(
       existsSync(
-        join(projectRoot, "src", "app", "category", "[categoryId].tsx"),
+        join(projectRoot, "src", "app-qa", "category", "[categoryId].tsx"),
       ),
     ).toBe(true);
     expect(
-      existsSync(join(projectRoot, "src", "app", "session", "[sessionId].tsx")),
+      existsSync(
+        join(projectRoot, "src", "app-qa", "session", "[sessionId].tsx"),
+      ),
     ).toBe(true);
     const registry = readFileSync(
       join(projectRoot, "src", "presets", "presetRegistry.ts"),
@@ -111,7 +112,7 @@ describe("product and asset request contracts", () => {
     );
 
     const player = readFileSync(
-      join(projectRoot, "src", "app", "session", "[sessionId].tsx"),
+      join(projectRoot, "src", "app-qa", "session", "[sessionId].tsx"),
       "utf8",
     );
     expect(player).toContain('label="Volume & mute"');
@@ -193,11 +194,16 @@ describe("product and asset request contracts", () => {
       "soundscapes.tsx",
     ]) {
       const source = readFileSync(
-        join(projectRoot, "src", "app", route),
+        route === "index.tsx"
+          ? join(projectRoot, "src/screens/MomentsScreen.tsx")
+          : join(projectRoot, "src", "app", route),
         "utf8",
       );
       expect(source).toContain("EditorialScreen");
-      expect(source).toContain("EditorialHeader");
+      if (route === "index.tsx") {
+        expect(source).toContain("styles.mobileHeader");
+        expect(source).toContain('accessibilityLabel="Settings"');
+      } else expect(source).toContain("EditorialHeader");
       expect(source).not.toMatch(/AmbientScreen|TopBar/);
     }
     expect(
@@ -205,7 +211,7 @@ describe("product and asset request contracts", () => {
     ).toContain('href="/outcome/yoga?practice=complete"');
 
     const technicalSource = readFileSync(
-      join(projectRoot, "src", "app", "audio-test.tsx"),
+      join(projectRoot, "src", "app-qa", "audio-test.tsx"),
       "utf8",
     );
     expect(technicalSource).toContain("AmbientScreen");

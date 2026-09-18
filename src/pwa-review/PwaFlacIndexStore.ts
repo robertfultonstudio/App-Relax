@@ -7,11 +7,18 @@ import manifest from "./flacIndexManifest.json";
 
 export type ApprovedFlacIndex = (typeof manifest.files)[number];
 const aborted = () => new Error("FLAC index loading cancelled.");
+type IndexLoad = {
+  controller: AbortController;
+  promise: Promise<FlacFrameIndex>;
+  consumers: number;
+  settled: boolean;
+};
 
 /** The registry is bundled with the shell; frame indexes are loaded only for
  * selected sounds and authenticated before any offsets reach the decoder. */
 export class PwaFlacIndexStore {
   private readonly cache = new Map<string, FlacFrameIndex>();
+  private readonly pending = new Map<string, IndexLoad>();
   constructor(
     private readonly fetcher: typeof fetch = (...args) => fetch(...args),
     private readonly files: readonly ApprovedFlacIndex[] = manifest.files,
@@ -40,6 +47,67 @@ export class PwaFlacIndexStore {
       !/^[a-f0-9]{64}$/.test(file.indexSha256)
     )
       throw new Error("Invalid FLAC index registry.");
+    let load = this.pending.get(file.indexSha256);
+    if (!load) {
+      const controller = new AbortController();
+      load = {
+        controller,
+        promise: this.loadVerified(file, controller.signal),
+        consumers: 0,
+        settled: false,
+      };
+      this.pending.set(file.indexSha256, load);
+      const current = load;
+      void current.promise
+        .finally(() => {
+          current.settled = true;
+          if (this.pending.get(file.indexSha256) === current)
+            this.pending.delete(file.indexSha256);
+        })
+        .catch(() => undefined);
+    }
+    return this.consume(file.indexSha256, load, signal);
+  }
+
+  private consume(
+    key: string,
+    load: IndexLoad,
+    signal: AbortSignal,
+  ): Promise<FlacFrameIndex> {
+    load.consumers += 1;
+    return new Promise((resolve, reject) => {
+      let finished = false;
+      const release = () => {
+        if (finished) return false;
+        finished = true;
+        signal.removeEventListener("abort", cancel);
+        load.consumers -= 1;
+        if (!load.settled && load.consumers === 0) {
+          if (this.pending.get(key) === load) this.pending.delete(key);
+          load.controller.abort();
+        }
+        return true;
+      };
+      const cancel = () => {
+        if (release()) reject(aborted());
+      };
+      signal.addEventListener("abort", cancel, { once: true });
+      if (signal.aborted) cancel();
+      void load.promise.then(
+        (value) => {
+          if (release()) resolve(value);
+        },
+        (error: unknown) => {
+          if (release()) reject(error);
+        },
+      );
+    });
+  }
+
+  private async loadVerified(
+    file: ApprovedFlacIndex,
+    signal: AbortSignal,
+  ): Promise<FlacFrameIndex> {
     const response = await this.fetcher(
       `/flac-index/${file.indexSha256}.json`,
       { signal, credentials: "same-origin" },

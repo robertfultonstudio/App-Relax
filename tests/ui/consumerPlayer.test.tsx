@@ -1,10 +1,13 @@
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import ConsumerPlayerScreen from "@/app/listen/[workId]";
+import { CurrentSessionBar } from "@/components/CurrentSessionBar";
 import { getConsumerWork } from "@/content/consumerCatalog";
 import { createSingleTrackProgram } from "@/domain/audio/consumerTypes";
 import { createConsumerAudioMock, deferred } from "./helpers/consumerAudioMock";
 import { HATHA_AUDIO_WORKS } from "@/content/hathaCatalog";
 import { createListeningNatureProgram } from "@/pwa-review/createListeningNatureProgram";
+import { replaceCoordinatedNatureBed } from "@/domain/sessions/continuumPlanner";
+import type { AdaptiveSessionProgram } from "@/domain/sessions/types";
 
 let mockAudio = createConsumerAudioMock();
 let mockParams: Record<string, string>;
@@ -14,7 +17,9 @@ jest.mock("expo-router", () => ({
     useEffect(callback, [callback]);
   },
   useLocalSearchParams: () => mockParams,
-  useRouter: () => ({ back: jest.fn(), setParams: jest.fn() }),
+  useGlobalSearchParams: () => mockParams,
+  usePathname: () => `/listen/${mockParams.workId}`,
+  useRouter: () => ({ back: jest.fn(), setParams: jest.fn(), push: jest.fn() }),
 }));
 jest.mock("expo-linear-gradient", () => ({ LinearGradient: "LinearGradient" }));
 jest.mock("@/audio/AudioProvider", () => ({
@@ -27,6 +32,95 @@ jest.mock("@/domain/sessions/playbackAvailability", () => ({
 }));
 
 describe("autonomous consumer player", () => {
+  it("changes family live with explicit pending feedback and no reload or Start", async () => {
+    mockParams = {
+      workId: "astral-thread",
+      outcome: "focus",
+      duration: "30",
+      nature: "rain",
+    };
+    const first = createListeningNatureProgram(
+      getConsumerWork("astral-thread")!,
+      "focus",
+      30,
+      "rain",
+    );
+    const selected = {
+      kind: "adaptive" as const,
+      program: first,
+      request: {
+        outcome: "focus" as const,
+        durationMinutes: 30 as const,
+        mode: "sound-only" as const,
+        soundKind: "music" as const,
+        natureFamily: "rain" as const,
+      },
+    };
+    mockAudio.setActive(selected);
+    mockAudio.publish({
+      status: "playing",
+      sessionPlanId: first.plan.id,
+      natureMixLevel: 0.3,
+      remainingMs: 29 * 60000,
+    });
+    const pending = deferred<AdaptiveSessionProgram>();
+    const change = jest.fn(() => pending.promise);
+    const cancel = jest.fn();
+    Object.assign(mockAudio.controller, {
+      canChangeNatureFamily: () => true,
+      changeNatureFamily: change,
+      cancelNatureFamilyChange: cancel,
+    });
+    const screen = await render(
+      <ConsumerPlayerScreen
+        createNatureProgram={createListeningNatureProgram}
+      />,
+    );
+    expect(
+      screen.getByRole("radio", { name: "Ambience Ocean waves" }),
+    ).toBeEnabled();
+    expect(screen.getByRole("radio", { name: "Ambience Off" })).toBeEnabled();
+    await fireEvent.press(
+      screen.getByRole("radio", { name: "Ambience Ocean waves" }),
+    );
+    expect(change).toHaveBeenCalledWith("sea");
+    expect(screen.getByText(/Music keeps playing/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Stop" })).toBeEnabled();
+    expect(
+      screen.getByRole("button", { name: "Cancel ambience change" }),
+    ).toBeEnabled();
+    await fireEvent.press(
+      screen.getByRole("button", { name: "Cancel ambience change" }),
+    );
+    expect(cancel).toHaveBeenCalledTimes(1);
+    const next = replaceCoordinatedNatureBed(first, "sea");
+    await act(async () => {
+      mockAudio.setActive({
+        ...selected,
+        program: next,
+        request: { ...selected.request, natureFamily: "sea" },
+      });
+      pending.resolve(next);
+    });
+    mockParams = { ...mockParams, nature: "sea" };
+    await screen.rerender(
+      <ConsumerPlayerScreen
+        createNatureProgram={createListeningNatureProgram}
+      />,
+    );
+    expect(
+      screen.getByRole("radio", {
+        name: "Ambience Ocean waves",
+        checked: true,
+      }),
+    ).toBeTruthy();
+    expect(screen.getByText("29:00")).toBeTruthy();
+    expect(mockAudio.controller.prepareSelection).not.toHaveBeenCalled();
+    expect(
+      mockAudio.controller.startSelectionFromUserGesture,
+    ).not.toHaveBeenCalled();
+    expect(mockAudio.controller.stop).not.toHaveBeenCalled();
+  });
   it("prepares real music plus chosen rain, keeps levels separate and allows Off", async () => {
     mockParams = { workId: "astral-thread", outcome: "focus", duration: "30" };
     const screen = await render(
@@ -71,7 +165,14 @@ describe("autonomous consumer player", () => {
     await fireEvent.press(screen.getByRole("radio", { name: "Ambience Off" }));
     await waitFor(() =>
       expect(mockAudio.controller.prepareSelection).toHaveBeenLastCalledWith(
-        expect.objectContaining({ kind: "single" }),
+        expect.objectContaining({
+          kind: "adaptive",
+          program: expect.objectContaining({
+            plan: expect.objectContaining({
+              natureMix: expect.objectContaining({ enabled: false }),
+            }),
+          }),
+        }),
       ),
     );
   });
@@ -201,6 +302,79 @@ describe("autonomous consumer player", () => {
     ).not.toHaveBeenCalled();
   });
 
+  it("separates the new 45-minute session from the paused 20-minute session and its Resume", async () => {
+    mockParams = {
+      workId: "aquarian-drift",
+      outcome: "meditation",
+      duration: "20",
+    };
+    const current = {
+      kind: "single" as const,
+      program: createSingleTrackProgram(
+        getConsumerWork(mockParams.workId)!,
+        "meditation",
+      ),
+      outcome: "meditation" as const,
+      durationMinutes: 20 as const,
+    };
+    mockAudio.setActive(current);
+    mockAudio.publish({ status: "paused", remainingMs: 19 * 60000 + 27000 });
+    const screen = await render(
+      <>
+        <ConsumerPlayerScreen />
+        <CurrentSessionBar />
+      </>,
+    );
+    await fireEvent.press(
+      screen.getByRole("button", { name: "Timer · 20 min +" }),
+    );
+    await fireEvent.press(screen.getByRole("radio", { name: "45 minutes" }));
+    mockParams = { ...mockParams, duration: "45" };
+    await screen.rerender(
+      <>
+        <ConsumerPlayerScreen />
+        <CurrentSessionBar />
+      </>,
+    );
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Start new session" }),
+      ).toBeEnabled(),
+    );
+    expect(screen.getByText("New session ready")).toBeTruthy();
+    expect(screen.getByText("45:00")).toBeTruthy();
+    expect(
+      screen.getByText(
+        "The session below is unchanged. Start new to replace it.",
+      ),
+    ).toBeTruthy();
+    expect(screen.getByText("Paused · 19:27 left · Return →")).toBeTruthy();
+    expect(screen.getByText("Resume")).toBeTruthy();
+    expect(mockAudio.controller.setTimer).not.toHaveBeenCalled();
+    expect(
+      mockAudio.controller.startSelectionFromUserGesture,
+    ).not.toHaveBeenCalled();
+    await fireEvent.press(
+      screen.getByRole("button", { name: "Resume current session" }),
+    );
+    expect(mockAudio.controller.playFromUserGesture).toHaveBeenCalledTimes(1);
+    expect(mockAudio.controller.getConsumerSelection()).toBe(current);
+    expect(mockAudio.snapshot.remainingMs).toBe(19 * 60000 + 27000);
+    await fireEvent.press(
+      screen.getByRole("button", { name: "Start new session" }),
+    );
+    expect(
+      mockAudio.controller.startSelectionFromUserGesture,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: "single",
+        outcome: "meditation",
+        durationMinutes: 45,
+      }),
+    );
+    expect(mockAudio.controller.setTimer).not.toHaveBeenCalled();
+  });
+
   it("leaves the fixed transport to the current session while browsing a different sound", async () => {
     const work = getConsumerWork("deep-river")!;
     mockAudio.setActive({
@@ -215,7 +389,7 @@ describe("autonomous consumer player", () => {
     expect(screen.queryByRole("button", { name: "Stop" })).toBeNull();
     await waitFor(() =>
       expect(
-        screen.getByRole("button", { name: "Play this sound" }),
+        screen.getByRole("button", { name: "Start new session" }),
       ).toBeEnabled(),
     );
     expect(mockAudio.controller.stop).not.toHaveBeenCalled();

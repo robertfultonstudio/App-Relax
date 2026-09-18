@@ -93,13 +93,23 @@ async function verifyCatalogExclusion() {
     join(repositoryRoot, "src", "content", "consumerCatalog.ts"),
     "utf8",
   );
-  const consumerAssets = readFileSync(
+  const nativeConsumerDriver = readFileSync(
     join(
       repositoryRoot,
       "src",
       "audio",
       "reactNativeAudioApi",
-      "consumerAssets.ts",
+      "ReactNativeAudioDriver.ts",
+    ),
+    "utf8",
+  );
+  const webConsumerResolver = readFileSync(
+    join(
+      repositoryRoot,
+      "src",
+      "audio",
+      "web",
+      "MetroWebAudioSourceResolver.ts",
     ),
     "utf8",
   );
@@ -127,7 +137,9 @@ async function verifyCatalogExclusion() {
     );
   }
   if (
-    /eclipse|eclypsis|stillwater|nirvana/i.test(`${catalog}\n${consumerAssets}`)
+    /eclipse|eclypsis|stillwater|nirvana/i.test(
+      `${catalog}\n${nativeConsumerDriver}\n${webConsumerResolver}`,
+    )
   ) {
     throw new Error(
       "An excluded work remains referenced by the consumer catalog or asset map.",

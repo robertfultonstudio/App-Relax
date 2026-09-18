@@ -70,6 +70,8 @@ describe("last confirmed listening", () => {
   });
   it.each([
     { ...single, workId: "soft-air" },
+    { ...single, workId: "moon-drone" },
+    { ...single, workId: "deep-river" },
     { ...single, workId: "eclipse-veil" },
     { ...single, workId: "stillwater-halo" },
     { ...single, workId: "does-not-exist" },

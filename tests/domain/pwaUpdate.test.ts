@@ -1,12 +1,13 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { runInNewContext } from "node:vm";
+import { PRIVATE_REVIEW_HOST } from "@/offline/pwaShellPolicy";
 
 const script = readFileSync(
   join(process.cwd(), "public-pwa/pwa-update.js"),
   "utf8",
 );
-const hostname = "app-relax-private-review.robfulton.chatgpt.site";
+const hostname = PRIVATE_REVIEW_HOST;
 
 function harness(registration?: { scope: string; unregister: jest.Mock }) {
   const callbacks = new Map<string, () => Promise<void>>();

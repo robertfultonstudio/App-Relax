@@ -1,8 +1,7 @@
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, useWindowDimensions } from "react-native";
 import type { ConsumerOutcome } from "@/content/productShell";
-import { editorial, OUTCOME_EDITORIAL_SURFACE } from "@/design/editorialTheme";
-import { OUTCOME_ARTWORK } from "@/design/outcomeArtwork";
-import { fonts, spacing } from "@/design/theme";
+import { editorial } from "@/design/editorialTheme";
+import { fonts } from "@/design/theme";
 
 export function OutcomeGridTile({
   onPress,
@@ -11,70 +10,44 @@ export function OutcomeGridTile({
   onPress: () => void;
   outcome: ConsumerOutcome;
 }) {
+  const { fontScale } = useWindowDimensions();
   return (
     <Pressable
-      accessibilityHint="Choose a listening duration and sound"
+      accessibilityHint="Open and press Play. The timer is optional."
       accessibilityLabel={`${outcome.functionLabel}. Open and press Play.`}
       accessibilityRole="button"
       onPress={onPress}
       style={({ pressed }) => [
         styles.tile,
-        { borderColor: outcome.wash },
+        fontScale > 1.3 && styles.largeText,
         pressed && styles.pressed,
       ]}
       testID={`outcome-${outcome.id}`}
     >
-      <View style={styles.artworkFrame}>
-        <Image
-          accessibilityIgnoresInvertColors
-          accessible={false}
-          resizeMode="cover"
-          source={OUTCOME_ARTWORK[outcome.id]}
-          style={styles.artwork}
-          testID={`outcome-artwork-${outcome.id}`}
-        />
-      </View>
-      <View
-        style={[
-          styles.caption,
-          { backgroundColor: OUTCOME_EDITORIAL_SURFACE[outcome.id] },
-        ]}
-      >
-        <Text style={styles.label}>{outcome.functionLabel}</Text>
-        <Text accessible={false} style={styles.arrow}>
-          →
-        </Text>
-      </View>
+      <Text style={styles.label}>{outcome.functionLabel.toLowerCase()}</Text>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   tile: {
-    width: "48%",
-    minHeight: 148,
-    backgroundColor: editorial.paperLight,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  artworkFrame: { height: 102, width: "100%", overflow: "hidden" },
-  artwork: { height: "100%", width: "100%" },
-  caption: {
-    minHeight: 46,
-    flexDirection: "row",
+    width: "50%",
+    minHeight: 190,
+    backgroundColor: "transparent",
+    justifyContent: "flex-end",
     alignItems: "center",
-    justifyContent: "space-between",
-    gap: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
+    paddingBottom: 12,
+    paddingHorizontal: 4,
   },
+  largeText: { minHeight: 220 },
   label: {
     flexShrink: 1,
     color: editorial.ink,
-    fontFamily: fonts.sansSemiBold,
-    fontSize: 14,
-    lineHeight: 20,
-    letterSpacing: 0.3,
+    fontFamily: fonts.sans,
+    fontSize: 19,
+    lineHeight: 26,
+    textTransform: "capitalize",
+    letterSpacing: -0.3,
   },
-  arrow: { color: editorial.ink, fontSize: 18 },
   pressed: { opacity: 0.82 },
 });

@@ -18,9 +18,14 @@ import {
 } from "@/domain/audio/consumerSelection";
 import type {
   AdaptiveSessionProgram,
+  NatureAmbienceFamily,
   NatureMixLevel,
 } from "@/domain/sessions/types";
-import type { TransitionAudition } from "@/domain/sessions/workbench";
+import type {
+  AdaptiveAuditionOptions,
+  TransitionAudition,
+} from "@/domain/sessions/workbench";
+import { setCoordinatedNatureChoice } from "@/domain/sessions/continuumPlanner";
 import type {
   PlayerPreferences,
   PlayerPreferencesStore,
@@ -114,6 +119,8 @@ export class AudioSessionController implements AudioEngine {
   private currentPreset: AudioPreset | null = null;
   private currentProgram: SingleTrackProgram | null = null;
   private currentAdaptiveProgram: AdaptiveSessionProgram | null = null;
+  private natureChangeAbort: AbortController | null = null;
+  private adaptiveReviewLoop = false;
   private restoredPreferences: PlayerPreferences | null = null;
   private restoredConsumerPreferences: ConsumerPlayerPreferences | null = null;
   private hydrationPromise: Promise<void> | null = null;
@@ -246,6 +253,21 @@ export class AudioSessionController implements AudioEngine {
 
   getSnapshot = (): SessionSnapshot => this.snapshot;
   getReviewReadMetrics = () => this.driver.getReviewReadMetrics?.() ?? null;
+
+  /** Read-only UI clock; no transport command or snapshot rerender. */
+  getAdaptiveReviewPosition = (): number | null => {
+    if (
+      !this.currentAdaptiveProgram ||
+      !["playing", "paused", "fadingOut"].includes(this.snapshot.status)
+    )
+      return null;
+    const position = this.driver.getAdaptiveSessionPosition?.();
+    return position !== undefined &&
+      position !== null &&
+      Number.isFinite(position)
+      ? position
+      : null;
+  };
 
   getConsumerSelection = (): ConsumerSelection | null => this.selection;
   getListeningRun = (): number => this.listeningRun;
@@ -656,6 +678,7 @@ export class AudioSessionController implements AudioEngine {
     positionSeconds: number,
     clearAudition = false,
   ): Promise<void> {
+    this.natureChangeAbort?.abort();
     return this.enqueue(async () => {
       const program = this.currentAdaptiveProgram;
       if (!program) throw new Error("No adaptive session is loaded.");
@@ -667,8 +690,13 @@ export class AudioSessionController implements AudioEngine {
         throw new Error("Session position is outside the plan.");
       }
       try {
-        await this.driver.seekAdaptiveSession(positionSeconds, clearAudition);
+        await this.confirmPlayback(
+          this.driver.seekAdaptiveSession(positionSeconds, clearAudition),
+          "The session position could not be loaded. Check your connection and retry.",
+        );
+        if (clearAudition) this.adaptiveReviewLoop = false;
       } catch (error) {
+        if (error instanceof PlaybackCancelledError) throw error;
         await this.failClosedSeek(error);
         throw error;
       }
@@ -686,6 +714,7 @@ export class AudioSessionController implements AudioEngine {
 
   configureAdaptiveAudition(
     audition: TransitionAudition | null,
+    options?: AdaptiveAuditionOptions,
   ): Promise<void> {
     return this.enqueue(async () => {
       // A review panel can unmount after another selection became current.
@@ -694,18 +723,33 @@ export class AudioSessionController implements AudioEngine {
         if (audition === null) return;
         throw new Error("No adaptive session is loaded.");
       }
+      const leavingLoop =
+        this.adaptiveReviewLoop &&
+        (audition === null || options?.loop === false);
       try {
-        await this.driver.configureAdaptiveAudition(audition);
+        await this.confirmPlayback(
+          this.driver.configureAdaptiveAudition(audition, options),
+          "The review window could not be loaded. Check your connection and retry.",
+        );
       } catch (error) {
+        if (error instanceof PlaybackCancelledError) throw error;
         await this.failClosedSeek(error);
         throw error;
       }
+      this.adaptiveReviewLoop = audition !== null && (options?.loop ?? true);
+      const actualPosition = leavingLoop
+        ? this.driver.getAdaptiveSessionPosition?.()
+        : undefined;
       // configureAudition already moves the driver. Synchronize the absolute
       // timer here instead of requiring a second seek/rebuild from the UI.
-      if (audition && this.currentAdaptiveProgram) {
+      if (
+        ((audition && !options?.preservePosition) ||
+          (actualPosition !== undefined && actualPosition !== null)) &&
+        this.currentAdaptiveProgram
+      ) {
         const remainingMs =
           (this.currentAdaptiveProgram.plan.totalDurationSeconds -
-            audition.startSeconds) *
+            (actualPosition ?? audition!.startSeconds)) *
           1000;
         this.patch({
           remainingMs,
@@ -735,6 +779,84 @@ export class AudioSessionController implements AudioEngine {
       await this.driver.setAdaptiveNatureLevel(level, fadeMs);
       this.patch({ natureMixLevel: level, error: null });
     });
+  }
+
+  canChangeNatureFamily(): boolean {
+    return Boolean(
+      this.driver.replaceAdaptiveNatureFamily &&
+      this.currentAdaptiveProgram?.plan.natureMix,
+    );
+  }
+
+  cancelNatureFamilyChange(): void {
+    this.natureChangeAbort?.abort();
+  }
+
+  async changeNatureFamily(
+    family: NatureAmbienceFamily | null,
+  ): Promise<AdaptiveSessionProgram> {
+    const previous = this.currentAdaptiveProgram;
+    const driver = this.driver;
+    if (
+      !previous ||
+      !driver.replaceAdaptiveNatureFamily ||
+      this.snapshot.status !== "playing"
+    )
+      throw new Error(
+        "Live ambience changes are unavailable for this session.",
+      );
+    if (this.natureChangeAbort)
+      throw new Error("An ambience change is already being prepared.");
+    const next = setCoordinatedNatureChoice(previous, family);
+    if (next === previous) return previous;
+    const abort = new AbortController();
+    this.natureChangeAbort = abort;
+    let expected = previous;
+    const commit = async (program: AdaptiveSessionProgram) => {
+      await this.enqueue(async () => {
+        if (this.currentAdaptiveProgram !== expected || this.driver !== driver)
+          throw new PlaybackCancelledError();
+        this.currentAdaptiveProgram = program;
+        expected = program;
+        if (this.selection?.kind === "adaptive")
+          this.selection = {
+            ...this.selection,
+            program,
+            request: {
+              ...this.selection.request,
+              natureFamily: program.plan.natureMix!.selectedFamily,
+              includeNatureBed: program.plan.natureMix!.enabled !== false,
+            },
+          };
+        this.patch({ error: null });
+      });
+    };
+    try {
+      // Exit an explicit QA repeat without seeking.
+      if (this.adaptiveReviewLoop)
+        await this.configureAdaptiveAudition(null, { preservePosition: true });
+      if (abort.signal.aborted || this.currentAdaptiveProgram !== previous)
+        throw new PlaybackCancelledError();
+      // Retire only ambience, even inside a long natural overlap. Committing
+      // Off makes a cancelled/failed second step truthful, without music restart.
+      if (family !== null && previous.plan.natureMix?.enabled !== false) {
+        const off = setCoordinatedNatureChoice(previous, null);
+        await driver.replaceAdaptiveNatureFamily(off, abort.signal);
+        await commit(off);
+        if (abort.signal.aborted) throw new PlaybackCancelledError();
+      }
+      // Preparation stays outside commandChain: volume, Pause and Stop remain
+      // responsive while the next family loads.
+      await driver.replaceAdaptiveNatureFamily(next, abort.signal);
+      await commit(next);
+      return next;
+    } catch (error) {
+      if (abort.signal.aborted) throw new PlaybackCancelledError();
+      // Selection records the last successful nature step; music is untouched.
+      throw error;
+    } finally {
+      if (this.natureChangeAbort === abort) this.natureChangeAbort = null;
+    }
   }
 
   private async failClosedSeek(error: unknown): Promise<void> {
@@ -864,6 +986,7 @@ export class AudioSessionController implements AudioEngine {
   }
 
   pause(): Promise<void> {
+    this.natureChangeAbort?.abort();
     return this.enqueue(async () => {
       const convertInterruptionPauseToManual =
         this.pausedByInterruption && this.snapshot.status === "paused";
@@ -877,11 +1000,13 @@ export class AudioSessionController implements AudioEngine {
   }
 
   stop(): Promise<void> {
+    this.natureChangeAbort?.abort();
     this.cancelOperation?.();
     return this.enqueue(() => this.stopInternal(true));
   }
 
   dispose(): Promise<void> {
+    this.natureChangeAbort?.abort();
     this.cancelOperation?.();
     ++this.selectionGeneration;
     if (this.preparedSelection)
@@ -1075,6 +1200,7 @@ export class AudioSessionController implements AudioEngine {
   }
 
   private async stopInternal(resetTimer: boolean): Promise<void> {
+    this.adaptiveReviewLoop = false;
     this.deadlineGeneration += 1;
     this.terminalStopQueued = false;
     this.pausedByInterruption = false;
@@ -1176,6 +1302,9 @@ export class AudioSessionController implements AudioEngine {
     this.patch({
       remainingMs,
       status,
+      ...(this.adaptiveReviewLoop
+        ? { deadlineMs: this.runtime.now() + remainingMs }
+        : {}),
       ...(enteringFade
         ? {
             sources: Object.fromEntries(
@@ -1196,6 +1325,23 @@ export class AudioSessionController implements AudioEngine {
   }
 
   private remainingFromDeadline(): number {
+    // Review loops repeat on the driver's sample clock. A wall-clock deadline
+    // alone would let the slider run past the actual join and eventually Stop
+    // a still-looping audition. Consumer timing keeps its absolute deadline.
+    if (this.adaptiveReviewLoop && this.currentAdaptiveProgram) {
+      const position = this.driver.getAdaptiveSessionPosition?.();
+      if (
+        position !== null &&
+        position !== undefined &&
+        Number.isFinite(position)
+      ) {
+        return Math.max(
+          0,
+          (this.currentAdaptiveProgram.plan.totalDurationSeconds - position) *
+            1000,
+        );
+      }
+    }
     return Math.max(
       0,
       (this.snapshot.deadlineMs ?? this.runtime.now()) - this.runtime.now(),

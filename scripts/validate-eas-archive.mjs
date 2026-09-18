@@ -58,6 +58,7 @@ const forbiddenSegments = new Set([
   ".git",
   ".pnpm-store",
   ".expo",
+  ".github",
   ".vscode",
   "android",
   "app-pwa",
@@ -68,15 +69,18 @@ const forbiddenSegments = new Set([
   "ios",
   "node_modules",
   "output",
+  "quality",
   "public-pwa",
   "pwa-review",
   "qa",
   "scripts",
   "tests",
+  "tooling",
   "tmp",
 ]);
 const forbiddenRootFiles = new Set([
   "AGENTS.md",
+  "CHANGELOG.md",
   "README.md",
   "STATO.md",
   "eslint.config.js",
@@ -101,12 +105,7 @@ const requiredFiles = [
   "pnpm-workspace.yaml",
   "tsconfig.json",
 ];
-const expectedAudioFiles = [
-  "assets/audio/test-pack-01/SLEEP_AMBIENCE_001.wav",
-  "assets/audio/test-pack-01/SLEEP_DRONE_001.wav",
-  "assets/audio/test-pack-01/SLEEP_TEXTURE_001.wav",
-  "assets/audio/test-pack-01/manifest.json",
-].sort((left, right) => left.localeCompare(right));
+const expectedAudioFiles = [];
 const secretPatterns = [
   /-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----/,
   /A[KS]IA[0-9A-Z]{16}/,
@@ -138,6 +137,15 @@ for (const { absolutePath, archivePath } of files) {
   assert(
     !archivePath.startsWith("public/audio-catalog/"),
     `local listening catalog entered the EAS archive: ${archivePath}`,
+  );
+  assert(
+    !archivePath.startsWith("assets/audio/test-pack-01/"),
+    `ATP01 TEST ONLY material entered the EAS archive: ${archivePath}`,
+  );
+  assert(
+    archivePath !== "src/audio/reactNativeAudioApi/stemAssets.ts" &&
+      !/^src\/app\/(?:audio-test\.tsx|session\/|category\/)/.test(archivePath),
+    `legacy technical entry entered the consumer archive: ${archivePath}`,
   );
   assert(
     !archivePath.startsWith(".env") &&
@@ -180,5 +188,5 @@ assert(
 );
 
 console.log(
-  `EAS archive: PASS (${files.length} files, ${totalBytes} bytes, no Git metadata/secrets/local paths, exactly 3 AUDIO TEST PACK 01 WAV files and no consumer starter FLAC).`,
+  `EAS archive: PASS (${files.length} files, ${totalBytes} bytes, no Git metadata/secrets/local paths, zero ATP01 or local-catalog files).`,
 );

@@ -1,10 +1,9 @@
 import { fireEvent, render, within } from "@testing-library/react-native";
 import { StyleSheet } from "react-native";
-import HomeScreen from "@/app/index";
-import PwaHome from "@/app-pwa/index";
+import HomeScreen from "@/app/moments";
+import PwaHome from "@/app-pwa/moments";
 import { CONSUMER_OUTCOMES, PRODUCT_TABS } from "@/content/productShell";
-import { OUTCOME_EDITORIAL_SURFACE } from "@/design/editorialTheme";
-import { OUTCOME_ARTWORK } from "@/design/outcomeArtwork";
+import { M6_HOME_PAINTING } from "@/design/shellArtwork";
 import { createConsumerAudioMock } from "./helpers/consumerAudioMock";
 
 const mockPush = jest.fn();
@@ -44,9 +43,10 @@ describe("compact outcome-first Home", () => {
     mockAudio = createConsumerAudioMock();
   });
 
-  it("keeps all six needs and existing artworks in a compact two-column grid", async () => {
+  it("keeps all six needs as live targets over the approved continuous painting", async () => {
     const screen = await render(<HomeScreen />);
-    expect(screen.getByText("APP RELAX")).toBeTruthy();
+    expect(screen.getByText("App Relax")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Settings" })).toBeTruthy();
     expect(screen.getByText("What do you need right now?")).toBeTruthy();
     expect(
       screen.getByText(
@@ -66,34 +66,25 @@ describe("compact outcome-first Home", () => {
     expect(screen.queryByText("IN PRODUCTION")).toBeNull();
     expect(
       StyleSheet.flatten(screen.getByTestId("outcome-grid").props.style),
-    ).toMatchObject({ flexDirection: "row", flexWrap: "wrap", rowGap: 10 });
+    ).toMatchObject({ flexDirection: "row", flexWrap: "wrap" });
     expect(
       within(screen.getByTestId("outcome-grid")).getAllByRole("button"),
     ).toHaveLength(6);
     for (const outcome of CONSUMER_OUTCOMES) {
       const tile = screen.getByTestId(`outcome-${outcome.id}`);
       expect(StyleSheet.flatten(tile.props.style)).toMatchObject({
-        width: "48%",
-        minHeight: 148,
+        width: "50%",
       });
+      expect(
+        StyleSheet.flatten(tile.props.style).minHeight,
+      ).toBeGreaterThanOrEqual(190);
       expect(tile.props.accessibilityLabel).toBe(
         `${outcome.functionLabel}. Open and press Play.`,
       );
-      const label = within(tile).getByText(outcome.functionLabel);
+      const label = within(tile).getByText(outcome.functionLabel.toLowerCase());
       expect(StyleSheet.flatten(label.props.style)).toMatchObject({
-        fontSize: 14,
-        lineHeight: 20,
-      });
-      expect(StyleSheet.flatten(label.parent?.props.style)).toMatchObject({
-        backgroundColor: OUTCOME_EDITORIAL_SURFACE[outcome.id],
-      });
-      const artwork = screen.getByTestId(`outcome-artwork-${outcome.id}`, {
-        includeHiddenElements: true,
-      });
-      expect(artwork.props.accessible).toBe(false);
-      expect(artwork.props.source).toBe(OUTCOME_ARTWORK[outcome.id]);
-      expect(StyleSheet.flatten(artwork.parent?.props.style)).toMatchObject({
-        height: 102,
+        fontSize: 19,
+        lineHeight: 26,
       });
       await fireEvent.press(tile);
       expect(mockPush).toHaveBeenCalledWith(`/outcome/${outcome.id}`);
@@ -102,15 +93,16 @@ describe("compact outcome-first Home", () => {
       includeHiddenElements: true,
     });
     expect(background.props.accessible).toBe(false);
+    expect(background.props.source).toBe(M6_HOME_PAINTING);
     expect(StyleSheet.flatten(background.props.style)).toMatchObject({
-      height: "100%",
+      height: 844,
       width: "100%",
     });
   });
 
   it("keeps the catalogue out of main tabs and offers a distinct complete Yoga path", async () => {
     expect(PRODUCT_TABS).toEqual([
-      { id: "rituals", label: "HOME", route: "/" },
+      { id: "rituals", label: "HOME", route: "/moments" },
       { id: "yoga", label: "HATHA", route: "/yoga" },
     ]);
     const screen = await render(<HomeScreen />);

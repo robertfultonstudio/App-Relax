@@ -35,6 +35,35 @@ async function drain(): Promise<void> {
 }
 
 describe("adaptive session controller", () => {
+  it("exposes a read-only precise clock without ticking or changing transport", async () => {
+    const program = createAdaptiveSessionProgram({
+      outcome: "meditation",
+      durationMinutes: 20,
+      mode: "sound-only",
+      soundKind: "nature",
+      seed: "precise-review-clock",
+      allowProvisionalMetadata: true,
+    });
+    let actual = 10.125;
+    const driver = Object.assign(new FakeAudioDriver(), {
+      getAdaptiveSessionPosition: () => actual,
+    });
+    const controller = new AudioSessionController(driver, store, new Runtime());
+    expect(controller.getAdaptiveReviewPosition()).toBeNull();
+    await controller.loadAdaptiveSession(program);
+    expect(controller.getAdaptiveReviewPosition()).toBeNull();
+    await controller.play();
+    const before = controller.getSnapshot();
+    expect(controller.getAdaptiveReviewPosition()).toBe(10.125);
+    actual = 10.375;
+    expect(controller.getAdaptiveReviewPosition()).toBe(10.375);
+    expect(controller.getSnapshot()).toBe(before);
+    expect(driver.adaptiveSeekCalls).toEqual([]);
+    actual = Number.NaN;
+    expect(controller.getAdaptiveReviewPosition()).toBeNull();
+    await controller.stop();
+    expect(controller.getAdaptiveReviewPosition()).toBeNull();
+  });
   it("ignores stale review cleanup when no adaptive program is current", async () => {
     const driver = new FakeAudioDriver();
     const controller = new AudioSessionController(driver, store, new Runtime());
@@ -82,6 +111,114 @@ describe("adaptive session controller", () => {
     expect(controller.getSnapshot().remainingMs).toBe(
       (program.plan.totalDurationSeconds - audition.startSeconds) * 1000,
     );
+  });
+
+  it("keeps the session deadline when auditioning sides at the current position", async () => {
+    const program = createAdaptiveSessionProgram({
+      outcome: "meditation",
+      durationMinutes: 20,
+      mode: "sound-only",
+      soundKind: "nature",
+      seed: "audition-clock",
+      allowProvisionalMetadata: true,
+    });
+    const driver = new FakeAudioDriver();
+    const runtime = new Runtime();
+    const controller = new AudioSessionController(driver, store, runtime);
+    await controller.loadAdaptiveSession(program);
+    await controller.play();
+    runtime.advance(27_000);
+    const before = controller.getSnapshot();
+    const configure = jest.spyOn(driver, "configureAdaptiveAudition");
+    const audition = createTransitionAudition(program.plan, 0, 30, "incoming");
+    await controller.configureAdaptiveAudition(audition, {
+      preservePosition: true,
+      loop: false,
+    });
+    expect(configure).toHaveBeenCalledWith(audition, {
+      preservePosition: true,
+      loop: false,
+    });
+    expect(controller.getSnapshot().remainingMs).toBe(before.remainingMs);
+    expect(controller.getSnapshot().deadlineMs).toBe(before.deadlineMs);
+    expect(driver.adaptiveSeekCalls).toEqual([]);
+  });
+
+  it("tracks the actual repeating review window instead of drifting past its join", async () => {
+    const program = createAdaptiveSessionProgram({
+      outcome: "meditation",
+      durationMinutes: 20,
+      mode: "sound-only",
+      soundKind: "nature",
+      seed: "repeat-clock",
+      allowProvisionalMetadata: true,
+    });
+    let actualPosition = 0;
+    const driver = Object.assign(new FakeAudioDriver(), {
+      getAdaptiveSessionPosition: () => actualPosition,
+    });
+    const runtime = new Runtime();
+    const controller = new AudioSessionController(driver, store, runtime);
+    await controller.loadAdaptiveSession(program);
+    await controller.play();
+    const audition = createTransitionAudition(program.plan, 0, 30, "both");
+    actualPosition = audition.startSeconds;
+    await controller.configureAdaptiveAudition(audition);
+    // Even after more than a complete consumer duration, the engine is still
+    // in the explicit QA repeat window. No accidental completion is allowed.
+    actualPosition = audition.startSeconds + 3;
+    runtime.advance(1_300_000);
+    expect(controller.getSnapshot().status).toBe("playing");
+    expect(controller.getSnapshot().remainingMs).toBeCloseTo(
+      (1200 - actualPosition) * 1000,
+      6,
+    );
+    actualPosition = audition.startSeconds + 0.5;
+    runtime.advance(500);
+    expect(controller.getSnapshot().remainingMs).toBeCloseTo(
+      (1200 - actualPosition) * 1000,
+      6,
+    );
+    await controller.configureAdaptiveAudition(null);
+    const remaining = controller.getSnapshot().remainingMs;
+    runtime.advance(500);
+    expect(controller.getSnapshot().remainingMs).toBeCloseTo(
+      remaining - 500,
+      6,
+    );
+    await controller.stop();
+  });
+
+  it("Stop cancels an unresolved review seek without waiting for its decoder", async () => {
+    const program = createAdaptiveSessionProgram({
+      outcome: "meditation",
+      durationMinutes: 20,
+      mode: "sound-only",
+      soundKind: "nature",
+      seed: "stop-seek",
+      allowProvisionalMetadata: true,
+    });
+    const driver = new FakeAudioDriver();
+    const controller = new AudioSessionController(driver, store, new Runtime());
+    await controller.loadAdaptiveSession(program);
+    await controller.play();
+    let resolveSeek!: () => void;
+    jest.spyOn(driver, "seekAdaptiveSession").mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveSeek = resolve;
+        }),
+    );
+    const seek = controller.seekAdaptiveSession(300);
+    const rejected = expect(seek).rejects.toThrow("Playback cancelled.");
+    await drain();
+    await controller.stop();
+    await rejected;
+    expect(controller.getSnapshot().status).toBe("ready");
+    expect(controller.getSnapshot().remainingMs).toBe(1_200_000);
+    resolveSeek();
+    await drain();
+    expect(controller.getSnapshot().remainingMs).toBe(1_200_000);
   });
 
   it("activates browser media synchronously before queuing adaptive playback", async () => {

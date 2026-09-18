@@ -2,7 +2,7 @@
   "expo": {
     "name": "App Relax",
     "slug": "app-relax",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "apprelax",
@@ -10,11 +10,16 @@
     "ios": {
       "icon": "./assets/expo.icon",
       "bundleIdentifier": "com.robertfultonstudio.apprelax",
+      "buildNumber": "5",
       "supportsTablet": false
     },
     "android": {
-      "versionCode": 4,
+      "versionCode": 5,
       "allowBackup": false,
+      "blockedPermissions": [
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ],
       "adaptiveIcon": {
         "backgroundColor": "#101719",
         "foregroundImage": "./assets/images/android-icon-foreground.png",

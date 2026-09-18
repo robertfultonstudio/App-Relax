@@ -33,10 +33,10 @@ export const radii = {
 } as const;
 
 export const fonts = {
-  sans: "Manrope_400Regular",
-  sansMedium: "Manrope_500Medium",
-  sansSemiBold: "Manrope_600SemiBold",
-  serif: "Newsreader_500Medium",
-  serifItalic: "Newsreader_500Medium_Italic",
-  mono: "Manrope_500Medium",
+  sans: "HankenRegular",
+  sansMedium: "HankenMedium",
+  sansSemiBold: "HankenSemiBold",
+  serif: "ZenMinchoRegular",
+  serifItalic: "HankenItalic",
+  mono: "HankenMedium",
 } as const;

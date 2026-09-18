@@ -41,8 +41,8 @@ export default function PwaSettingsScreen() {
           Saved sounds
         </Text>
         <Text style={styles.downloadNote}>
-          Save the rain starter on this device. Both the app and its sounds must
-          be ready before you disconnect. You can remove sounds here.
+          Save the rain starter on this device for reuse. App access still
+          depends on the connection requirements below.
         </Text>
         <DownloadControl />
       </View>

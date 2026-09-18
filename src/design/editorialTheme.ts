@@ -1,10 +1,10 @@
 import type { ConsumerOutcomeId } from "@/content/productShell";
 
 export const editorial = {
-  paper: "#F2E9DA",
-  paperLight: "#F8F2E8",
+  paper: "#F6EFE4",
+  paperLight: "#FAF5ED",
   paperDeep: "#E7D9C5",
-  ink: "#172220",
+  ink: "#29353B",
   inkMuted: "#4B5954",
   inkFaint: "#55615B",
   line: "#81796D",
@@ -12,7 +12,7 @@ export const editorial = {
   gold: "#735A27",
   jade: "#3E665E",
   rose: "#815247",
-  lavender: "#6D5578",
+  lavender: "#625875",
   mineralBlue: "#445D78",
 } as const;
 

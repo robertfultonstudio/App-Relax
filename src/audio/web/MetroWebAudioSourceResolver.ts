@@ -1,6 +1,4 @@
 import { Asset } from "expo-asset";
-import { CONSUMER_ASSETS } from "@/audio/reactNativeAudioApi/consumerAssets";
-import { STEM_ASSETS } from "@/audio/reactNativeAudioApi/stemAssets";
 import type { ConsumerAudioWork } from "@/domain/audio/consumerTypes";
 import type { StemAssetKey } from "@/domain/audio/types";
 import {
@@ -9,12 +7,23 @@ import {
 } from "./WebAudioSourceResolver";
 
 export class MetroWebAudioSourceResolver implements WebAudioSourceResolver {
+  constructor(
+    private readonly technicalAssets?: Readonly<
+      Record<StemAssetKey, { moduleId: number; md5: string }>
+    >,
+  ) {}
+
   resolveStem(assetKey: StemAssetKey): string | null {
-    return Asset.fromModule(STEM_ASSETS[assetKey].moduleId).uri || null;
+    const descriptor = this.technicalAssets?.[assetKey];
+    return descriptor
+      ? Asset.fromModule(descriptor.moduleId).uri || null
+      : null;
   }
 
   resolveWork(work: ConsumerAudioWork): string | null {
-    const descriptor = CONSUMER_ASSETS[work.assetKey];
+    if (work.availability.startsWith("embedded-") && !this.technicalAssets)
+      return null;
+    const descriptor = this.technicalAssets?.[work.assetKey as StemAssetKey];
     return descriptor
       ? Asset.fromModule(descriptor.moduleId).uri || null
       : resolveLocalPreviewWork(work);

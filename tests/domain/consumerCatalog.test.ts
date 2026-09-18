@@ -5,6 +5,7 @@ import {
   getPlayableWorksForOutcome,
   getWorksForOutcome,
   getVisibleConsumerWorks,
+  isPlayableWork,
   isPlayableWorkOnWeb,
 } from "@/content/consumerCatalog";
 import { CONSUMER_OUTCOMES } from "@/content/productShell";
@@ -126,7 +127,7 @@ describe("M4 autonomous consumer catalog", () => {
     }
   });
 
-  it("retains ATP01 technical lookup and original asset keys without exposing them as consumer works", () => {
+  it("retains ATP01 technical metadata while making it non-playable on consumer surfaces", () => {
     const reused = CONSUMER_AUDIO_WORKS.filter(
       (work) => work.availability === "embedded-wav",
     );
@@ -139,6 +140,8 @@ describe("M4 autonomous consumer catalog", () => {
     );
     expect(getConsumerWork("moon-drone")?.assetKey).toBe("sleepDrone001");
     expect(getConsumerWork("deep-river")?.assetKey).toBe("sleepAmbience001");
+    expect(reused.every((work) => !isPlayableWork(work))).toBe(true);
+    expect(reused.every((work) => !isPlayableWorkOnWeb(work))).toBe(true);
     const rejected = CONSUMER_AUDIO_WORKS.find(
       (work) => work.id === "soft-air",
     );
@@ -147,6 +150,8 @@ describe("M4 autonomous consumer catalog", () => {
       availability: "rejected-listening",
       listeningStatus: "REJECTED — REPLACEMENT REQUIRED",
     });
+    expect(isPlayableWork(rejected!)).toBe(false);
+    expect(isPlayableWorkOnWeb(rejected!)).toBe(false);
     expect(getPlayableWorksForOutcome("focus")).not.toContainEqual(rejected);
   });
 

@@ -154,6 +154,8 @@ export interface AdaptiveSessionPlan {
   metadataReviewStatus:
     "PROVISIONAL — QA ONLY" | "REVIEWED — EDITORIAL METADATA";
   natureMix?: {
+    /** Off retains the independent lane contract, but acquires no audio. */
+    enabled?: boolean;
     initialLevel: NatureMixLevel;
     minimumLevel: 0;
     maximumLevel: 1;
@@ -190,6 +192,8 @@ export interface CreateAdaptiveSessionInput {
   curve?: TransitionCurve;
   allowProvisionalMetadata?: boolean;
   includeNatureBed?: boolean;
+  /** Consumer adapter opt-in: prepare metadata, but no bytes, while Off. */
+  prepareNatureControls?: boolean;
   natureFamily?: NatureAmbienceFamily;
   phasePolicy?: SessionIntentPhasePolicy;
 }

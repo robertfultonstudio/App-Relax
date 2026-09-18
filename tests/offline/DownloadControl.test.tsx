@@ -55,6 +55,38 @@ beforeEach(() => {
 });
 
 describe("explicit offline download control", () => {
+  it("keeps verified saved audio on private review without impossible offline retries", async () => {
+    mockShellState = "online-only";
+    mockSnapshot.record.status = "available";
+    const screen = await render(
+      <DownloadControl workId="field-rain-006-quiet-weather" />,
+    );
+    expect(screen.getByText("SAVE AUDIO ON THIS DEVICE")).toBeTruthy();
+    expect(screen.getByText(/Downloaded and verified/)).toBeTruthy();
+    expect(
+      screen.getByText(/private review needs an internet connection to open/),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(
+        /Offline reopening is not ready|close all App Relax|Check downloads before going offline/,
+      ),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Check offline readiness" }),
+    ).toBeNull();
+    expect(mockShellCheck).not.toHaveBeenCalled();
+    expect(mockDownloads.hydrate).toHaveBeenCalledWith(
+      "field-rain-006-quiet-weather",
+    );
+    for (const action of [
+      mockDownloads.download,
+      mockDownloads.remove,
+      mockDownloads.purgeRemoval,
+      mockDownloads.undoRemoval,
+    ]) {
+      expect(action).not.toHaveBeenCalled();
+    }
+  });
   it("keeps review-only audio playable without querying an unapproved download", async () => {
     const screen = await render(
       <DownloadControl workId="respiro-hatha-1-01" />,

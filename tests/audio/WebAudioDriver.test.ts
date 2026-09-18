@@ -1,3 +1,5 @@
+/** @jest-environment jsdom */
+
 import { WebAudioDriver } from "@/audio/web/WebAudioDriver";
 import { positionMediaElement } from "@/audio/web/positionMediaElement";
 import { CONSUMER_AUDIO_WORKS } from "@/content/consumerCatalog";
@@ -334,6 +336,47 @@ describe("WebAudioDriver file seeking", () => {
 });
 
 describe("WebAudioDriver browser gesture lifecycle", () => {
+  it.each([false, true])(
+    "keeps the complete entry fade after media is ready (clocked=%s)",
+    async (clocked) => {
+      const elements: DriverMediaElement[] = [];
+      let releasePlay!: () => void;
+      const pendingPlay = new Promise<void>((resolve) => {
+        releasePlay = resolve;
+      });
+      const context = installDriverBrowser(elements, (element) => {
+        element.play.mockImplementation(async () => pendingPlay);
+      });
+      // blob avoids the PCM factory: this isolates the master envelope from
+      // decoder implementation while exercising both PWA and normal drivers.
+      const driver = new WebAudioDriver(
+        {
+          resolveStem: () => null,
+          resolveWork: () => "blob:entry-fade",
+        },
+        clocked,
+      );
+      const program = { ...fileProgram(), fadeInSeconds: 4 };
+      await driver.loadSingleTrack(program);
+      const master = (context.createGain as jest.Mock).mock.results[0].value;
+      const start = driver.startSingleTrack(program, 0.8);
+      await waitForDriverState(() => elements[0]?.play.mock.calls.length > 0);
+      expect(master.gain.linearRampToValueAtTime).not.toHaveBeenCalled();
+      Object.defineProperty(context, "currentTime", {
+        value: 3,
+        configurable: true,
+      });
+      releasePlay();
+      await start;
+      expect(master.gain.setValueAtTime).toHaveBeenLastCalledWith(0, 3);
+      expect(master.gain.linearRampToValueAtTime).toHaveBeenLastCalledWith(
+        1,
+        7,
+      );
+      await driver.dispose();
+    },
+  );
+
   it("requests the source 48 kHz clock for the PWA before any audio is prepared", async () => {
     installDriverBrowser([]);
     const driver = new WebAudioDriver(

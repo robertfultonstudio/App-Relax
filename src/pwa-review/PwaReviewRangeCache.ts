@@ -71,23 +71,33 @@ export class PwaReviewRangeCache {
       )
     )
       this.purgeSource(prefix);
-    // Only metadata probes are memoized during normal playback. Audio windows
-    // enter this cache solely through explicit paused review preparation.
-    const match = /^bytes=0-(\d+)$/.exec(range);
-    if (!match || Number(match[1]) >= 65536 || url.startsWith("blob:"))
+    // Reuse verified foreground windows as well as explicit QA preparation.
+    // The same bounded LRU applies; this never retains a complete sound file.
+    const match = /^bytes=(\d+)-(\d+)$/.exec(range);
+    const start = Number(match?.[1]);
+    const end = Number(match?.[2]);
+    if (
+      !match ||
+      ![start, end].every(Number.isSafeInteger) ||
+      start < 0 ||
+      end < start ||
+      end - start + 1 > MAX_RANGE_BYTES ||
+      url.startsWith("blob:")
+    )
       return response;
-    const content = /^bytes 0-(\d+)\/(\d+)$/.exec(
+    const content = /^bytes (\d+)-(\d+)\/(\d+)$/.exec(
       response.headers.get("content-range") ?? "",
     );
-    if (!content || content[1] !== match[1]) return response;
+    if (!content || Number(content[1]) !== start || Number(content[2]) !== end)
+      return response;
     const value = await this.readVerified(
       response,
       {
         url,
         sha256,
-        start: 0,
-        end: Number(match[1]),
-        total: Number(content[2]),
+        start,
+        end,
+        total: Number(content[3]),
       },
       init?.signal ?? new AbortController().signal,
     );

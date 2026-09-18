@@ -1,6 +1,374 @@
 # Stato progetto
 
-Aggiornato: 14 settembre 2026
+Aggiornato: 17 settembre 2026
+
+## Correzione successiva M6 — Welcome e ambiente live pubblicati
+
+[F] Nuova richiesta utente implementata: ingresso pittorico interattivo `/`,
+attività spostate su `/moments`, Play disegnato senza emoji o titolo tipografico.
+Rain/Ocean/Off possono cambiare durante la musica tramite il controller e bus
+separati; Off non prepara decoder o file naturali. Feedback e annullamento
+visibili, musica/timer invariati durante la modifica dell'ambiente.
+
+[F] Prova strumentale nel browser reale: segnale PCM simultaneo su bus musica
+e natura, musica continua quando natura viene spenta. Nessun asset audio,
+servizio o dipendenza aggiunto. Dettaglio, controlli e screenshot in
+`docs/M6_LIVE_AMBIENCE_WELCOME.md`.
+
+[F] Pubblicazione privata esplicitamente autorizzata e completata sul Site
+stabile `https://app-relax-private-review.robfulton.chatgpt.site/`: Sites41,
+marker `PLAYER-REVIEW.32-WELCOME-LIVE-LOCAL`, stato succeeded. Accesso ancora
+owner-only: un solo account, zero gruppi e zero ospiti; richiesta anonima 401.
+Il browser autenticato ha mostrato la nuova Welcome, la route `/moments`, il
+Play disegnato e Rain/Ocean/Off; nessun warning o errore console. Manifest
+radice, standalone, service worker e metadati/icona Apple sono presenti.
+Worker, catalogo, 45 registrazioni e binding audio hanno hash invariati.
+
+[U] Android e iPhone fisici non collegati; Sentry non configurato/accessibile.
+Installazione Safari > Aggiungi alla schermata Home, riapertura standalone,
+playback concorrente nativo, prestazioni/touch/accessibilità reali, ascolto,
+background e offline: NON DETERMINATO — EVIDENZA INSUFFICIENTE. Nessun commit
+o push del repository canonico, PR, APK/EAS, upload audio o costo. Il gate
+dispositivo resta aperto: non dichiarare tutti gli acceptance criteria chiusi
+sulla base delle prove software o browser.
+
+## M6 — gate locali chiusi, PWA privata aggiornata
+
+[F] Implementazione M6 e patch Expo57.0.23 consolidate:103 suite/761 test,
+55 tooling, lint/typecheck, validatori ed export Web/PWA PASS;
+Expo Doctor20/20 e install check allineato. Trasporto pastello, tab netti,
+font locali e pitture approvate conservati. Nitidezza verificata senza
+filtri/ombre sui caratteri; screenshot validi `*-visible.png` e confronti
+in `dist/m6-closeout/`, non gli scatti CDP diagnostici a scala incoerente.
+
+[F] Su autorizzazione esplicita «Sì, aggiorna la PWA privata a costo zero»,
+Sites40 pubblicata con stato succeeded, accesso owner-only invariato,
+ambiente6. Nessun nuovo servizio/costo richiesto, upload audio o APK/EAS.
+Catalogo45 registrazioni e Worker invariati; controlli review, Hatha90,
+Rain/Ocean, volumi, loop e giunzioni conservati e provati nel browser.
+Dettaglio e limiti: `docs/M6_CLOSEOUT.md`.
+
+[U] Il prossimo gate è la prova iPhone dell'utente, non altra implementazione
+M6. Nitidezza percepita sul dispositivo, ascolto, touch/VoiceOver, offline e
+background restano NON DETERMINATO — EVIDENZA INSUFFICIENTE per questa versione.
+Nessun commit/push canonico; worktree precedente preservato, index vuoto.
+Le note successive sono cronologia e non riaprono i gate già chiusi sopra.
+
+### M6 — ultimo feedback: trasporto pastello e tipografia
+
+[F] Revisione locale: fondo lavanda/cipria sfumato, Stop delimitato,
+Pause nitido; tab netti e selezione giada. Zen Old Mincho + Hanken Grotesk
+locali, 329696 byte. Ultimi gate: 103 suite/760 test, typecheck/lint,
+font/asset/config/secret scan ed export PWA PASS. Screenshot `*-pastel.png`
+in `dist/m6-review/`; dettaglio in `docs/M6_APP_INTEGRATION.md`.
+[U] Approvazione visiva della nuova revisione e patch Expo ancora pendenti.
+Solo anteprima locale aggiornata; nessun commit/deploy/build, audio fermo.
+
+## D-116 — integrazione M6 approvata, gate finale Expo aperto
+
+[F] Dopo l'approvazione «prosegui e concludi M6», direzione 1–2 integrata
+nell'app reale: Home pittorica, player coordinato, Play/Pause senza ombre,
+volumi regolabili e controlli review conservati. Riferimenti Figma presenti
+e verificati nei nodi `3:2` e `3:3` del file `m09OI6AzKuOlFyTDLgxQ4o`.
+[F] Typecheck, lint, 102 suite/758 test, validatori asset/config/secret/boundary,
+export Web e PWA PASS. QA visiva locale in `design-qa.md`; perimetro, prove,
+provenienza e screenshot in `docs/M6_APP_INTEGRATION.md`.
+[U] Expo Doctor online19/20: serve patch57.0.23 (presente57.0.22), richiesta
+approvazione locale. M6 integrata NON dichiarata chiusa finché questo gate
+resta aperto. Nessun commit o deploy; la PWA online è invariata. App reale
+locale su127.0.0.1:8104, audio fermo e vecchi server8102/8103 spenti.
+
+Le sezioni successive conservano la cronologia precedente, non annullano
+l'approvazione e l'integrazione registrate sopra.
+
+## D-116 — M6 Product Design System, riferimenti e gate esterni
+
+[F] Avviata milestone di design subordinata a M5, distinta dalla M6 di verifica
+integrata D-115. Audit Product Design del candidato locale con otto screenshot
+nuovi: `docs/M6_PRODUCT_DESIGN_RECONSTRUCTION.md`. Nessuna modifica funzionale.
+[F] Autenticazione Figma successivamente sbloccata. Creato file
+`m09OI6AzKuOlFyTDLgxQ4o`, ancora vuoto; editor nel browser integrato bloccato
+da WebGL non disponibile. Sei riferimenti ImageToCode/Image Gen separati e
+ispezionati, analisi e piano componenti in `docs/M6_VISUAL_REVIEW.md`.
+[F] Successiva autorizzazione esplicita: collegamento 12ui completato e quattro
+varianti Home generate, solo riferimento visivo caricato, tetto0,122 USD.
+Registro del run: addebito0 USD, finanziamento sponsored; nessuna conversione.
+Risultati ispezionati: tutti orizzontali, non conformi al requisito mobile;
+B omette Relax. Nessuna variante approvata. Dettagli in `docs/M6_12UI_VARIANTS.md`.
+Prima fase M6 NON completata; nessuna approvazione visuale inferita.
+[F] Successivo rifiuto esplicito delle proposte precedenti: raccomandazione C
+ritirata. Prodotte due nuove coppie Home/player tramite Image Gen integrato,
+non tramite altri acquisti 12ui; ispezione e limiti in `docs/M6_MOBILE_V2.md`.
+La successiva scelta esplicita «1-2» seleziona Home pittorica e player coordinato.
+[F] Prototipo interattivo isolato in `output/m6-mobile-prototype`, aperto su
+`http://127.0.0.1:8102/`: sei attività, Hatha, timer, Play/Pause/Stop simulati,
+Rain/Ocean/Off, due volumi e mute. Nessun audio collegato, nessuna modifica
+all'app di produzione. Runtime protetto28 file, TypeScript e build locale PASS.
+Prove e confronto visivo in `output/m6-mobile-prototype/design-qa.md`.
+[U] Approvazione del prototipo e integrazione Expo restano aperte. Server di audit spento,
+nessuna PWA pubblicata, build, commit, push o costo.
+
+## D-115 — revisione completa, consegna solo PWA
+
+[F] Nuovo mandato diretto: sei milestone sequenziali, stabilità audio prima;
+nessuna APK/EAS/export nativo, deploy, commit o costo. Worktree D-106–D-114
+preservato; baseline e audit locale raccolti. Registro `docs/PWA_D115_REVISION.md`.
+
+[F] M1 verificata localmente: corretti cambio prematuro della nuova corsia
+naturale su errore AudioParam e accumulo timer dei vecchi ambienti. Regressione
+audio finale27 suite/302 test PASS; ultimi casi40/40 PASS. Inclusi20 cambi via
+controller/motore, Hatha90 accelerato, rollback/retry e pause/seek concorrenti.
+Browser reale: cambi ambiente, pausa/ripresa/seek e Stop PASS, seed conservato;
+non è approvazione sonora su telefono. Su successivo «aggiorna PWA», M1 marker29
+pubblicata in Sites39 owner-only; entry online verificata byte-identica.
+TypeScript, lint mirato, PWA, asset safety e secret scan PASS.
+[F] M2–M5 implementate nel candidato locale D115: giunzioni memoizzate,
+barra tecnica persistente, dettagli chiusi, Home mobile con sei artwork,
+raccolte musicali provvisorie e anti-ripetizione anche dopo musica+natura/reload.
+Suite integrata101/101,756 test PASS; tooling54 PASS/1 skip ambientale.
+Export solo Web consumer/QA/PWA e relativo confine PASS. Screenshot reali
+390×844 e844×390 in `dist/d115-audit/10-home-clean.png`,
+`11-review-final.png`, `12-home-landscape.png`.
+[U] M6 non chiusa: Expo Doctor online19/20 richiede Expo57.0.23 (installata
+57.0.22); nessun aggiornamento installato nel mandato senza installazioni.
+Figma richiesto esplicitamente: plugin abilitato ma autenticazione ripetutamente
+non disponibile; nessun file letto o creato. Richiesta riconnessione all'utente.
+Il candidato locale non sostituisce ancora Sites39. Ascolto e prestazioni
+fisiche restano NON DETERMINATO — EVIDENZA INSUFFICIENTE.
+
+## D-114 — workflow Git scalabile, solo locale
+
+[F] Definito trunk-based development con `main` stabile, branch brevi e una PR
+per risultato coerente. Convenzioni per naming, dimensione, sincronizzazione,
+squash merge, worktree, conflitti e pulizia sono in `docs/GIT_WORKFLOW.md` e
+nel punto d'ingresso `CONTRIBUTING.md`.
+
+[F] Aggiunti template PR, Code Owners per i confini delivery/quality e workflow
+read-only `PR policy`: valida branch e titolo Conventional Commits, quattro
+sezioni descrittive, target400 righe/15 file e gate oltre1.200 righe o35 file
+senza label maintainer `large-pr-approved`. Il churn dei due lockfile è escluso
+dal conteggio righe, non dalla review del contenuto.
+
+[F] Verifica locale del nuovo processo:6/6 test PR policy PASS,54 test tooling
+complessivi PASS e1 skip ambientale; Prettier ratchet, ESLint0/0, TypeScript,
+peer dependencies, configurazione progetto e validazione dei4 workflow PASS.
+La CI completa ha inoltre esposto due test Web privi di ambiente browser
+esplicito: corretti con `jsdom`, poi100 suite/748 test e coverage ratchet PASS.
+
+[U] Workflow, label, Code Owner review, cancellazione branch e status check non
+sono operativi sul remoto finché non esistono baseline e `main` protetto. Il
+checkout attuale richiederà una bootstrap PR grande e revisionata; nessun
+commit, push, worktree o modifica GitHub remota eseguita.
+
+## D-113 — CI/CD di produzione e confine backend, solo locale
+
+[F] Introdotti tre workflow GitHub Actions: CI su pull request/main con gate
+aggregato, preparazione SemVer/changelog via PR manuale e release da tag
+annotato con build EAS Android/iOS separate,
+ricevute, manifest SHA-256, source archive deterministico, GitHub Release draft
+e submission protette da quattro environment. Node22.23.1, pnpm11.16.0,
+EAS CLI24.3.0 isolata, profili e immagini builder sono fissati. Nessuna build cloud,
+submission, tag, push o pubblicazione eseguita.
+
+[F] Quality ratchet fail-closed: ESLint0, Prettier1 documento storico;
+coverage statements79,03%, branches74,29%, functions76,14%, lines81,35%.
+Ogni nuova violazione/regressione fallisce e gli update baseline non possono
+aumentare il debito. Test tooling49:48 PASS,1 skip ambientale; suite app con
+coverage748/748 PASS. Archivio EAS_NO_VCS locale:174 file/108341863B, esclude
+Git, catalogo, QA/PWA, documenti, test, script, credenziali e contiene solo i
+due WAV consumer condivisi.
+
+[F] EAS CLI separata dalle dipendenze app perché Expo Doctor rifiuta la CLI
+locale nel progetto. Lock dedicato e override patch rimuovono7 advisory high;
+restano in allowlist esatta1 low/2 moderate della sola toolchain, zero
+high/critical. Qualsiasi advisory nuovo o percorso fuori `eas-cli` fallisce.
+
+[F] Export locali finali PASS: iOS44 file/109653128B, Android48/110810043B,
+entrambi con2 WAV consumer e zero catalogo localhost; PWA184/12458104B, zero
+audio; confine Web consumer/QA PASS. Manifest smoke:92 file mobile e285 Web,
+HEAD `53b506b`; la pipeline richiede sorgente pulita per i manifest reali.
+
+[F] Documentati ordine dei gate, branch/environment protection, versioni,
+tag, changelog, release e rollback in `docs/CI_CD_ARCHITECTURE.md`. Il confine
+client/server e il percorso Fase0 offline → Fase1 object storage/CDN → Fase2
+auth/entitlement managed sono in `docs/BACKEND_BOUNDARY.md`. Nessun backend è
+stato introdotto.
+
+[U] Ruleset, reviewer, environment, secret e status check obbligatori sul
+GitHub remoto sono `NON DETERMINATO — EVIDENZA INSUFFICIENTE` finché la
+configurazione locale non viene pubblicata e applicata. Build firmate, store,
+rollback reale e prove su telefono restano gate separati.
+
+[F] Verifica read-only remota: repository GitHub pubblico esistente ma senza
+branch né default branch. Nessun push iniziale è stato inferito o eseguito.
+
+## D-112 — APK Android 1.0.4 pronta per il test fisico
+
+[F] Richiesta diretta «prepara un Apk Aggiornata»: una build consumer1.0.4/5
+inviata dopo748 test PASS, Doctor20/20, archivio174 file/108364626B e kit47/47
+verificati. Quota live Free Android3/15, costo stimato0 prima dell'invio.
+Job `46e4258b-7b54-4738-b3d8-ea19d996c587`; nessun retry o commit canonico.
+PWA38 e audio invariati. Dettagli: `docs/ANDROID_APK_D112.md`.
+[F] Job FINISHED alle15:57:56 UTC. APK239954542B,53,13MB in meno (-18,13%)
+rispetto alla1.0.3; audit pacchetto PASS, firma precedente conservata.
+Installazione in aggiornamento su AVD API34 riuscita,47/47 importati conservati;
+Astral Thread FLAC, Night Birds WAV, Hatha90+Rain e Hatha90+Ocean superano
+avvio con segnale nativo presente, pausa/ripresa e Stop, senza Metro.
+Costo finale0; Free Android4/15 usate,11 residue. APK e istruzioni nella
+cartella esterna di test; hash/link e limiti in `docs/ANDROID_APK_D112.md`.
+[U] Pronta per il test, non validata all'ascolto o su telefono fisico.
+Consumer Android senza pannelli review, cambio Rain/Ocean dopo Stop;
+review live resta nella PWA. Nessun altro job, commit o aggiornamento PWA.
+
+## D-111 — aggiornamento della sola PWA privata
+
+[F] Su richiesta diretta «Aggiorna solo Pwa» / «continua», pubblicata Sites38
+sullo stesso indirizzo privato; deployment riuscito il 14 settembre alle
+14:30:27 UTC. Candidato C2 riutilizzato senza modifiche:184 file/12457342B,
+zero audio, marker `PLAYER-REVIEW.28-C2-LOCAL` conservato per identità dei byte.
+C1/C2 e i controlli review D-106/D-107 sono ora online; C3 aggiunge solo prove.
+Le diciture «online26» nelle sezioni precedenti restano cronologia, non stato corrente.
+
+[F] Policy owner-only revision1, environment6 e catalogo remoto45 FLAC
+invariati. Nessuna APK/EAS, upload audio, nuova risorsa, acquisto o modifica
+accessi. HEAD canonico `53b506b` e index vuoto preservati; commit/push solo
+nel checkout Sites isolato, come passaggio della pubblicazione autorizzata.
+Hosting17/17 e validatore PWA PASS; ricevuta e verifica online in
+`docs/PWA_PRIVATE_D111.md`.
+
+[U] Pubblicazione non equivale ad ascolto/touch, background o latenza su telefono.
+Quei gate restano NON DETERMINATO — EVIDENZA INSUFFICIENTE.
+
+## D-110 / C3 — preparazione verificata, prove fisiche aperte
+
+[F] Dopo accettazione C2, completata la parte locale C3 senza cambiare app/audio:
+oracolo seed C3-20260914, Hatha30/45/60/90 con WAV/FLAC distinti, frame, join
+e loop; inventario11 naturali brevi. Cinque casi nuovi PASS,748 test/100 suite
+nel consolidamento, lint/typecheck PASS. Report `docs/C3_LOCAL_AND_DEVICE_REVIEW.md`.
+
+[F] Browser locale .28: barra/linea allineate, drag69ms, loop71ms, stesso join
+95→11ms; non tap→suono. Larghezze390/320, target almeno44×44, focus slider;
+pinch200 non prova reflow. Vecchia cache localhost distinta dall'export corretto
+su127.0.0.1, nessuna cache cancellata. Audio/server/tab di prova spenti.
+
+[U] Nessun target mobile disponibile nell'inventario. AG05/06/07/08/09/18:
+runbook/registro pronti; ascolto, assistive reali, latenza, background e long-run
+su telefono restano NON DETERMINATO — EVIDENZA INSUFFICIENTE. Non bloccano
+la consegna della preparazione. Nessun commit/build/pubblicazione; online26 e
+APK1.0.3 invariati. C4 documentale resta a Work.
+
+## D-109 / C2 — separazione bundle e audit sicurezza, solo locale
+
+[F] AG10: tre route legacy trasferite nella sola radice QA e registry tecnica
+iniettata dalle factory QA; consumer conserva solo i due WAV condivisi Moon
+Drone/Deep River103680088B. Il terzo WAV51840044B resta intatto in repo/QA,
+fuori dall'export consumer. Catalogo esterno47 file invariato, fuori APK/EAS.
+AG17: corretto falso verde npm/ENOLOCK nel controllo dipendenze; schema/status
+e provenienza degli advisory ora falliscono chiusi. Due residui image-size
+espliciti invariati. Permessi storage generali bloccati, overlay bloccato solo
+preview-android; servizio media/notifiche conservati, introspection PASS.
+
+[F] 743/743 test99 suite (297 audio),10 test audit,10 decoder, lint/typecheck,
+Doctor20/20, install check, asset/config/QA/PWA PASS. Export finali iOS109653129B,
+Android110810048B:2WAV/hash canonici, zero route tecniche. PWA locale184 file,
+12457342B,zero audio. Scan453 testi0 firme credenziali. Report con fallimenti
+intermedi e correzioni: `docs/C2_BUNDLE_SECURITY_REVIEW.md`.
+
+[F] Nessun commit, build, pubblicazione o modifica master. Online resta26,
+APK1.0.3/4 resta quella precedente con3WAV e marker legacy. C1 preservata.
+Node22.23.1 e pnpm11.16.0 già presente in cache usati per audit finale; launcher
+pnpm11.19 individuato e non confuso con il runtime fissato.
+[U] Device e ascolto non certificati. C3 locale avviata; C4 documentale a Work.
+
+## D-108 / C1 — istruzioni e sessione corrente coerenti, solo locale
+
+[F] Chiusi localmente AG01/AG02/AG03 del rapporto generale Strategy del
+14 settembre. `PLAYER-REVIEW.27-C1-LOCAL` distingue avvio nuovo e Resume;
+il timer corrente non cambia implicitamente. La policy del solo hostname
+privato impedisce anche a Settings di preparare/reinstallare il service worker;
+audio salvato e riapertura dell'app sono capacità distinte. Nessuna cache,
+preferenza o sorgente audio cancellata. Architettura/catalogo/runbook correnti
+aggiornati, cronologia conservata.
+
+[F] 736/736 test, 97 suite (294 audio), lint/typecheck/Prettier e validatori
+asset/ATP01/config/boundary/PWA PASS. Server: 18 test PASS più il caso47 URL
+rieseguito con root esplicita, PASS. Export locale184 file/12.458.109 byte,
+zero audio; scan firme credenziali603 file, zero riscontri. Due aspettative
+di vecchio copy nel primo run completo corrette e intera regressione verde.
+Browser Codex390×844: prima/dopo, Pause20→prepara45→Resume20→Return senza reset,
+avvio esplicito45 e Stop verificati; errori console raccolti: zero.
+
+[F] Nessuna pubblicazione, APK, commit o push. PWA online resta .26/Sites37,
+APK resta1.0.3/4. Server e audio della prova locale spenti. D-106/D-107 e
+modifiche preesistenti preservate; C2–C4 non avviate.
+[U] Ascolto/touch iPhone e gate di pubblicazione rimangono separati; l'Obiettivo
+globale non è dichiarato completato. Prove e limiti:
+`docs/C1_LOCAL_COHERENCE_REVIEW.md`.
+
+## D-107 — timeline e barra insieme, cursore sincronizzato
+
+[F] PLAYER-REVIEW.26 pubblicata sullo stesso sito owner-only: Sites37,
+deployment riuscito alle 09:57:07 UTC, environment6 e accessi invariati.
+Barra subito sotto ogni diagramma musica/natura; linea, cursore e tempo
+condividono la posizione durante drag/seek. In Play il trasporto visibile
+legge il clock reale fino a 30fps; sospensione fuori schermo/tab nascosta,
+Reduce Motion a 500ms. Dettagli e audit non vengono ricostruiti a ogni frame.
+
+[F] Richieste concorrenti per lo stesso indice FLAC unificate e verificate,
+con annullamento indipendente e cache limitate invariate. Non elimina la rete
+necessaria alle sorgenti ancora fredde e non promette latenza zero.
+
+[F] 730/730 test in 97 suite, inclusi 294 audio; lint/typecheck/Prettier,
+asset/config/boundary e PWA PASS. Export 184 file, 12.455.723 byte, audio zero.
+Hosting 17/17. Scan firme credenziali su 483 file testuali: zero riscontri.
+Browser locale: drag reale 44:52.10 con linea/barra allineate, seek 252ms;
+Pause/Play e avanzamento clock verificati. Online: 184 risorse corrispondenti
+all'export; revisione26 visibile, Hatha90+Rain Playing, drag44:52.10 con linea
+immediata e seek audio1054ms. Resta attesa sulle sorgenti fredde.
+
+[F] D-106 preservata; nessun nuovo commit/staging/push canonico, audio,
+APK/EAS, dipendenza, costo o modifica Strategy. Server locale spento.
+[U] Fluidità, latenza e ascolto su iPhone restano gate umano, non provati
+dallo screenshot desktop. Dettagli: `docs/PWA_PRIVATE_D107_TIMELINE.md`.
+
+## D-106 — commit di sicurezza, touch review e cambio ambiente durante Play
+
+[F] Prima delle correzioni richieste da Robert: commit locale selettivo
+`53b506b8bc65284dff4c66eb0c53d60893f83c40`, checkout pulito subito dopo,
+nessun push GitHub. Le correzioni successive restano non committate.
+
+[F] PLAYER-REVIEW.25 pubblicata owner-only: Sites36, deployment riuscito
+alle 04:11:31 UTC, environment6 e accessi invariati. Fade iniziale completo
+dopo readiness; slider con posizione locale durante il trascinamento;
+salti esatti a inizio/fine giunzione; ascolto entrante/uscente senza reload;
+loop QA con orologio coerente e uscita senza salto. Rain/Ocean durante Play
+cambia solo ambiente, con fade4s e annullamento; gli incroci già in corso
+rinviano il cambio in modo esplicito, senza bloccare Stop.
+
+[F] 720/720 test in96 suite, inclusi288 test audio; lint/typecheck/Prettier,
+Doctor20/20, Expo install check, asset/audio/config/boundary e PWA PASS.
+Un FAIL intermedio Off esplicito corretto e ricontrollato nel run completo.
+Audit dipendenze: soltanto i due residui image-size già accettati.
+Browser locale: Hatha90 Ocean→Rain→Ocean Playing, seed/timer/livelli
+conservati, Jump113ms e drag181ms. Non sono latenze misurate su iPhone.
+
+[F] Il controllo online della .24 ha rilevato un errore di allineamento
+su rete lenta: corretto nella .25 con un unico istante futuro per seek,
+avvio e fade. Deadline mancata: ambiente precedente intatto. I range audio
+già letti vengono ora riusati nella cache limitata esistente (8MiB retained,
+non RAM totale), evitando rete ripetuta finché non vengono espulsi.
+
+[F] Prova online .25: Rain→Ocean→Rain durante Playing riuscita; volumi
+80%/50% conservati. Jump esatto05:52.79:729ms iniziale,109ms ripetuto.
+Drag reale05:52.79→39:51.20 riuscito ma2944ms per sorgenti ancora fredde:
+questo limite di rete resta aperto, non viene dichiarata latenza quasi nulla.
+Loop completo±30, isolamento entrante ed Exit senza seek verificati.
+184 risorse pubblicate corrispondono all'export; accesso privato invariato.
+
+[U] Nuovo ascolto/touch iPhone, qualità loop e background restano gate umano.
+Nessuna nuova APK/EAS, audio caricato o costo introdotto. Catalogo remoto
+45 FLAC invariato; due texture restano local-only. Dettagli:
+`docs/PWA_PRIVATE_D106_TOUCH_REVIEW.md`.
 
 ## D-105 — errore aggiornamento e controlli review corretti nella PWA
 

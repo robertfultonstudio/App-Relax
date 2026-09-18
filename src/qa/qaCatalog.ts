@@ -1,5 +1,6 @@
 import {
   CONSUMER_AUDIO_WORKS,
+  isAudioTestPackWork,
   isPlayableWorkOnWeb,
 } from "@/content/consumerCatalog";
 import { SESSION_WORK_PROFILES } from "@/content/sessionWorkProfiles";
@@ -45,7 +46,9 @@ export const QA_CATALOG: readonly QaCatalogEntry[] = CONSUMER_AUDIO_WORKS.map(
     const transitionProfile =
       SESSION_WORK_PROFILES.find((profile) => profile.work.id === work.id) ??
       null;
-    const playable = isPlayableWorkOnWeb(work);
+    const playable = isAudioTestPackWork(work)
+      ? work.availability === "embedded-wav"
+      : isPlayableWorkOnWeb(work);
     return {
       work,
       playable,

@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
@@ -73,6 +73,9 @@ const consumerSource = consumerFiles
   )
   .join("\n");
 for (const forbidden of [
+  "audio-test",
+  "/session/",
+  "/category/",
   "AUDIO QA WORKBENCH",
   "qa-workbench",
   "@/qa/",
@@ -82,6 +85,47 @@ for (const forbidden of [
   assert(
     !consumerSource.includes(forbidden),
     `consumer route source contains ${forbidden}`,
+  );
+}
+
+for (const path of [
+  "src/audio/createAudioDriver.ts",
+  "src/audio/createAudioDriver.web.ts",
+  "src/audio/reactNativeAudioApi/ReactNativeAudioDriver.ts",
+  "src/audio/web/MetroWebAudioSourceResolver.ts",
+]) {
+  const contents = readFileSync(join(projectRoot, path), "utf8");
+  assert(
+    !contents.includes('from "./stemAssets"') &&
+      !contents.includes("reactNativeAudioApi/stemAssets"),
+    `consumer audio dependency imports the technical registry: ${path}`,
+  );
+  assert(
+    !/consumerAssets|test-pack-01|SLEEP_(?:DRONE|AMBIENCE|TEXTURE)_001/.test(
+      contents,
+    ),
+    `consumer audio dependency contains an ATP01 reference: ${path}`,
+  );
+}
+assert(
+  !existsSync(
+    join(
+      projectRoot,
+      "src",
+      "audio",
+      "reactNativeAudioApi",
+      "consumerAssets.ts",
+    ),
+  ),
+  "legacy consumer ATP01 asset map still exists",
+);
+for (const entry of [
+  "/src/audio/reactNativeAudioApi/stemAssets.ts",
+  "/assets/audio/test-pack-01/",
+]) {
+  assert(
+    easIgnore.includes(entry),
+    `technical-only file not excluded from EAS: ${entry}`,
   );
 }
 

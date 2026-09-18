@@ -1,9 +1,13 @@
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import { ImmediateSessionSetup } from "@/components/ImmediateSessionSetup";
 import { ListeningPreferences } from "@/components/ListeningPreferences";
+import { loadLastListening } from "@/state/lastListeningPersistence";
 import { createListeningNatureProgram } from "@/pwa-review/createListeningNatureProgram";
 import { createConsumerAudioMock, deferred } from "./helpers/consumerAudioMock";
 const mockPush = jest.fn();
+jest.mock("@/state/lastListeningPersistence", () => ({
+  loadLastListening: jest.fn(async () => null),
+}));
 let mockAudio = createConsumerAudioMock();
 jest.mock("expo-router", () => ({
   useRouter: () => ({ push: mockPush }),
@@ -23,6 +27,7 @@ jest.mock("@/domain/sessions/playbackAvailability", () => ({
 beforeEach(() => {
   mockAudio = createConsumerAudioMock();
   mockPush.mockClear();
+  jest.mocked(loadLastListening).mockReset().mockResolvedValue(null);
 });
 
 it("prepares silently, keeps one selected file across timer changes and starts it only on the direct gesture", async () => {
@@ -100,7 +105,9 @@ it("keeps the same music through rain, waves, timer and Off without autoplay", a
     expect(screen.getByTestId("start-immediate-session")).toBeEnabled(),
   );
   const original = mockAudio.controller.prepareSelection.mock.calls.at(-1)![0];
-  if (original.kind !== "single") throw new Error("Expected single by default");
+  if (original.kind !== "adaptive")
+    throw new Error("Expected independent music by default");
+  expect(original.program.plan.natureMix?.enabled).toBe(false);
   expect(
     screen.getByRole("radio", { name: "Ambience Off" }).props.accessibilityState
       .checked,
@@ -120,18 +127,18 @@ it("keeps the same music through rain, waves, timer and Off without autoplay", a
     expect(selected).toMatchObject({
       kind: "adaptive",
       request: {
-        listeningWorkId: original.program.work.id,
+        listeningWorkId: original.program.plan.listeningWorkId,
         includeNatureBed: true,
         natureFamily: family,
       },
       program: {
         plan: {
-          listeningWorkId: original.program.work.id,
+          listeningWorkId: original.program.plan.listeningWorkId,
           natureMix: { selectedFamily: family },
         },
       },
     });
-    expect(screen.queryByText(original.program.work.title)).toBeNull();
+    expect(screen.queryByText(original.program.works[0].title)).toBeNull();
   }
   await fireEvent.press(screen.getByText("Timer · 20 min +"));
   await fireEvent.press(screen.getByTestId("duration-45"));
@@ -145,7 +152,7 @@ it("keeps the same music through rain, waves, timer and Off without autoplay", a
     request: {
       durationMinutes: 45,
       natureFamily: "sea",
-      listeningWorkId: original.program.work.id,
+      listeningWorkId: original.program.plan.listeningWorkId,
     },
   });
   await fireEvent.press(screen.getByRole("radio", { name: "Ambience Off" }));
@@ -155,9 +162,14 @@ it("keeps the same music through rain, waves, timer and Off without autoplay", a
   expect(
     mockAudio.controller.prepareSelection.mock.calls.at(-1)![0],
   ).toMatchObject({
-    kind: "single",
-    durationMinutes: 45,
-    program: { work: original.program.work },
+    kind: "adaptive",
+    request: { durationMinutes: 45, includeNatureBed: false },
+    program: {
+      plan: {
+        listeningWorkId: original.program.plan.listeningWorkId,
+        natureMix: { enabled: false },
+      },
+    },
   });
   expect(
     mockAudio.controller.startSelectionFromUserGesture,
@@ -201,17 +213,17 @@ it("cancels obsolete preparation and cannot start rain after switching to waves"
 });
 
 it("fails closed when nature cannot be planned, then retries the same recording", async () => {
-  const factory = jest
-    .fn(createListeningNatureProgram)
-    .mockImplementationOnce(() => {
-      throw new Error("Ambience unavailable. Please retry.");
-    });
+  const factory = jest.fn(createListeningNatureProgram);
   const screen = await render(
     <ImmediateSessionSetup outcome="relax" createNatureProgram={factory} />,
   );
   await waitFor(() =>
     expect(screen.getByTestId("start-immediate-session")).toBeEnabled(),
   );
+  factory.mockClear();
+  factory.mockImplementationOnce(() => {
+    throw new Error("Ambience unavailable. Please retry.");
+  });
   await fireEvent.press(screen.getByRole("radio", { name: "Ambience Rain" }));
   expect(screen.getByRole("alert")).toHaveTextContent(
     "This session could not be prepared. Retry, or choose another activity.",
@@ -237,6 +249,9 @@ it("locks both ambience and timer while the direct Play request is starting", as
       createNatureProgram={createListeningNatureProgram}
     />,
   );
+  await waitFor(() =>
+    expect(screen.getByTestId("start-immediate-session")).toBeEnabled(),
+  );
   await fireEvent.press(screen.getByRole("radio", { name: "Ambience Rain" }));
   await fireEvent.press(screen.getByText("Timer · 20 min +"));
   await waitFor(() =>
@@ -261,6 +276,33 @@ it("locks both ambience and timer while the direct Play request is starting", as
   );
   await act(async () => pending.resolve());
   expect(mockPush.mock.calls.at(-1)![0]).toMatch(/duration=20&nature=rain$/);
+});
+
+it("avoids the saved music-plus-nature recording after a reload and keeps its replacement on retry", async () => {
+  jest.mocked(loadLastListening).mockResolvedValueOnce({
+    kind: "adaptive",
+    request: {
+      outcome: "sleep",
+      durationMinutes: 90,
+      mode: "sound-only",
+      soundKind: "music",
+      natureFamily: "rain",
+      listeningWorkId: "moonlit-veil",
+      includeNatureBed: true,
+    },
+  });
+  const screen = await render(<ImmediateSessionSetup outcome="sleep" />);
+  await waitFor(() =>
+    expect(screen.getByTestId("start-immediate-session")).toBeEnabled(),
+  );
+  expect(mockAudio.controller.prepareSelection).toHaveBeenLastCalledWith(
+    expect.objectContaining({
+      kind: "single",
+      program: expect.objectContaining({
+        work: expect.objectContaining({ id: "aquarian-drift" }),
+      }),
+    }),
+  );
 });
 
 it("does not expose unsupported nature playback without the PWA factory", async () => {

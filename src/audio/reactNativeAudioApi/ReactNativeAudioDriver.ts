@@ -11,6 +11,7 @@ import { Asset } from "expo-asset";
 import type {
   AudioPreset,
   AudioSourceId,
+  StemAssetKey,
   StemSourceId,
 } from "@/domain/audio/types";
 import {
@@ -29,8 +30,6 @@ import {
   createColoredNoiseSamples,
   createSeededRandom,
 } from "@/audio/generators/coloredNoise";
-import { STEM_ASSETS } from "./stemAssets";
-import { CONSUMER_ASSETS } from "./consumerAssets";
 import type {
   AdaptiveSessionProgram,
   NatureMixLevel,
@@ -156,6 +155,9 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
   constructor(
     private readonly nativeSourceResolver?: NativeAudioSourceResolver,
     private readonly nativePolicy: { allowHathaPreview?: boolean } = {},
+    private readonly technicalAssets?: Readonly<
+      Record<StemAssetKey, { moduleId: number; md5: string }>
+    >,
   ) {}
 
   activateUserGesture(): void {
@@ -204,6 +206,13 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
   }
 
   async loadPreset(preset: AudioPreset): Promise<void> {
+    // Only the isolated QA factory supplies the technical asset registry.
+    if (!this.technicalAssets) {
+      throw new SourceLoadError(
+        "drone",
+        "Technical playback is unavailable on this surface.",
+      );
+    }
     if (
       this.loadedPresetId === preset.id &&
       this.context &&
@@ -227,7 +236,7 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
       for (const stem of preset.stems) {
         activeSourceId = stem.id;
         activeSourceLabel = stem.label;
-        const descriptor = STEM_ASSETS[stem.assetKey];
+        const descriptor = this.technicalAssets[stem.assetKey];
         const asset = Asset.fromModule(descriptor.moduleId);
         if (asset.hash !== descriptor.md5) {
           throw new Error(`Asset hash mismatch for ${stem.label}.`);
@@ -275,6 +284,12 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
 
   async loadSingleTrack(program: SingleTrackProgram): Promise<void> {
     if (
+      program.work.availability.startsWith("embedded-") &&
+      !this.technicalAssets
+    ) {
+      throw new Error("Technical playback is unavailable on this surface.");
+    }
+    if (
       this.loadedProgramId === program.work.id &&
       this.context &&
       (program.work.sourceKind === "generated-noise"
@@ -306,7 +321,8 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
       if (context.state === "running") await context.suspend();
       return;
     }
-    const descriptor = CONSUMER_ASSETS[program.work.assetKey];
+    const descriptor =
+      this.technicalAssets?.[program.work.assetKey as StemAssetKey];
     let lease: VerifiedNativeAudioFile | null = null;
     try {
       if (descriptor) {
@@ -649,6 +665,15 @@ export class ReactNativeAudioDriver implements AudioGraphDriver {
     if (!this.adaptive)
       throw new Error("No native adaptive session is loaded.");
     this.adaptive.setNatureLevel(level, fadeMs);
+  }
+
+  async replaceAdaptiveNatureFamily(
+    program: AdaptiveSessionProgram,
+    signal: AbortSignal,
+  ): Promise<void> {
+    if (!this.adaptive)
+      throw new Error("No native adaptive session is loaded.");
+    await this.adaptive.replaceNatureFamily(program, signal);
   }
 
   async resume(): Promise<void> {

@@ -1,0 +1,39 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Rome
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: build
+      prefix-development: build
+      include: scope
+    groups:
+      expo-runtime:
+        patterns:
+          - expo
+          - "expo-*"
+          - "@expo/*"
+          - react-native
+          - "react-native-*"
+      test-tooling:
+        dependency-type: development
+        patterns:
+          - jest
+          - "jest-*"
+          - "@testing-library/*"
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:30"
+      timezone: Europe/Rome
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: ci
+      include: scope

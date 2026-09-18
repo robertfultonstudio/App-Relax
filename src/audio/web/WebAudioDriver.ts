@@ -24,7 +24,10 @@ import type {
   AdaptiveSessionProgram,
   NatureMixLevel,
 } from "@/domain/sessions/types";
-import type { TransitionAudition } from "@/domain/sessions/workbench";
+import type {
+  AdaptiveAuditionOptions,
+  TransitionAudition,
+} from "@/domain/sessions/workbench";
 import { AdaptiveWebPlayback } from "./AdaptiveWebPlayback";
 import { positionMediaElement } from "./positionMediaElement";
 import { requestPlaybackAudioSession } from "./requestPlaybackAudioSession";
@@ -540,7 +543,6 @@ export class WebAudioDriver implements AudioGraphDriver {
       }
 
       await context.resume();
-      this.prepareMasterFade(program.fadeInSeconds);
       const gestureActivation = this.takeUserGesturePromise();
       if (this.noiseRuntime) {
         this.noiseRuntime.source.start(context.currentTime + 0.02);
@@ -550,6 +552,9 @@ export class WebAudioDriver implements AudioGraphDriver {
         await this.mediaRuntime.get("program")?.element.play();
       }
       this.assertPlayback(generation);
+      // The audible envelope starts after media readiness, not while a slow
+      // decoder/network operation is still keeping the source silent.
+      this.prepareMasterFade(program.fadeInSeconds);
       this.graphStarted = true;
     } catch (error) {
       if (generation === this.playbackGeneration)
@@ -626,6 +631,12 @@ export class WebAudioDriver implements AudioGraphDriver {
     return this.pcmReaderFactory?.getReviewReadMetrics?.() ?? null;
   }
 
+  getAdaptiveSessionPosition(): number | null {
+    return this.loadedAdaptiveProgramId && this.adaptivePlayback
+      ? this.adaptivePlayback.positionSeconds()
+      : null;
+  }
+
   async prepareReviewSeek(
     positionSeconds: number,
     signal: AbortSignal,
@@ -648,11 +659,12 @@ export class WebAudioDriver implements AudioGraphDriver {
 
   async configureAdaptiveAudition(
     audition: TransitionAudition | null,
+    options?: AdaptiveAuditionOptions,
   ): Promise<void> {
     if (!this.adaptivePlayback) {
       throw new Error("No adaptive session is loaded.");
     }
-    await this.adaptivePlayback.configureAudition(audition);
+    await this.adaptivePlayback.configureAudition(audition, options);
   }
 
   async setAdaptiveNatureLevel(
@@ -663,6 +675,18 @@ export class WebAudioDriver implements AudioGraphDriver {
       throw new Error("No adaptive session is loaded.");
     }
     this.adaptivePlayback.setNatureLevel(level, fadeMs);
+  }
+
+  async replaceAdaptiveNatureFamily(
+    program: AdaptiveSessionProgram,
+    signal: AbortSignal,
+  ): Promise<void> {
+    if (
+      !this.adaptivePlayback ||
+      this.loadedAdaptiveProgramId !== program.plan.id
+    )
+      throw new Error("The current adaptive session changed.");
+    await this.adaptivePlayback.replaceNatureFamily(program, signal);
   }
 
   async resume(): Promise<void> {
@@ -947,10 +971,9 @@ export class WebAudioDriver implements AudioGraphDriver {
     const now = this.context.currentTime;
     this.masterGain.gain.cancelScheduledValues(now);
     this.masterGain.gain.setValueAtTime(0, now);
-    // PWA review must respond promptly once ready. Keep a short anti-click
-    // attack; this does not alter musical crossfades, exits or source samples.
-    const attack = this.clockedWav ? Math.min(seconds, 0.08) : seconds;
-    this.masterGain.gain.linearRampToValueAtTime(1, now + attack);
+    // Readiness latency and musical fade are distinct. The review uses the
+    // complete editorial attack too; do not truncate it to an anti-click ramp.
+    this.masterGain.gain.linearRampToValueAtTime(1, now + Math.max(0, seconds));
   }
 
   private rampGain(node: GainNode, value: number, fadeMs: number): void {

@@ -112,6 +112,29 @@ it("keeps the whole point within budget without evicting its older cached header
   expect(await cache.prepare([request(0, 100)], signal())).toBe(false);
   expect(fetcher).toHaveBeenCalledTimes(calls);
 });
+it("reuses foreground audio ranges within the same fixed LRU budget", async () => {
+  const fetcher = network();
+  const cache = new PwaReviewRangeCache(fetcher as typeof fetch, 20);
+  const first = request(42, 51);
+  await cache.fetch(first.url, options(first), sha256);
+  await cache.fetch(first.url, options(first), sha256);
+  expect(fetcher).toHaveBeenCalledTimes(1);
+  expect(cache.readCounts()).toEqual({ networkReads: 1, cacheReads: 1 });
+  for (const r of [request(52, 61), request(62, 71)])
+    await cache.fetch(r.url, options(r), sha256);
+  await cache.fetch(first.url, options(first), sha256);
+  expect(fetcher).toHaveBeenCalledTimes(4); // Oldest was evicted, not retained above budget.
+});
+it("does not cache a foreground range with invalid source identity", async () => {
+  const fetcher = jest.fn(async () => response(request(), { etag: "weak" }));
+  const cache = new PwaReviewRangeCache(fetcher as typeof fetch);
+  for (let attempt = 0; attempt < 2; attempt++)
+    await expect(
+      cache.fetch(request().url, options(request()), sha256),
+    ).rejects.toThrow("identity");
+  expect(fetcher).toHaveBeenCalledTimes(2);
+  expect(cache.readCounts().cacheReads).toBe(0);
+});
 it.each<Record<string, string>>([
   { etag: "weak" },
   { "x-content-sha256": "b".repeat(64) },

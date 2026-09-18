@@ -33,7 +33,7 @@ export function EditorialHeader({
             pressed && styles.pressed,
           ]}
         >
-          <Text style={styles.backLabel}>← BACK</Text>
+          <Text style={styles.backLabel}>‹ Back</Text>
         </Pressable>
       ) : (
         <View style={styles.brandBlock}>
@@ -65,14 +65,15 @@ export function EditorialHeader({
 
 const styles = StyleSheet.create({
   header: {
-    minHeight: 62,
+    zIndex: 1,
+    minHeight: 48,
     flexDirection: "row",
     flexWrap: "wrap",
     columnGap: spacing.sm,
     rowGap: spacing.xs,
     alignItems: "center",
     justifyContent: "space-between",
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: 0,
     borderBottomColor: editorial.line,
     marginBottom: spacing.md,
   },
@@ -97,7 +98,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     flexShrink: 1,
     textAlign: "center",
-    letterSpacing: 1.5,
+    letterSpacing: 0.3,
   },
   sideAction: {
     minWidth: 92,

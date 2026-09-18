@@ -20,13 +20,13 @@ export function ProductTabBar({ activeTab }: { activeTab: ProductTabId }) {
               accessibilityState={{ selected }}
               key={tab.id}
               onPress={() => router.replace(tab.route as Href)}
-              style={({ pressed }) => [styles.tab, pressed && styles.pressed]}
+              style={({ pressed }) => [
+                styles.tab,
+                selected && styles.tabSelected,
+                pressed && styles.pressed,
+              ]}
               testID={`product-tab-${tab.id}`}
             >
-              <View
-                accessibilityElementsHidden
-                style={[styles.stroke, selected && styles.strokeSelected]}
-              />
               <Text style={[styles.label, selected && styles.labelSelected]}>
                 {tab.label}
               </Text>
@@ -41,15 +41,16 @@ export function ProductTabBar({ activeTab }: { activeTab: ProductTabId }) {
 const styles = StyleSheet.create({
   safeArea: {
     backgroundColor: editorial.paperLight,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: editorial.lineStrong,
+    borderTopWidth: 1,
+    borderTopColor: "#81796D",
   },
   bar: {
     minHeight: 52,
     flexDirection: "row",
     alignItems: "stretch",
     paddingHorizontal: spacing.sm,
-    paddingTop: 2,
+    paddingVertical: 6,
+    gap: 10,
   },
   tab: {
     flex: 1,
@@ -58,18 +59,22 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 4,
     paddingHorizontal: 4,
+    borderWidth: 1,
+    borderColor: "#81796D",
+    borderBottomWidth: 3,
+    borderBottomColor: "#81796D",
   },
-  stroke: {
-    width: 18,
-    height: 1,
-    backgroundColor: "transparent",
+  tabSelected: {
+    backgroundColor: "#D8E3DC",
+    borderColor: "#405B54",
+    borderBottomColor: "#405B54",
   },
-  strokeSelected: { backgroundColor: editorial.gold },
   label: {
-    color: editorial.inkFaint,
+    color: editorial.ink,
     fontFamily: fonts.sansMedium,
-    fontSize: 14,
-    letterSpacing: 0.8,
+    fontSize: 16,
+    letterSpacing: 0,
+    textTransform: "capitalize",
   },
   labelSelected: {
     color: editorial.ink,

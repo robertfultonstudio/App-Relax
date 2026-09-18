@@ -1,3 +1,5 @@
+/** @jest-environment jsdom */
+
 import { requestPlaybackAudioSession } from "@/audio/web/requestPlaybackAudioSession";
 
 const original = Object.getOwnPropertyDescriptor(navigator, "audioSession");

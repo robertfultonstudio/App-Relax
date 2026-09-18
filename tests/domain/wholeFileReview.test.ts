@@ -1,4 +1,4 @@
-import { createWholeFileReviewProgram } from "@/pwa-review/createWholeFileReviewProgram";
+import { createWholeFileReviewProgram } from "@/domain/sessions/createWholeFileReviewProgram";
 import { createAdaptiveSessionProgram } from "@/domain/sessions/continuumPlanner";
 import { auditPlanAccelerated } from "@/domain/sessions/workbench";
 import { HATHA_AUDIO_WORKS } from "@/content/hathaCatalog";

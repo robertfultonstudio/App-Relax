@@ -62,18 +62,18 @@ const styles = StyleSheet.create({
   },
   option: {
     alignItems: "center",
-    backgroundColor: "rgba(248, 242, 232, 0.72)",
+    backgroundColor: "transparent",
     borderColor: editorial.line,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     justifyContent: "center",
     minHeight: 56,
     minWidth: 48,
     paddingHorizontal: spacing.sm,
   },
   optionSelected: {
-    backgroundColor: "#DCE5DD",
-    borderColor: editorial.jade,
-    borderWidth: 1,
+    backgroundColor: "#E9E2EF",
+    borderColor: editorial.lavender,
+    borderBottomWidth: 2,
   },
   minutes: {
     color: editorial.inkMuted,

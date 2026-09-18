@@ -1,0 +1,10 @@
+# Changes to delivery and trust boundaries require owner review.
+/.github/ @robertfultonstudio
+/quality/ @robertfultonstudio
+/scripts/quality/ @robertfultonstudio
+/scripts/release/ @robertfultonstudio
+/eas.json @robertfultonstudio
+/app.json @robertfultonstudio
+/package.json @robertfultonstudio
+/pnpm-lock.yaml @robertfultonstudio
+

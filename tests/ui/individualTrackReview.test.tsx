@@ -174,7 +174,7 @@ it.each([undefined, "1"])(
   },
 );
 
-it("opens the ordinary single-file review without a query and never auto-plays", async () => {
+it("opens the ordinary listening timeline without a query and never auto-plays", async () => {
   mockParams = { workId: "respiro-hatha-1-01" };
   const screen = await render(<PwaPlayer />);
   expect(
@@ -183,7 +183,7 @@ it("opens the ordinary single-file review without a query and never auto-plays",
       expanded: true,
     }),
   ).toBeTruthy();
-  expect(screen.getByTestId("review-source-file")).toBeTruthy();
+  expect(screen.getByTestId("review-segment-0")).toBeTruthy();
   expect(
     mockAudio.controller.startSelectionFromUserGesture,
   ).not.toHaveBeenCalled();
@@ -192,13 +192,13 @@ it("opens the ordinary single-file review without a query and never auto-plays",
 it("honors an explicit closed preview and query changes on the same player", async () => {
   mockParams = { workId: "respiro-hatha-1-01", review: "0" };
   const screen = await render(<PwaPlayer />);
-  expect(screen.queryByTestId("review-source-file")).toBeNull();
+  expect(screen.queryByTestId("review-segment-0")).toBeNull();
   mockParams = { workId: "respiro-hatha-1-01" };
   await screen.rerender(<PwaPlayer />);
-  expect(screen.getByTestId("review-source-file")).toBeTruthy();
+  expect(screen.getByTestId("review-segment-0")).toBeTruthy();
   mockParams = { ...mockParams, review: "0" };
   await screen.rerender(<PwaPlayer />);
-  expect(screen.queryByTestId("review-source-file")).toBeNull();
+  expect(screen.queryByTestId("review-segment-0")).toBeNull();
   expect(
     mockAudio.controller.startSelectionFromUserGesture,
   ).not.toHaveBeenCalled();

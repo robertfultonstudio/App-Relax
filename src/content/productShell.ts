@@ -3,7 +3,7 @@ export type ProductTabId = "rituals" | "yoga" | "soundscapes";
 export interface ProductTab {
   id: ProductTabId;
   label: string;
-  route: "/" | "/yoga" | "/soundscapes";
+  route: "/moments" | "/yoga" | "/soundscapes";
 }
 
 export interface PlannedCollection {
@@ -34,7 +34,7 @@ export interface ConsumerOutcome {
 }
 
 export const PRODUCT_TABS: readonly ProductTab[] = [
-  { id: "rituals", label: "HOME", route: "/" },
+  { id: "rituals", label: "HOME", route: "/moments" },
   { id: "yoga", label: "HATHA", route: "/yoga" },
 ] as const;
 

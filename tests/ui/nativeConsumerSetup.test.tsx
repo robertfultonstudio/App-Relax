@@ -47,7 +47,7 @@ it("Android consumer offers real Hatha90 plus rain through the shared controller
     },
   });
   expect(screen.queryByTestId("open-complete-practice-review")).toBeNull();
-  expect(screen.queryByText(/Playlist & development/)).toBeNull();
+  expect(screen.queryByText(/Session & development/)).toBeNull();
   await fireEvent.press(screen.getByTestId("start-adaptive-session"));
   expect(
     mockAudio.controller.startSelectionFromUserGesture,

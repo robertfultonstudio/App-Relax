@@ -52,7 +52,7 @@ type PlayerExtensions = {
     work: ConsumerAudioWork,
     outcome: ConsumerOutcomeId,
     duration: SessionDurationMinutes,
-    family: NatureAmbienceFamily,
+    family: NatureAmbienceFamily | null,
   ) => AdaptiveSessionProgram;
   renderNatureReview?: (
     program: AdaptiveSessionProgram,
@@ -79,7 +79,7 @@ export default function ConsumerPlayerScreen({
   }>();
   return (
     <Player
-      key={`${params.workId}:${params.outcome ?? ""}:${params.duration ?? ""}:${params.nature ?? ""}`}
+      key={`${params.workId}:${params.outcome ?? ""}:${params.duration ?? ""}`}
       {...params}
       renderReviewControls={renderReviewControls}
       createNatureProgram={createNatureProgram}
@@ -135,6 +135,10 @@ function Player({
         : policy.defaultDuration,
   );
   const [error, setError] = useState<string | null>(null);
+  const [changingNature, setChangingNature] = useState(false);
+  const [natureChangeError, setNatureChangeError] = useState<string | null>(
+    null,
+  );
   const [timerOpen, setTimerOpen] = useState(false);
   const [offlineOpen, setOfflineOpen] = useState(false);
   const [nature, setNature] = useState<NatureAmbienceFamily | null>(() =>
@@ -144,10 +148,38 @@ function Player({
         ? null
         : active?.kind === "adaptive" &&
             active.program.plan.listeningWorkId === workId
-          ? (active.program.plan.natureMix?.selectedFamily ?? null)
+          ? active.program.plan.natureMix?.enabled === false
+            ? null
+            : (active.program.plan.natureMix?.selectedFamily ?? null)
           : null,
   );
-  const [variant, setVariant] = useState<AdaptiveSessionProgram | null>(null);
+  const [variant, setVariant] = useState<AdaptiveSessionProgram | null>(() =>
+    active?.kind === "adaptive" &&
+    activeSameWork &&
+    active.request.outcome === outcome &&
+    active.request.durationMinutes === duration &&
+    (active.program.plan.natureMix?.enabled === false
+      ? null
+      : active.program.plan.natureMix?.selectedFamily) === nature
+      ? active.program
+      : null,
+  );
+  const [previousNatureParam, setPreviousNatureParam] = useState(natureParam);
+  if (previousNatureParam !== natureParam) {
+    setPreviousNatureParam(natureParam);
+    if (
+      natureParam === "rain" ||
+      natureParam === "sea" ||
+      natureParam === "off"
+    ) {
+      const routeNature = natureParam === "off" ? null : natureParam;
+      // Live changes already updated variant and identity before the route.
+      if (routeNature !== nature) {
+        setVariant(null);
+        setNature(routeNature);
+      }
+    }
+  }
   const [selectionAttempt, setSelectionAttempt] = useState(0);
   const natureAvailable = Boolean(
     createNatureProgram && work && soundFamilyFor(work) === "music",
@@ -159,19 +191,19 @@ function Player({
     void selectionAttempt;
     try {
       const selection: ConsumerSelection | null = work
-        ? nature && createNatureProgram && natureAvailable
+        ? createNatureProgram && natureAvailable
           ? {
               kind: "adaptive",
               program:
                 variant ?? createNatureProgram(work, outcome, duration, nature),
               request: {
                 listeningWorkId: work.id,
-                includeNatureBed: true,
+                includeNatureBed: nature !== null,
                 outcome,
                 durationMinutes: duration,
                 mode: "sound-only",
                 soundKind: "music",
-                natureFamily: nature,
+                natureFamily: nature ?? "rain",
               },
             }
           : {
@@ -291,7 +323,18 @@ function Player({
         canStop={matching && (playing || busy || snapshot.status === "paused")}
         contextLabel=""
         isPlaying={playing}
-        status={work ? status : "Unavailable"}
+        status={
+          work
+            ? otherSessionActive && status === "Ready"
+              ? "New session ready"
+              : status
+            : "Unavailable"
+        }
+        preparedSessionNote={
+          otherSessionActive
+            ? "The session below is unchanged. Start new to replace it."
+            : undefined
+        }
         error={visibleError}
         onRetry={() => {
           setError(null);
@@ -318,21 +361,72 @@ function Player({
               {natureAvailable && (
                 <NatureAmbienceChoice
                   value={nature}
+                  changing={changingNature}
+                  onCancel={() => controller.cancelNatureFamilyChange()}
                   disabled={
                     matching &&
                     ["playing", "paused", "fadingOut", "preparing"].includes(
                       snapshot.status,
+                    ) &&
+                    !(
+                      snapshot.status === "playing" &&
+                      controller.canChangeNatureFamily?.()
                     )
                   }
                   onChange={(value) => {
+                    if (
+                      matching &&
+                      snapshot.status === "playing" &&
+                      selection?.kind === "adaptive"
+                    ) {
+                      setChangingNature(true);
+                      setNatureChangeError(null);
+                      void controller
+                        .changeNatureFamily(value)
+                        .then((updated) => {
+                          setVariant(updated);
+                          setNature(value);
+                          router.setParams({ nature: value ?? "off" });
+                        })
+                        .catch((reason) => {
+                          const actual = controller.getConsumerSelection();
+                          if (
+                            actual?.kind === "adaptive" &&
+                            actual.program.plan.id === selection.program.plan.id
+                          ) {
+                            const family =
+                              actual.program.plan.natureMix?.enabled === false
+                                ? null
+                                : (actual.program.plan.natureMix
+                                    ?.selectedFamily ?? null);
+                            setVariant(actual.program);
+                            setNature(family);
+                            router.setParams({ nature: family ?? "off" });
+                          }
+                          if (!(reason instanceof PlaybackCancelledError))
+                            setNatureChangeError(
+                              reason instanceof Error
+                                ? reason.message
+                                : "The ambience could not be changed. Music continues.",
+                            );
+                        })
+                        .finally(() => setChangingNature(false));
+                      return;
+                    }
                     setVariant(null);
                     setNature(value);
                     router.setParams({ nature: value ?? "off" });
                   }}
                 />
               )}
+              {natureChangeError && (
+                <Text accessibilityLiveRegion="polite">
+                  {natureChangeError}
+                </Text>
+              )}
               {selection?.kind === "adaptive" &&
-                selection.program.plan.natureMix && (
+                selection.program.plan.natureMix &&
+                nature !== null && (
                   <SessionNatureControl
                     family={selection.program.plan.natureMix.selectedFamily}
                     familyDisabled
@@ -350,6 +444,12 @@ function Player({
                     volumeDisabled={!matching || busy}
                   />
                 )}
+            </>
+          ) : null
+        }
+        secondaryOptions={
+          work ? (
+            <>
               <Pressable
                 accessibilityRole="button"
                 accessibilityState={{ expanded: timerOpen }}

@@ -17,6 +17,12 @@ describe("QA catalog and direct transition programs", () => {
     expect(
       QA_CATALOG.filter(({ readiness }) => readiness === "rejected"),
     ).toHaveLength(1);
+    for (const id of ["moon-drone", "deep-river"]) {
+      expect(QA_CATALOG.find(({ work }) => work.id === id)).toMatchObject({
+        playable: true,
+        readiness: "single-only",
+      });
+    }
     expect(QA_CATALOG.find(({ work }) => work.id === "soft-air")).toMatchObject(
       {
         playable: false,

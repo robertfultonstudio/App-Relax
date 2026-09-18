@@ -92,6 +92,24 @@ describe("unified last listening action", () => {
     },
   );
 
+  it.each(["moon-drone", "deep-river", "soft-air"])(
+    "ignores a persisted TEST ONLY selection %s without preparing audio",
+    async (workId) => {
+      mockLoadLastListening.mockResolvedValue({
+        kind: "single",
+        workId,
+        outcome: "sleep",
+        durationMinutes: 90,
+      });
+      const screen = await render(<LastListeningAction />);
+      await waitFor(() => expect(mockLoadLastListening).toHaveBeenCalled());
+      expect(
+        screen.queryByRole("button", { name: "Play your last session" }),
+      ).toBeNull();
+      expect(mockAudio.controller.prepareSelection).not.toHaveBeenCalled();
+    },
+  );
+
   it("replays the last autonomous sound with Massage 90 preserved, navigating only after successful Start", async () => {
     mockLoadLastListening.mockResolvedValue({
       kind: "single",

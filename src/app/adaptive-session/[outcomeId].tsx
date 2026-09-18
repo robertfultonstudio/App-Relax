@@ -84,15 +84,23 @@ export default function AdaptiveSessionPlayerScreen({
     active.request.outcome === outcome &&
     active.request.durationMinutes === duration &&
     active.request.soundKind === sound &&
-    active.request.natureFamily === family &&
+    (active.request.natureFamily === family ||
+      (snapshot.status === "playing" &&
+        snapshot.sessionPlanId === active.program.plan.id)) &&
     (sound !== "music" ||
-      Boolean(active.program.plan.natureMix) ===
-        (params.nature !== "off" && params.nature !== undefined))
+      Boolean(
+        active.program.plan.natureMix &&
+        active.program.plan.natureMix.enabled !== false,
+      ) === (params.nature !== "off" && params.nature !== undefined))
       ? active
       : null;
   const [recent, setRecent] = useState<string[] | null>(null);
   const [nonce] = useState(() => Date.now());
   const [error, setError] = useState<string | null>(null);
+  const [changingNature, setChangingNature] = useState(false);
+  const [natureChangeError, setNatureChangeError] = useState<string | null>(
+    null,
+  );
   const [reviewSelection, setReviewSelection] =
     useState<ConsumerSelection | null>(null);
   useEffect(() => {
@@ -308,14 +316,72 @@ export default function AdaptiveSessionPlayerScreen({
           <>
             {reviewProgramFactory && sound === "music" && (
               <NatureAmbienceChoice
-                value={program?.plan.natureMix?.selectedFamily ?? null}
+                value={
+                  program?.plan.natureMix?.enabled === false
+                    ? null
+                    : (program?.plan.natureMix?.selectedFamily ?? null)
+                }
+                changing={changingNature}
+                onCancel={() => controller.cancelNatureFamilyChange()}
                 disabled={
                   matching &&
                   ["playing", "paused", "fadingOut", "preparing"].includes(
                     snapshot.status,
+                  ) &&
+                  !(
+                    snapshot.status === "playing" &&
+                    controller.canChangeNatureFamily?.()
                   )
                 }
                 onChange={(next) => {
+                  if (
+                    matching &&
+                    snapshot.status === "playing" &&
+                    program?.plan.natureMix
+                  ) {
+                    setChangingNature(true);
+                    setNatureChangeError(null);
+                    void controller
+                      .changeNatureFamily(next)
+                      .then((updated) => {
+                        if (selection?.kind === "adaptive")
+                          setReviewSelection({
+                            ...selection,
+                            program: updated,
+                            request: {
+                              ...selection.request,
+                              natureFamily:
+                                next ?? updated.plan.natureMix!.selectedFamily,
+                              includeNatureBed: next !== null,
+                            },
+                          });
+                        router.setParams({ nature: next ?? "off" });
+                      })
+                      .catch((reason) => {
+                        const actual = controller.getConsumerSelection();
+                        if (
+                          actual?.kind === "adaptive" &&
+                          actual.program.plan.id === program.plan.id
+                        ) {
+                          setReviewSelection(actual);
+                          router.setParams({
+                            nature:
+                              actual.program.plan.natureMix?.enabled === false
+                                ? "off"
+                                : (actual.program.plan.natureMix
+                                    ?.selectedFamily ?? "off"),
+                          });
+                        }
+                        if (!(reason instanceof PlaybackCancelledError))
+                          setNatureChangeError(
+                            reason instanceof Error
+                              ? reason.message
+                              : "The ambience could not be changed. Music continues.",
+                          );
+                      })
+                      .finally(() => setChangingNature(false));
+                    return;
+                  }
                   setReviewSelection(null);
                   router.replace(
                     `/adaptive-session/${outcome}?duration=${duration}&sound=music&nature=${next ?? "off"}` as Href,
@@ -323,7 +389,11 @@ export default function AdaptiveSessionPlayerScreen({
                 }}
               />
             )}
-            {program?.plan.natureMix ? (
+            {natureChangeError && (
+              <Text accessibilityLiveRegion="polite">{natureChangeError}</Text>
+            )}
+            {program?.plan.natureMix &&
+            program.plan.natureMix.enabled !== false ? (
               <SessionNatureControl
                 family={program.plan.natureMix.selectedFamily}
                 familyDisabled

@@ -3,7 +3,11 @@ import { type Href, useFocusEffect, useRouter } from "expo-router";
 import { Pressable, Text, View } from "react-native";
 import { useAudioSession } from "@/audio/AudioProvider";
 import { usePreparedSelection } from "@/audio/usePreparedSelection";
-import { getConsumerWork, isPlayableWork } from "@/content/consumerCatalog";
+import {
+  getConsumerWork,
+  isPlayableWork,
+  isVisibleConsumerWork,
+} from "@/content/consumerCatalog";
 import { createSingleTrackProgram } from "@/domain/audio/consumerTypes";
 import {
   consumerSelectionUrl,
@@ -28,7 +32,9 @@ import type {
 
 export function LastListeningAction({
   reviewProgramFactory,
+  compact = false,
 }: {
+  compact?: boolean;
   reviewProgramFactory?: (
     input: CreateAdaptiveSessionInput,
   ) => AdaptiveSessionProgram;
@@ -82,7 +88,7 @@ export function LastListeningAction({
     const last = saved.listening;
     if (last.kind === "single") {
       const work = getConsumerWork(last.workId);
-      return work && isPlayableWork(work)
+      return work && isVisibleConsumerWork(work) && isPlayableWork(work)
         ? {
             kind: "single",
             program: createSingleTrackProgram(work, last.outcome),
@@ -119,7 +125,7 @@ export function LastListeningAction({
   return (
     <View
       style={{
-        borderTopWidth: 1,
+        borderTopWidth: compact ? 0 : 1,
         borderColor: editorial.lineStrong,
         marginVertical: 10,
       }}
@@ -153,8 +159,8 @@ export function LastListeningAction({
       >
         <Text
           style={{
-            fontFamily: fonts.serif,
-            fontSize: 23,
+            fontFamily: compact ? fonts.sans : fonts.serif,
+            fontSize: compact ? 16 : 23,
             color: editorial.ink,
           }}
         >

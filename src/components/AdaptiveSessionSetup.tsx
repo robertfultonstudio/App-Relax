@@ -443,7 +443,7 @@ export function AdaptiveSessionSetup({
         selection?.kind === "adaptive" && (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={`Open ${duration}-minute playlist and development player`}
+            accessibilityLabel={`Open ${duration}-minute session and development player`}
             disabled={busy}
             accessibilityState={{ disabled: busy }}
             onPress={() =>
@@ -453,7 +453,7 @@ export function AdaptiveSessionSetup({
             testID="open-complete-practice-review"
           >
             <Text style={styles.disclosureTitle}>
-              Playlist & development player →
+              Session & development player →
             </Text>
             <Text style={styles.body}>
               {duration} min ·{" "}

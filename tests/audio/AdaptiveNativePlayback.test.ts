@@ -1,6 +1,9 @@
 import type { AudioContext, GainNode } from "react-native-audio-api";
 import { AdaptiveNativePlayback } from "@/audio/reactNativeAudioApi/AdaptiveNativePlayback";
-import { createAdaptiveSessionProgram } from "@/domain/sessions/continuumPlanner";
+import {
+  createAdaptiveSessionProgram,
+  setCoordinatedNatureChoice,
+} from "@/domain/sessions/continuumPlanner";
 import type { AdaptiveSessionProgram } from "@/domain/sessions/types";
 import type { VerifiedNativeAudioFile } from "@/audio/reactNativeAudioApi/NativeAudioSourceResolver";
 import { createWholeFileReviewProgram } from "@/domain/sessions/createWholeFileReviewProgram";
@@ -169,6 +172,81 @@ describe("native adaptive software contract", () => {
   beforeEach(() => jest.useFakeTimers());
   afterEach(() => jest.useRealTimers());
 
+  it("enables and disables nature independently while the native music source keeps running", async () => {
+    const off = createListeningNatureProgram(
+      getConsumerWork("astral-thread")!,
+      "focus",
+      30,
+      null,
+    );
+    const h = harness(off);
+    await h.playback.load(off);
+    expect(h.resolver.acquire).toHaveBeenCalledTimes(1);
+    await h.playback.start(0.7);
+    const music = h.sources[0].source;
+    const startCalls = music.start.mock.calls.length;
+    const musicAutomation =
+      h.gains[2].gain.linearRampToValueAtTime.mock.calls.length;
+    const rain = setCoordinatedNatureChoice(off, "rain");
+    const enable = h.playback.replaceNatureFamily(
+      rain,
+      new AbortController().signal,
+    );
+    await jest.advanceTimersByTimeAsync(300);
+    await enable;
+    expect(music.start).toHaveBeenCalledTimes(startCalls);
+    expect(music.disconnect).not.toHaveBeenCalled();
+    expect(h.gains[2].gain.linearRampToValueAtTime).toHaveBeenCalledTimes(
+      musicAutomation,
+    );
+    const disable = h.playback.replaceNatureFamily(
+      setCoordinatedNatureChoice(rain, null),
+      new AbortController().signal,
+    );
+    await jest.advanceTimersByTimeAsync(300);
+    await disable;
+    expect(
+      h.sources.filter((s) => s.source.disconnect.mock.calls.length === 0),
+    ).toHaveLength(1);
+    expect(music.disconnect).not.toHaveBeenCalled();
+    await h.playback.stop();
+  });
+
+  it("joins an incoming natural recording during its overlap without restarting native music", async () => {
+    const off = createListeningNatureProgram(
+      getConsumerWork("astral-thread")!,
+      "focus",
+      30,
+      null,
+    );
+    const rain = setCoordinatedNatureChoice(off, "rain");
+    const join = rain.plan.transitions.find((t) => t.lane === "nature")!;
+    const h = harness(off);
+    await h.playback.load(off);
+    await h.playback.start(0.7, join.startSeconds + 1);
+    const music = h.sources[0].source;
+    const starts = music.start.mock.calls.length;
+    const enable = h.playback.replaceNatureFamily(
+      rain,
+      new AbortController().signal,
+    );
+    await jest.advanceTimersByTimeAsync(300);
+    await enable;
+    await jest.advanceTimersByTimeAsync(500);
+    expect(music.start).toHaveBeenCalledTimes(starts);
+    expect(music.disconnect).not.toHaveBeenCalled();
+    expect(h.handlers.error).not.toHaveBeenCalled();
+    expect(
+      h.sources.filter((s) => !s.source.disconnect.mock.calls.length),
+    ).toHaveLength(3); // Music, incoming ambience, one future preload.
+    expect(
+      (
+        h.playback as unknown as { skippedNatureIndexes: Set<number> }
+      ).skippedNatureIndexes.has(join.outgoingSegmentIndex),
+    ).toBe(true);
+    await h.playback.stop();
+  });
+
   it("keeps adjacent native gain curves disjoint on non-round sample clocks", async () => {
     const program = createNativePreviewProgram({
       outcome: "yoga",
@@ -277,7 +355,13 @@ describe("native adaptive software contract", () => {
     const h = harness(program);
     await expect(h.playback.load(program)).rejects.toThrow("approved file");
     expect(
-      program.works.every((w) => w.listeningStatus.startsWith("PROVISIONAL")),
+      program.works
+        .filter((w) =>
+          program.plan.segments.some(
+            (s) => s.lane !== "nature" && s.workId === w.id,
+          ),
+        )
+        .every((w) => w.listeningStatus.startsWith("PROVISIONAL")),
     ).toBe(true);
   });
   it("plays standalone music plus changing rain or sea without a two-recording-only restriction", async () => {

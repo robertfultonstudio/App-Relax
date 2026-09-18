@@ -1,0 +1,75 @@
+name: Prepare release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Stable SemVer target, for example 1.1.0
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: prepare-release
+  cancel-in-progress: false
+
+env:
+  CI: "1"
+  NODE_VERSION: 22.23.1
+  TARGET_VERSION: ${{ inputs.version }}
+
+jobs:
+  prepare-release:
+    name: Version and changelog PR
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Require main as the source
+        run: test "$GITHUB_REF_NAME" = main
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - run: corepack enable && corepack prepare pnpm@11.16.0 --activate
+      - run: pnpm install --frozen-lockfile
+      - name: Prepare and validate release metadata
+        run: |
+          pnpm release:prepare "$TARGET_VERSION"
+          pnpm release:check
+          pnpm test:tooling
+          git diff --check
+      - name: Create reviewed release pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          branch="release/v${TARGET_VERSION}"
+          git switch -c "$branch"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json app.json CHANGELOG.md
+          git commit -m "chore(release): v${TARGET_VERSION}"
+          git push origin "$branch"
+          cat > /tmp/app-relax-release-pr.md <<EOF
+          ## Why
+
+          Prepare a traceable App Relax release from the reviewed Unreleased changelog.
+
+          ## What changed
+
+          Prepares App Relax v${TARGET_VERSION}, increments both native build numbers, and promotes the reviewed Unreleased changelog entries.
+
+          ## Validation
+
+          Release metadata, tooling tests, and diff check.
+
+          ## Risk and rollback
+
+          Metadata-only change. Close the PR or revert its squash commit before creating the annotated tag.
+          EOF
+          gh pr create --base main --head "$branch" --title "chore(release): v${TARGET_VERSION}" --body-file /tmp/app-relax-release-pr.md

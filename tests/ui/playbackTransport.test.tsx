@@ -29,20 +29,29 @@ describe("immediately recognisable listening controls", () => {
     ]);
     for (const button of buttons) {
       const style = StyleSheet.flatten(button.props.style);
-      expect(style.minHeight).toBe(52);
+      expect(style.minHeight).toBe(56);
       expect(style.minHeight).toBeGreaterThanOrEqual(44);
-      expect(style.flexDirection).toBe("row");
-      expect(style.borderWidth).toBe(1);
+      expect(style.flexDirection).toBe("column");
+      expect(style.borderWidth).toBe(0);
       // Text scaling may grow the row: do not clip it to the default height.
       expect(style.height).toBeUndefined();
       expect(style.maxHeight).toBeUndefined();
     }
     expect(StyleSheet.flatten(buttons[0].props.style).backgroundColor).toBe(
-      editorial.paperLight,
+      "transparent",
     );
     expect(StyleSheet.flatten(buttons[1].props.style).backgroundColor).toBe(
-      editorial.ink,
+      "transparent",
     );
+    const disc = screen.getByTestId("transport-symbol-pause", {
+      includeHiddenElements: true,
+    }).parent;
+    expect(StyleSheet.flatten(disc?.props.style)).toMatchObject({
+      width: 64,
+      height: 64,
+      borderRadius: 32,
+      backgroundColor: editorial.lavender,
+    });
     expect(
       screen.getByTestId("transport-symbol-stop", {
         includeHiddenElements: true,

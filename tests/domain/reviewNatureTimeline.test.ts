@@ -1,11 +1,18 @@
 import { createListeningNatureProgram } from "@/pwa-review/createListeningNatureProgram";
-import { createWholeFileReviewProgram } from "@/pwa-review/createWholeFileReviewProgram";
-import { reviewMarkers } from "@/pwa-review/reviewTimeline";
+import { createWholeFileReviewProgram } from "@/domain/sessions/createWholeFileReviewProgram";
+import { reviewMarkers, reviewTime } from "@/pwa-review/reviewTimeline";
 import { getConsumerWork } from "@/content/consumerCatalog";
 import { soundFamilyFor } from "@/content/soundFamilies";
 import { auditPlanAccelerated } from "@/domain/sessions/workbench";
 import { consumerSelectionUrl } from "@/domain/audio/consumerSelection";
 import { parseSavedSessionRequest } from "@/state/adaptiveSessionPersistence";
+
+it("formats deterministic precise review points without floating-point truncation", () => {
+  expect(reviewTime(10.29)).toBe("00:10.29");
+  expect(reviewTime(59.999)).toBe("01:00.00");
+  expect(reviewTime(404.25)).toBe("06:44.25");
+  expect(reviewTime(Number.NaN)).toBe("00:00.00");
+});
 
 it.each(["rain", "sea"] as const)(
   "keeps one music recording, adds only %s, and maps every real loop",

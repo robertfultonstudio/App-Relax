@@ -996,6 +996,189 @@ export function attachCoordinatedNatureBed(
   };
 }
 
+/** Replace only nature recordings. A live family choice is not a new listening
+ * run: identity, seed, music, timings and the consumer deadline stay intact. */
+export function setCoordinatedNatureChoice(
+  program: AdaptiveSessionProgram,
+  family: NatureAmbienceFamily | null,
+): AdaptiveSessionProgram {
+  const mix = program.plan.natureMix;
+  if (!mix) throw new Error("This session has no independent ambience lane.");
+  const enabled = family !== null;
+  if (
+    (mix.enabled !== false) === enabled &&
+    (!enabled || mix.selectedFamily === family)
+  )
+    return program;
+  const next = family ? replaceCoordinatedNatureBed(program, family) : program;
+  return {
+    ...next,
+    plan: { ...next.plan, natureMix: { ...next.plan.natureMix!, enabled } },
+  };
+}
+
+export function replaceCoordinatedNatureBed(
+  program: AdaptiveSessionProgram,
+  family: NatureAmbienceFamily,
+): AdaptiveSessionProgram {
+  const mix = program.plan.natureMix;
+  if (!mix || !mix.availableFamilies.includes(family))
+    throw new Error("This session has no supported natural ambience family.");
+  if (mix.selectedFamily === family) return program;
+  const nature = program.plan.segments.filter((s) => s.lane === "nature");
+  const available = SESSION_WORK_PROFILES.filter(
+    (profile) =>
+      profile.materialKind === "nature" && profile.aestheticFamily === family,
+  ).length;
+  if (nature.length > available) {
+    const primary = program.plan.segments.filter(
+      (segment) => segment.lane !== "nature",
+    );
+    const primaryTransitions = program.plan.transitions.filter(
+      (transition) => transition.lane !== "nature",
+    );
+    const natureTransitions = program.plan.transitions.filter(
+      (transition) => transition.lane === "nature",
+    );
+    const guard = primaryTransitions.length
+      ? Math.max(
+          0,
+          Math.min(
+            ...natureTransitions.flatMap((natureTransition) =>
+              primaryTransitions.map((musicTransition) =>
+                Math.max(
+                  natureTransition.startSeconds - musicTransition.endSeconds,
+                  musicTransition.startSeconds - natureTransition.endSeconds,
+                ),
+              ),
+            ),
+          ),
+        )
+      : 0;
+    const rebuilt = attachCoordinatedNatureBed(
+      {
+        ...program,
+        works: program.works.filter((work) =>
+          primary.some((segment) => segment.workId === work.id),
+        ),
+        plan: {
+          ...program.plan,
+          natureMix: undefined,
+          segments: primary,
+          transitions: primaryTransitions,
+        },
+      },
+      program.plan.seed,
+      family,
+      natureTransitions[0]?.durationSeconds,
+      guard,
+    );
+    // A smaller target family needs a new nature-only schedule, never repeats.
+    return {
+      ...rebuilt,
+      plan: {
+        ...rebuilt.plan,
+        id: program.plan.id,
+        segments: [
+          ...primary,
+          ...rebuilt.plan.segments.filter(
+            (segment) => segment.lane === "nature",
+          ),
+        ],
+        transitions: [
+          ...primaryTransitions,
+          ...rebuilt.plan.transitions.filter(
+            (transition) => transition.lane === "nature",
+          ),
+        ],
+        natureMix: {
+          ...mix,
+          selectedFamily: family,
+          natureWorkIds: rebuilt.plan.natureMix!.natureWorkIds,
+        },
+      },
+    };
+  }
+  const profiles: SessionWorkProfile[] = [];
+  for (let index = 0; index < nature.length; index++)
+    profiles.push(
+      selectNatureProfile(
+        family,
+        `${program.plan.seed}|nature|${index}|${family}`,
+        profiles.map(({ work }) => work.id),
+      ),
+    );
+  const byIndex = new Map(
+    nature.map((segment, index) => [segment.index, profiles[index]]),
+  );
+  const peaks = new Map(
+    program.plan.transitions
+      .filter((t) => t.lane === "nature")
+      .map((transition) => {
+        const peak = estimateOverlapPeakDbtp(
+          byIndex.get(transition.outgoingSegmentIndex)!.work,
+          byIndex.get(transition.incomingSegmentIndex)!.work,
+          transition.curve,
+        );
+        if (peak === null)
+          throw new Error("Natural ambience peak metrics are unavailable.");
+        return [transition.index, peak];
+      }),
+  );
+  const trim = Number(
+    Math.min(0, ...[...peaks.values()].map((peak) => -1.1 - peak)).toFixed(3),
+  );
+  const primaryIds = new Set(
+    program.plan.segments
+      .filter((s) => s.lane !== "nature")
+      .map((s) => s.workId),
+  );
+  return {
+    ...program,
+    works: [
+      ...program.works.filter((work) => primaryIds.has(work.id)),
+      ...profiles.map(({ work }) => work),
+    ],
+    plan: {
+      ...program.plan,
+      segments: program.plan.segments.map((segment) => {
+        const profile = byIndex.get(segment.index);
+        if (!profile) return segment;
+        return createNatureSegment(
+          profile,
+          segment.index,
+          segment.phase,
+          segment.startFrame,
+          segment.endFrame,
+          trim,
+          segment.finalEnvelopeSeconds,
+        );
+      }),
+      transitions: program.plan.transitions.map((transition) => {
+        const peak = peaks.get(transition.index);
+        return peak === undefined
+          ? transition
+          : {
+              ...transition,
+              untrimmedPeakDbtp: peak,
+              transitionTrimDb: trim,
+              clippingRiskDbtp: Number((peak + trim).toFixed(3)),
+              ruleAudit: [
+                "PROVISIONAL · live user-selected natural ambience",
+                `PASS · ${family} family remains user-selected`,
+                "PASS · unchanged music and transition timing",
+              ],
+            };
+      }),
+      natureMix: {
+        ...mix,
+        selectedFamily: family,
+        natureWorkIds: profiles.map(({ work }) => work.id),
+      },
+    },
+  };
+}
+
 export function createAdaptiveSessionProgram(
   input: CreateAdaptiveSessionInput,
 ): AdaptiveSessionProgram {
