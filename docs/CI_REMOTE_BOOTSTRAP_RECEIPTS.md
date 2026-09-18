@@ -4,13 +4,13 @@ Date: 18 September 2026
 
 ## Main seed
 
-- Repository: `robertfultonstudio/App-Relax`
-- Seed commit: `0d0fa663c25b5ef2f805ad3e1cbba0d4757dd0da`
-- Candidate: `MAIN-BLOCKER-FIX-C2-20260918-02`
-- Candidate manifest SHA-256: `c619d0bef7d7750bfc102e6e4c997cfdeb22ddbf289fb9c0b029742b74b81df6`
-- Candidate source tree SHA-256: `329cf89d520d27a6f486265f59132f30b20aa7e8b2805733fceea79736b78347`
-- Candidate delta SHA-256: `72fca854dbd283f43d864b062e1ae7a66bec12b2b4eca32ace23e2c63f995013`
-- Verification result: C4, A-T, and A-P passed on the same frozen candidate.
+- [F] Repository: `robertfultonstudio/App-Relax`
+- [F] Seed commit: `0d0fa663c25b5ef2f805ad3e1cbba0d4757dd0da`
+- [F] Candidate: `MAIN-BLOCKER-FIX-C2-20260918-02`
+- [F] Candidate manifest SHA-256: `c619d0bef7d7750bfc102e6e4c997cfdeb22ddbf289fb9c0b029742b74b81df6`
+- [F] Candidate source tree SHA-256: `329cf89d520d27a6f486265f59132f30b20aa7e8b2805733fceea79736b78347`
+- [F] Candidate delta SHA-256: `72fca854dbd283f43d864b062e1ae7a66bec12b2b4eca32ace23e2c63f995013`
+- [F] Verification result: C4, A-T, and A-P passed on the same frozen candidate.
 
 The remote repository had no `HEAD` or `main` reference before this seed. The
 verified candidate was therefore pushed as the initial `main` commit so that a
