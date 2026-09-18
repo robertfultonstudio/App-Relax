@@ -213,7 +213,10 @@ export function ImmediateSessionSetup({
         {starting ? (
           <ActivityIndicator color={editorial.paperLight} />
         ) : (
-          <TransportSymbol kind="play" light />
+          <>
+            <TransportSymbol kind="play" light />
+            <Text style={styles.primaryText}>{policy.startLabel}</Text>
+          </>
         )}
       </Pressable>
       <Text accessibilityLiveRegion="polite" style={styles.status}>
@@ -281,17 +284,18 @@ const styles = StyleSheet.create({
   },
   primary: {
     backgroundColor: editorial.ink,
-    height: 68,
-    width: 68,
-    borderRadius: 34,
+    minHeight: 56,
+    width: "100%",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 24,
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 18,
   },
   primaryText: {
     color: editorial.paperLight,
     fontFamily: fonts.sansSemiBold,
-    fontSize: 19,
+    fontSize: 16,
   },
   status: {
     color: editorial.inkMuted,

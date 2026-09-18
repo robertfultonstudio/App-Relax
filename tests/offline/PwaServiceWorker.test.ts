@@ -13,7 +13,7 @@ function setup() {
     },
     APP_RELAX_PRECACHE: {
       revision: "a".repeat(64),
-      urls: ["/", "/offline.html", "/listen/a.html", "/app.js", "/font.woff2"],
+      urls: ["/", "/offline", "/listen/a", "/app.js", "/font.woff2"],
     },
     skipWaiting: jest.fn(),
     clients: { claim: jest.fn() },
@@ -85,7 +85,7 @@ describe("PWA offline shell and non-interrupting updates", () => {
         headers: new Map(),
       },
     });
-    expect(response).toBe(t.entries.get("/listen/a.html"));
+    expect(response).toBe(t.entries.get("/listen/a"));
   });
   it("never routes audio and Range requests into shell cache", async () => {
     const t = setup();

@@ -4,11 +4,9 @@ import {
   Animated,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
-  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -21,7 +19,6 @@ import { useReducedMotionPreference } from "@/design/useReducedMotionPreference"
  * moves; text stays crisp. Motion is finite, cancellable and optional. */
 export default function WelcomeScreen() {
   const router = useRouter();
-  const { height } = useWindowDimensions();
   const reduceMotion = useReducedMotionPreference();
   const [arrival] = useState(() => new Animated.Value(1));
   const [touch] = useState(() => new Animated.Value(0));
@@ -96,12 +93,7 @@ export default function WelcomeScreen() {
         style={StyleSheet.absoluteFill}
       />
       <SafeAreaView style={{ flex: 1 }}>
-        <ScrollView
-          contentContainerStyle={[
-            styles.content,
-            { minHeight: Math.max(600, height - 56) },
-          ]}
-        >
+        <View style={styles.content}>
           <View style={styles.masthead}>
             <Text style={styles.brand}>App Relax</Text>
             <Text style={styles.aside}>A little space for you</Text>
@@ -137,7 +129,7 @@ export default function WelcomeScreen() {
               Press Play. Leave the phone behind.
             </Text>
           </View>
-        </ScrollView>
+        </View>
       </SafeAreaView>
     </View>
   );
@@ -152,10 +144,10 @@ const styles = StyleSheet.create({
     height: "100%",
   },
   content: {
-    flexGrow: 1,
+    flex: 1,
     paddingHorizontal: 28,
     paddingTop: 26,
-    paddingBottom: 32,
+    paddingBottom: 24,
     width: "100%",
     maxWidth: 720,
     alignSelf: "center",
@@ -167,20 +159,21 @@ const styles = StyleSheet.create({
   invitation: { gap: 20 },
   title: {
     fontFamily: fonts.serif,
-    fontSize: 46,
-    lineHeight: 53,
-    letterSpacing: -1.4,
+    fontSize: 34,
+    lineHeight: 40,
+    letterSpacing: -0.9,
     color: editorial.ink,
   },
   description: {
     maxWidth: 280,
     fontFamily: fonts.sans,
-    fontSize: 17,
-    lineHeight: 25,
+    fontSize: 16,
+    lineHeight: 24,
     color: editorial.inkMuted,
   },
   enter: {
-    minHeight: 60,
+    minHeight: 56,
+    width: "100%",
     paddingHorizontal: 22,
     paddingVertical: 16,
     backgroundColor: "#D9D6E1",

@@ -1,10 +1,6 @@
 const button = document.getElementById("update");
 const status = document.getElementById("status");
 const online = document.getElementById("online");
-const privateReviewHost =
-  window.location.hostname ===
-  "app-relax-private-review.robfulton.chatgpt.site";
-
 async function openOnlineReview() {
   if ("serviceWorker" in navigator) {
     const registration = await navigator.serviceWorker.getRegistration("/");
@@ -52,10 +48,6 @@ button.addEventListener("click", async () => {
   button.disabled = true;
   status.textContent = "Preparing the updated app…";
   try {
-    if (privateReviewHost) {
-      await openOnlineReview();
-      return;
-    }
     if ("serviceWorker" in navigator) {
       const registration = await navigator.serviceWorker.register("/sw.js", {
         scope: "/",

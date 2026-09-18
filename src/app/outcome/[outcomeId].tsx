@@ -31,9 +31,11 @@ type ReviewFactory = (
 export default function OutcomeSessionScreen({
   reviewProgramFactory = platformReviewProgramFactory,
   createNatureProgram = platformNatureProgramFactory,
+  showDevelopmentLink = true,
 }: {
   reviewProgramFactory?: ReviewFactory;
   createNatureProgram?: ListeningNatureFactory;
+  showDevelopmentLink?: boolean;
 } = {}) {
   const { outcomeId, practice } = useLocalSearchParams<{
     outcomeId: string;
@@ -48,6 +50,7 @@ export default function OutcomeSessionScreen({
       completePractice={completePractice}
       reviewProgramFactory={reviewProgramFactory}
       createNatureProgram={createNatureProgram}
+      showDevelopmentLink={showDevelopmentLink}
     />
   ) : (
     <EditorialScreen>
@@ -63,11 +66,13 @@ function OutcomeContent({
   completePractice,
   reviewProgramFactory,
   createNatureProgram,
+  showDevelopmentLink,
 }: {
   outcomeId: ConsumerOutcomeId;
   completePractice: boolean;
   reviewProgramFactory?: ReviewFactory;
   createNatureProgram?: ListeningNatureFactory;
+  showDevelopmentLink: boolean;
 }) {
   const router = useRouter();
   const outcome = CONSUMER_OUTCOMES.find((item) => item.id === outcomeId)!;
@@ -81,7 +86,12 @@ function OutcomeContent({
         source={OUTCOME_ARTWORK[outcome.id]}
         style={styles.artwork}
       />
-      <Text accessibilityRole="header" style={styles.title}>
+      <Text
+        accessibilityRole="header"
+        nativeID="consumer-screen-title"
+        style={styles.title}
+        testID="consumer-screen-title"
+      >
         {completePractice ? "Your complete Hatha practice" : outcome.cta}
       </Text>
       {completePractice ? (
@@ -95,6 +105,7 @@ function OutcomeContent({
             onDurationChange={setDuration}
             reviewProgramFactory={reviewProgramFactory}
             completePractice
+            showDevelopmentLink={showDevelopmentLink}
           />
         </>
       ) : (
@@ -126,20 +137,20 @@ function OutcomeContent({
   );
 }
 const styles = StyleSheet.create({
-  artwork: { height: 154, width: "100%" },
+  artwork: { height: 216, width: "100%" },
   title: {
     color: editorial.ink,
     fontFamily: fonts.serif,
-    fontSize: 34,
-    lineHeight: 39,
-    marginTop: 22,
-    marginBottom: 12,
+    fontSize: 28,
+    lineHeight: 34,
+    marginTop: 14,
+    marginBottom: 8,
   },
   note: {
     color: editorial.inkMuted,
     fontFamily: fonts.sans,
-    fontSize: 15,
-    lineHeight: 23,
+    fontSize: 16,
+    lineHeight: 24,
   },
   secondary: {
     minHeight: 52,

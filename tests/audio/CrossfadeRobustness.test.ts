@@ -21,61 +21,89 @@ describe("track-independent crossfade scheduler", () => {
     jest.useRealTimers();
   });
 
-  it("runs the actual 90-minute Hatha plan after a live family change through every source boundary and one end", async () => {
-    const original = createWholeFileReviewProgram({
-      outcome: "yoga",
-      durationMinutes: 90,
-      mode: "sound-only",
-      soundKind: "music",
-      seed: "D115-full-session",
-      includeNatureBed: true,
-      natureFamily: "rain",
-      allowProvisionalMetadata: true,
-    });
-    const next = replaceCoordinatedNatureBed(original, "sea");
-    await h.playback.load(original);
-    await h.playback.start(original, 0.8);
-    const change = h.playback.replaceNatureFamily(
-      next,
-      new AbortController().signal,
-    );
-    await jest.advanceTimersByTimeAsync(4001);
-    await change;
-    const checkpoints = [
-      ...new Set(
-        next.plan.segments.flatMap((s) => [s.startSeconds, s.endSeconds]),
-      ),
-    ]
-      .filter((seconds) => seconds > h.playback.positionSeconds())
-      .sort((a, b) => a - b);
-    for (const seconds of checkpoints) {
-      await jest.advanceTimersByTimeAsync(
-        Math.max(0, Math.ceil(seconds * 1000) - Date.now()),
+  it.each([60, 90] as const)(
+    "runs the actual %i-minute Hatha plan after a live family change through every source boundary and one end",
+    async (durationMinutes) => {
+      const original = createWholeFileReviewProgram({
+        outcome: "yoga",
+        durationMinutes,
+        mode: "sound-only",
+        soundKind: "music",
+        seed: `PWA-DUAL-VIEW-${durationMinutes}`,
+        includeNatureBed: true,
+        natureFamily: "rain",
+        allowProvisionalMetadata: true,
+      });
+      const next = replaceCoordinatedNatureBed(original, "sea");
+      expect(auditPlanAccelerated(next)).toMatchObject({
+        pass: true,
+        noGap: true,
+        maxConcurrentSources: 3,
+      });
+      expect(next.plan.totalDurationSeconds).toBe(durationMinutes * 60);
+      await h.playback.load(original);
+      await h.playback.start(original, 0.8);
+      const change = h.playback.replaceNatureFamily(
+        next,
+        new AbortController().signal,
       );
-      const actualSeconds = Date.now() / 1000;
-      const expected = next.plan.segments
-        .filter(
-          (s) =>
-            actualSeconds >= s.startSeconds && actualSeconds < s.endSeconds,
-        )
-        .map((s) => `fixture://${s.workId}`)
-        .sort();
-      expect(
-        h.media
-          .filter((m) => !m.paused)
-          .map((m) => m.src)
-          .sort(),
-      ).toEqual(expected);
-      expect(h.media.filter((m) => !m.paused).length).toBeLessThanOrEqual(3);
-      expect(h.handlers.error).not.toHaveBeenCalled();
-    }
-    expect(h.handlers.ended).toHaveBeenCalledTimes(1);
-    expect(jest.getTimerCount()).toBe(0);
-    await h.playback.dispose();
-    expect(h.releases.every((release) => release.mock.calls.length === 1)).toBe(
-      true,
-    );
-  });
+      await jest.advanceTimersByTimeAsync(4001);
+      await change;
+      const checkpoints = [
+        ...new Set(
+          next.plan.segments.flatMap((s) => [s.startSeconds, s.endSeconds]),
+        ),
+      ]
+        .filter((seconds) => seconds > h.playback.positionSeconds())
+        .sort((a, b) => a - b);
+      let previousClockMs = Date.now();
+      let maxActiveSources = 0;
+      for (const seconds of checkpoints) {
+        await jest.advanceTimersByTimeAsync(
+          Math.max(0, Math.ceil(seconds * 1000) - Date.now()),
+        );
+        const actualSeconds = Date.now() / 1000;
+        const expected = next.plan.segments
+          .filter(
+            (s) =>
+              actualSeconds >= s.startSeconds && actualSeconds < s.endSeconds,
+          )
+          .map((s) => `fixture://${s.workId}`)
+          .sort();
+        const activeSources = h.media.filter((m) => !m.paused);
+        expect(activeSources.map((m) => m.src).sort()).toEqual(expected);
+        maxActiveSources = Math.max(maxActiveSources, activeSources.length);
+        expect(activeSources.length).toBeLessThanOrEqual(3);
+        expect(Date.now()).toBeGreaterThanOrEqual(previousClockMs);
+        previousClockMs = Date.now();
+        expect(h.handlers.error).not.toHaveBeenCalled();
+      }
+      expect(maxActiveSources).toBe(3);
+      expect(h.handlers.ended).toHaveBeenCalledTimes(1);
+      expect(jest.getTimerCount()).toBe(0);
+      await h.playback.dispose();
+      const releasesOnce = h.releases.every(
+        (release) => release.mock.calls.length === 1,
+      );
+      expect(releasesOnce).toBe(true);
+      console.log(
+        "PWA_ACCELERATED_PROGRAM_RECEIPT",
+        JSON.stringify({
+          durationMinutes,
+          planId: next.plan.id,
+          totalDurationSeconds: next.plan.totalDurationSeconds,
+          segments: next.plan.segments.length,
+          transitions: next.plan.transitions.length,
+          checkpoints: checkpoints.length,
+          maxActiveSources,
+          endedCalls: h.handlers.ended.mock.calls.length,
+          pendingTimers: jest.getTimerCount(),
+          releasesOnce,
+          acceleratedAudit: auditPlanAccelerated(next),
+        }),
+      );
+    },
+  );
 
   it("clears a QA loop and seeks atomically, without rebuilding at the old position", async () => {
     const program = crossfadeProgram();

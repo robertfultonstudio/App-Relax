@@ -15,6 +15,10 @@ export function ReviewDock({
   onSeek,
   actions,
   status,
+  canPlay,
+  canStop,
+  onPlayPause,
+  onStop,
 }: {
   position: number;
   duration: number;
@@ -30,12 +34,16 @@ export function ReviewDock({
     run: () => void;
   }[];
   status: string;
+  canPlay: boolean;
+  canStop: boolean;
+  onPlayPause: () => void;
+  onStop: () => void;
 }) {
-  const [footerHeight, setFooterHeight] = useState(72);
+  const [footerHeight, setFooterHeight] = useState(58);
   useEffect(() => {
     if (typeof document === "undefined") return;
     const footer = document.querySelector(
-      '[data-testid="fixed-player-controls"]',
+      '[data-testid="pwa-bottom-navigation"]',
     );
     if (!footer) return;
     const measure = () =>
@@ -60,7 +68,7 @@ export function ReviewDock({
         zIndex: 40,
         background: editorial.paperLight,
         borderTop: `1px solid ${editorial.line}`,
-        padding: "8px 18px 0",
+        padding: "8px 12px 6px",
         boxShadow: "0 -4px 16px rgba(26,39,35,0.06)",
       }}
     >
@@ -86,7 +94,7 @@ export function ReviewDock({
         positionLabel="Position"
       />
       <View style={{ flexDirection: "row", gap: 4 }}>
-        {actions.map((action) => (
+        {actions.slice(0, 1).map((action) => (
           <Pressable
             key={action.label}
             accessibilityRole="button"
@@ -119,6 +127,41 @@ export function ReviewDock({
             </Text>
           </Pressable>
         ))}
+        <DockButton
+          label={playing ? "Pause review" : "Play review"}
+          short={playing ? "Pause" : "Play"}
+          disabled={!canPlay}
+          onPress={onPlayPause}
+          dominant
+        />
+        <DockButton
+          label="Stop review"
+          short="Stop"
+          disabled={!canStop}
+          onPress={onStop}
+        />
+        {actions.slice(1, 2).map((action) => (
+          <DockButton
+            key={action.label}
+            label={action.label}
+            short={action.short}
+            disabled={!enabled || action.disabled}
+            active={action.active}
+            onPress={action.run}
+          />
+        ))}
+      </View>
+      <View style={{ flexDirection: "row", gap: 4 }}>
+        {actions.slice(2).map((action) => (
+          <DockButton
+            key={action.label}
+            label={action.label}
+            short={action.short}
+            disabled={!enabled || action.disabled}
+            active={action.active}
+            onPress={action.run}
+          />
+        ))}
       </View>
     </div>
   );
@@ -127,4 +170,50 @@ export function ReviewDock({
   return typeof document !== "undefined" && document.body?.nodeType === 1
     ? createPortal(dock, document.body)
     : dock;
+}
+
+function DockButton({
+  label,
+  short,
+  disabled = false,
+  active = false,
+  dominant = false,
+  onPress,
+}: {
+  label: string;
+  short: string;
+  disabled?: boolean;
+  active?: boolean;
+  dominant?: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled, selected: active }}
+      disabled={disabled}
+      onPress={onPress}
+      style={{
+        flex: dominant ? 1.25 : 1,
+        minHeight: 44,
+        justifyContent: "center",
+        alignItems: "center",
+        borderTopWidth: active || dominant ? 2 : 0,
+        borderColor: active ? editorial.jade : editorial.lavender,
+        opacity: disabled ? 0.48 : 1,
+      }}
+    >
+      <Text
+        style={{
+          fontFamily: fonts.sansSemiBold,
+          fontSize: 13,
+          color: editorial.ink,
+          textAlign: "center",
+        }}
+      >
+        {short}
+      </Text>
+    </Pressable>
+  );
 }

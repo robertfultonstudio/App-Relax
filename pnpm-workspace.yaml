@@ -16,23 +16,23 @@ peerDependencyRules:
   allowedVersions:
     typescript: 6.0.3
 minimumReleaseAgeExclude:
-  - "@expo/cli@57.0.14 || 57.0.15 || 57.0.21"
+  - "@expo/cli@57.0.14 || 57.0.15 || 57.0.21 || 57.0.26"
   - "@expo/fingerprint@0.20.7 || 0.20.12"
   - "@expo/inline-modules@0.1.5"
   - "@expo/local-build-cache-provider@57.0.6"
   - "@expo/metro-config@57.0.8"
   - "@expo/prebuild-config@57.0.11 || 57.0.12"
-  - expo-asset@57.0.11 || 57.0.16
-  - expo-constants@57.0.11 || 57.0.17
+  - expo-asset@57.0.11 || 57.0.16 || 57.0.18
+  - expo-constants@57.0.11 || 57.0.17 || 57.0.19
   - expo-server@57.0.2 || 57.0.3
-  - expo@57.0.13 || 57.0.19
-  - "@expo/metro-runtime@57.0.9 || 57.0.10 || 57.0.15"
-  - "@expo/ui@57.0.10 || 57.0.11 || 57.0.15"
+  - expo@57.0.13 || 57.0.19 || 57.0.24
+  - "@expo/metro-runtime@57.0.9 || 57.0.10 || 57.0.15 || 57.0.16"
+  - "@expo/ui@57.0.10 || 57.0.11 || 57.0.15 || 57.0.19"
   - expo-dev-client@57.0.12 || 57.0.18
   - expo-dev-launcher@57.0.11 || 57.0.12 || 57.0.19
   - expo-dev-menu@57.0.11 || 57.0.12 || 57.0.18
   - expo-linking@57.0.6 || 57.0.9
-  - expo-router@57.0.13 || 57.0.18
+  - expo-router@57.0.13 || 57.0.18 || 57.0.22
   - expo-splash-screen@57.0.6
   - jest-expo@57.0.4
   - "@expo/config-plugins@57.0.8"

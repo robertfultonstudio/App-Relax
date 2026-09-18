@@ -15,7 +15,11 @@ import { PlaybackTransport } from "./PlaybackTransport";
 import { sessionContextTitle } from "@/content/sessionPolicies";
 import { isPwaWebSurface } from "@/domain/sessions/playbackAvailability";
 
-export function CurrentSessionBar() {
+export function CurrentSessionBar({
+  showReviewCopy = true,
+}: {
+  showReviewCopy?: boolean;
+} = {}) {
   const { controller, snapshot } = useAudioSession();
   const router = useRouter();
   const path = usePathname();
@@ -38,7 +42,8 @@ export function CurrentSessionBar() {
     isPwaWebSurface() &&
     selection.kind === "adaptive" &&
     !selection.program.plan.listeningWorkId;
-  const playerUrl = hasSessionReview ? `${url}&review=1` : url;
+  const playerUrl =
+    hasSessionReview && showReviewCopy ? `${url}&review=1` : url;
   const sameDetails =
     selection.kind === "single"
       ? (params.outcome ?? selection.outcome) === selection.outcome &&
@@ -93,7 +98,7 @@ export function CurrentSessionBar() {
         <Text style={styles.detail}>
           {snapshot.status === "paused" ? "Paused · " : ""}
           {formatPlaybackTime(snapshot.remainingMs)} left ·{" "}
-          {hasSessionReview
+          {hasSessionReview && showReviewCopy
             ? `${selection.request.durationMinutes} min · Player & review →`
             : "Return →"}
           {snapshot.status === "error" ? " · Playback needs attention" : ""}

@@ -4,3 +4,8 @@
 /public-pwa/flac-source/
 /pnpm-lock.yaml
 /tooling/eas/pnpm-lock.yaml
+
+# Byte-exact snapshots supplied by the verified Sites hosting handoff.
+/.openai/hosting.json
+/catalog.json
+/worker.mjs

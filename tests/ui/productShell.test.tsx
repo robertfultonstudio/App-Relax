@@ -7,6 +7,7 @@ import PwaOutcome from "@/app-pwa/outcome/[outcomeId]";
 import { soundFamilyFor } from "@/content/soundFamilies";
 import { REVIEW_REVISION } from "@/content/reviewRevision";
 import { createWholeFileReviewProgram } from "@/pwa-review/createWholeFileReviewProgram";
+import { PwaViewProvider } from "@/pwa-view/PwaViewProvider";
 import {
   getVisibleConsumerWorks,
   isPlayableWork,
@@ -25,7 +26,12 @@ jest.mock("expo-router", () => ({
     useEffect(callback, [callback]);
   },
   useLocalSearchParams: () => mockParams,
-  useRouter: () => ({ push: mockPush, replace: mockReplace }),
+  useGlobalSearchParams: () => mockParams,
+  useRouter: () => ({
+    push: mockPush,
+    replace: mockReplace,
+    setParams: jest.fn(),
+  }),
 }));
 
 jest.mock("expo-linear-gradient", () => ({
@@ -127,7 +133,11 @@ describe("consumer product tabs", () => {
     "wires optional nature into the actual PWA $id entry route before Play",
     async (outcome) => {
       mockParams = { outcomeId: outcome.id };
-      const screen = await render(<PwaOutcome />);
+      const screen = await render(
+        <PwaViewProvider>
+          <PwaOutcome />
+        </PwaViewProvider>,
+      );
       await waitFor(() =>
         expect(screen.getByTestId("start-immediate-session")).toBeEnabled(),
       );

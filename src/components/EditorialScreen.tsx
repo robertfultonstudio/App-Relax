@@ -1,6 +1,6 @@
 import type { PropsWithChildren, ReactNode } from "react";
 import { LinearGradient } from "expo-linear-gradient";
-import type { ImageSourcePropType } from "react-native";
+import type { ImageSourcePropType, StyleProp, ViewStyle } from "react-native";
 import { Image, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { editorial } from "@/design/editorialTheme";
@@ -11,6 +11,8 @@ interface EditorialScreenProps extends PropsWithChildren {
   footer?: ReactNode;
   tone?: "paper" | "sky";
   painted?: boolean;
+  contentStyle?: StyleProp<ViewStyle>;
+  scrollEnabled?: boolean;
 }
 
 export function EditorialScreen({
@@ -20,6 +22,8 @@ export function EditorialScreen({
   footer,
   tone = "paper",
   painted = false,
+  contentStyle,
+  scrollEnabled = true,
 }: EditorialScreenProps) {
   const gradient = backgroundArtwork
     ? ([
@@ -58,7 +62,9 @@ export function EditorialScreen({
           contentContainerStyle={[
             styles.content,
             painted && styles.paintedContent,
+            contentStyle,
           ]}
+          scrollEnabled={scrollEnabled}
           showsVerticalScrollIndicator={false}
         >
           {backgroundArtwork && painted ? (
@@ -107,6 +113,7 @@ const styles = StyleSheet.create({
   },
   safeArea: { flex: 1 },
   content: {
+    flexGrow: 1,
     paddingHorizontal: 22,
     paddingTop: 8,
     paddingBottom: 56,

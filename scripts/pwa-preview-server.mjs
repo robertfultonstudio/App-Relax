@@ -135,10 +135,9 @@ export function createPwaPreviewHandler({
     if (!Array.isArray(urls) || urls.length === 0)
       throw new Error("Invalid PWA precache URL list.");
     for (const url of urls) {
-      if (
-        typeof url !== "string" ||
-        !resources.has(url === "/" ? "/index.html" : url)
-      )
+      const routeFile =
+        url === "/" ? "/index.html" : !extname(url) ? `${url}.html` : url;
+      if (typeof url !== "string" || !resources.has(routeFile))
         throw new Error(`Unserved PWA precache resource: ${url}`);
     }
   }

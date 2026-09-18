@@ -22,13 +22,14 @@ self.addEventListener("install", (event) => {
     (async () => {
       const cache = await caches.open(SHELL_CACHE);
       try {
-        // Sequential full-shell precache: JS, fonts, artwork and consumer routes.
+        // Sequential published-shell precache: JS, fonts, artwork and canonical
+        // consumer routes. Installation remains atomic and fail-closed.
         for (const url of manifest.urls) {
           const response = await fetch(
             new Request(url, {
               cache: "reload",
               credentials: "same-origin",
-              redirect: "error",
+              redirect: "follow",
             }),
           );
           if (!response.ok || response.type !== "basic")
@@ -147,18 +148,16 @@ self.addEventListener("fetch", (event) => {
       const cache = await caches.open(SHELL_CACHE);
       const path = url.pathname;
       const canonical =
-        request.mode === "navigate" &&
-        path !== "/" &&
-        !/\.[a-z0-9]+$/i.test(path)
-          ? `${path.replace(/\/$/, "")}.html`
-          : path;
+        request.mode === "navigate" && path.endsWith(".html")
+          ? path.slice(0, -5) || "/"
+          : path.replace(/\/$/, "") || "/";
       const cached = await cache.match(canonical);
       if (cached) return cached;
       try {
         return await fetch(request);
       } catch {
         return request.mode === "navigate"
-          ? (await cache.match("/offline.html")) || Response.error()
+          ? (await cache.match("/offline")) || Response.error()
           : Response.error();
       }
     })(),

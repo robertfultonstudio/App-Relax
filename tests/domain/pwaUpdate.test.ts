@@ -25,9 +25,12 @@ function harness(registration?: { scope: string; unregister: jest.Mock }) {
   );
   const serviceWorker = {
     getRegistration: jest.fn(async () => registration),
-    register: jest.fn(async () => {
-      throw new Error("Must not install a private shell");
-    }),
+    register: jest.fn(async () => ({
+      scope: `https://${hostname}/`,
+      update: jest.fn(async () => undefined),
+      installing: null,
+      waiting: null,
+    })),
   };
   const replace = jest.fn();
   runInNewContext(script, {
@@ -40,32 +43,35 @@ function harness(registration?: { scope: string; unregister: jest.Mock }) {
   return { callbacks, elements, replace, serviceWorker };
 }
 
-it("opens the online private app without creating a missing service worker", async () => {
+it("installs the private root shell before opening the app", async () => {
   const h = harness();
   await h.callbacks.get("update")!();
   expect(h.replace).toHaveBeenCalledWith("/");
-  expect(h.serviceWorker.register).not.toHaveBeenCalled();
+  expect(h.serviceWorker.register).toHaveBeenCalledWith("/sw.js", {
+    scope: "/",
+    updateViaCache: "none",
+  });
   expect(h.elements.get("online")?.hidden).toBe(true);
 });
 
 it.each([true, false])(
-  "opens after root registration retirement (unregister=%s)",
+  "updates without retiring an existing root registration (unregister=%s)",
   async (result) => {
     const unregister = jest.fn(async () => result);
     const h = harness({ scope: `https://${hostname}/`, unregister });
     await h.callbacks.get("update")!();
-    expect(unregister).toHaveBeenCalledTimes(1);
+    expect(unregister).not.toHaveBeenCalled();
     expect(h.replace).toHaveBeenCalledWith("/");
-    expect(h.serviceWorker.register).not.toHaveBeenCalled();
+    expect(h.serviceWorker.register).toHaveBeenCalledTimes(1);
   },
 );
 
 it.each([`https://${hostname}/other/`, "https://other.example/"])(
-  "preserves foreign scope %s",
+  "preserves foreign scope during explicit online recovery %s",
   async (scope) => {
     const unregister = jest.fn();
     const h = harness({ scope, unregister });
-    await h.callbacks.get("update")!();
+    await h.callbacks.get("online")!();
     expect(unregister).not.toHaveBeenCalled();
     expect(h.replace).not.toHaveBeenCalled();
     expect(h.elements.get("status")?.textContent).toContain(

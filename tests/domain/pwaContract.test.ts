@@ -236,7 +236,7 @@ describe("PWA contract", () => {
       ),
     );
     expect(serviceWorker).toContain(
-      '? (await cache.match("/offline.html")) || Response.error()',
+      '? (await cache.match("/offline")) || Response.error()',
     );
     expect(serviceWorker).not.toContain(
       '(await caches.match(request)) ||\n            (await caches.match("/offline.html"))',

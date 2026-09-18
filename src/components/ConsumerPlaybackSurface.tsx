@@ -1,5 +1,12 @@
 import { type ReactNode, useEffect, useRef } from "react";
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  Image,
+  Pressable,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import type { ConsumerOutcomeId } from "@/content/productShell";
 import { M6_PLAYER_PAINTING } from "@/design/shellArtwork";
 import { editorial } from "@/design/editorialTheme";
@@ -38,6 +45,7 @@ interface ConsumerPlaybackSurfaceProps {
   status?: string;
   onRetry?: () => void;
   hideTransport?: boolean;
+  transportAfterControls?: boolean;
   previewTransport?: boolean;
   preparedSessionNote?: string;
 }
@@ -67,14 +75,40 @@ export function ConsumerPlaybackSurface({
   status,
   onRetry,
   hideTransport = false,
+  transportAfterControls = false,
   previewTransport = false,
   preparedSessionNote,
 }: ConsumerPlaybackSurfaceProps) {
+  const { height } = useWindowDimensions();
+  const artworkHeight = Math.min(360, Math.max(220, height * 0.42));
   const volumePercent = Math.round(volume * 100);
   const lastAudibleVolume = useRef(volume > 0 ? volume : 0.8);
   useEffect(() => {
     if (volume > 0) lastAudibleVolume.current = volume;
   }, [volume]);
+
+  const transport = !hideTransport ? (
+    <View style={styles.transport} testID="consumer-inline-transport">
+      {preparedSessionNote ? (
+        <Text style={styles.preparedNote} accessibilityLiveRegion="polite">
+          {preparedSessionNote}
+        </Text>
+      ) : null}
+      <PlaybackTransport
+        previewOnly={previewTransport}
+        canPlay={canPlay}
+        canStop={canStop}
+        isPlaying={isPlaying}
+        onPlayPause={onPlayPause}
+        onStop={onStop}
+        playPauseTestID={playPauseTestID}
+        primaryLabel={preparedSessionNote ? "Start new session" : undefined}
+        playPauseAccessibilityLabel={
+          preparedSessionNote ? "Start new session" : undefined
+        }
+      />
+    </View>
+  ) : null;
 
   return (
     <View testID="consumer-playback-surface" style={styles.surface}>
@@ -84,6 +118,7 @@ export function ConsumerPlaybackSurface({
           style={[
             styles.artwork,
             variant === "session" && styles.sessionArtwork,
+            { height: artworkHeight },
           ]}
         >
           <Image
@@ -100,7 +135,9 @@ export function ConsumerPlaybackSurface({
       ) : null}
       <Text
         accessibilityRole="header"
+        nativeID="consumer-screen-title"
         style={[styles.title, variant === "session" && styles.sessionTitle]}
+        testID="consumer-screen-title"
       >
         {title}
       </Text>
@@ -140,28 +177,7 @@ export function ConsumerPlaybackSurface({
         </Pressable>
       ) : null}
 
-      {!hideTransport && (
-        <View style={styles.transport}>
-          {preparedSessionNote ? (
-            <Text style={styles.preparedNote} accessibilityLiveRegion="polite">
-              {preparedSessionNote}
-            </Text>
-          ) : null}
-          <PlaybackTransport
-            previewOnly={previewTransport}
-            canPlay={canPlay}
-            canStop={canStop}
-            isPlaying={isPlaying}
-            onPlayPause={onPlayPause}
-            onStop={onStop}
-            playPauseTestID={playPauseTestID}
-            primaryLabel={preparedSessionNote ? "Start new session" : undefined}
-            playPauseAccessibilityLabel={
-              preparedSessionNote ? "Start new session" : undefined
-            }
-          />
-        </View>
-      )}
+      {!transportAfterControls ? transport : null}
 
       <View style={styles.controls}>
         {options}
@@ -204,6 +220,7 @@ export function ConsumerPlaybackSurface({
         {secondaryOptions}
         <Text style={styles.note}>{note}</Text>
       </View>
+      {transportAfterControls ? transport : null}
     </View>
   );
 }
@@ -211,33 +228,30 @@ export function ConsumerPlaybackSurface({
 const styles = StyleSheet.create({
   surface: { position: "relative" },
   artwork: {
-    position: "absolute",
-    top: -72,
-    left: -22,
-    right: -22,
-    height: 844,
+    marginLeft: -22,
+    marginRight: -22,
     width: undefined,
   },
-  sessionArtwork: { height: 844 },
+  sessionArtwork: {},
   controls: {
-    marginTop: 160,
+    marginTop: spacing.md,
     paddingTop: 12,
   },
   functionLabel: {
     color: editorial.mineralBlue,
     fontFamily: fonts.sansSemiBold,
-    fontSize: 11,
+    fontSize: 13,
     letterSpacing: 1.2,
     marginTop: spacing.lg,
   },
   title: {
     color: editorial.ink,
     fontFamily: fonts.serif,
-    fontSize: 30,
-    lineHeight: 35,
+    fontSize: 28,
+    lineHeight: 34,
     marginTop: spacing.sm,
   },
-  sessionTitle: { fontSize: 30, lineHeight: 35 },
+  sessionTitle: { fontSize: 28, lineHeight: 34 },
   gate: {
     color: editorial.gold,
     fontFamily: fonts.sansSemiBold,
@@ -248,9 +262,9 @@ const styles = StyleSheet.create({
   timer: {
     color: editorial.ink,
     fontFamily: fonts.serif,
-    fontSize: 58,
-    lineHeight: 64,
-    marginTop: 30,
+    fontSize: 52,
+    lineHeight: 58,
+    marginTop: 18,
     textAlign: "center",
   },
   nowPanel: {
@@ -271,7 +285,7 @@ const styles = StyleSheet.create({
     fontSize: 22,
     marginTop: 3,
   },
-  transport: { marginTop: spacing.md },
+  transport: { marginTop: spacing.xl, marginBottom: spacing.md },
   preparedNote: {
     color: editorial.inkMuted,
     fontFamily: fonts.sans,

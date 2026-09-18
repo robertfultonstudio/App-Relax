@@ -7,17 +7,19 @@ import { useSyncExternalStore } from "react";
 import { Text } from "react-native";
 import { EditorialScreen } from "@/components/EditorialScreen";
 import { PlaybackTransport } from "@/components/PlaybackTransport";
+import { usePwaView } from "@/pwa-view/PwaViewProvider";
+import { PwaConsumerTransportDock } from "@/pwa-view/PwaConsumerTransportDock";
 
 const subscribe = () => () => {};
 const clientReady = () => true;
 const serverReady = () => false;
 
 export default function PwaPlayer() {
-  const { review, isolated } = useLocalSearchParams<{
-    review?: string;
+  const { isolated } = useLocalSearchParams<{
     isolated?: string;
   }>();
-  const reviewOpen = review !== "0";
+  const { viewMode } = usePwaView();
+  const workbench = viewMode === "workbench";
   const hydrated = useSyncExternalStore(subscribe, clientReady, serverReady);
   if (!hydrated)
     return (
@@ -32,25 +34,36 @@ export default function PwaPlayer() {
         />
       </EditorialScreen>
     );
-  const isolatedReview = review === "1" && isolated === "1";
+  const isolatedReview = isolated === "1";
   return (
     <ConsumerPlayerScreen
-      key={String(isolatedReview)}
+      hidePersistentTransport={workbench}
+      renderPersistentTransport={(props) => (
+        <PwaConsumerTransportDock {...props} />
+      )}
       createNatureProgram={
         isolatedReview ? undefined : createListeningNatureProgram
       }
-      renderNatureReview={(program, matching, onVariant) => (
+      renderNatureReview={(program, matching, onVariant, transport) => (
         <PwaPlayerReviewControls
-          key={`${program.plan.id}:${reviewOpen}`}
-          initiallyOpen={reviewOpen}
+          initiallyOpen
+          visible={workbench}
           target={{ kind: "adaptive", program, matching, onVariant }}
+          transport={transport}
         />
       )}
-      renderReviewControls={(work, matching, elapsedSeconds, error) => (
+      renderReviewControls={(
+        work,
+        matching,
+        elapsedSeconds,
+        error,
+        transport,
+      ) => (
         <PwaPlayerReviewControls
-          key={`${work.id}:${reviewOpen}`}
-          initiallyOpen={reviewOpen}
+          initiallyOpen
+          visible={workbench}
           target={{ kind: "single", work, matching, elapsedSeconds, error }}
+          transport={transport}
         />
       )}
     />

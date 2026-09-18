@@ -7,7 +7,10 @@ import { usePreparedSelection } from "@/audio/usePreparedSelection";
 import { ConsumerDurationOptions } from "@/components/ConsumerDurationOptions";
 import { ConsumerPlaybackSurface } from "@/components/ConsumerPlaybackSurface";
 import { DownloadControl } from "@/components/DownloadControl";
-import { PlaybackTransport } from "@/components/PlaybackTransport";
+import {
+  PlaybackTransport,
+  type PlaybackTransportProps,
+} from "@/components/PlaybackTransport";
 import { EditorialHeader } from "@/components/EditorialHeader";
 import { EditorialScreen } from "@/components/EditorialScreen";
 import {
@@ -31,6 +34,7 @@ import {
   consumerSelectionKey,
   type ConsumerSelection,
 } from "@/domain/audio/consumerSelection";
+import type { ReviewTransport } from "@/domain/audio/reviewTransport";
 import {
   isPwaWebSurface,
   isNativeCatalogPreview,
@@ -48,6 +52,9 @@ import type {
 } from "@/domain/sessions/types";
 
 type PlayerExtensions = {
+  hidePersistentTransport?: boolean;
+  inlineConsumerTransport?: boolean;
+  renderPersistentTransport?: (props: PlaybackTransportProps) => ReactNode;
   createNatureProgram?: (
     work: ConsumerAudioWork,
     outcome: ConsumerOutcomeId,
@@ -58,18 +65,23 @@ type PlayerExtensions = {
     program: AdaptiveSessionProgram,
     matching: boolean,
     onVariant: (program: AdaptiveSessionProgram) => void,
+    transport: ReviewTransport,
   ) => ReactNode;
   renderReviewControls?: (
     work: ConsumerAudioWork,
     matching: boolean,
     elapsedSeconds: number,
     error: string | null,
+    transport: ReviewTransport,
   ) => ReactNode;
 };
 export default function ConsumerPlayerScreen({
   renderReviewControls,
   createNatureProgram = platformNatureProgramFactory,
   renderNatureReview,
+  hidePersistentTransport = false,
+  inlineConsumerTransport = false,
+  renderPersistentTransport,
 }: PlayerExtensions = {}) {
   const params = useLocalSearchParams<{
     workId: string;
@@ -84,6 +96,9 @@ export default function ConsumerPlayerScreen({
       renderReviewControls={renderReviewControls}
       createNatureProgram={createNatureProgram}
       renderNatureReview={renderNatureReview}
+      hidePersistentTransport={hidePersistentTransport}
+      inlineConsumerTransport={inlineConsumerTransport}
+      renderPersistentTransport={renderPersistentTransport}
     />
   );
 }
@@ -94,6 +109,9 @@ function Player({
   renderReviewControls,
   createNatureProgram,
   renderNatureReview,
+  hidePersistentTransport = false,
+  inlineConsumerTransport = false,
+  renderPersistentTransport,
   nature: natureParam,
 }: {
   workId: string;
@@ -137,6 +155,9 @@ function Player({
   const [error, setError] = useState<string | null>(null);
   const [changingNature, setChangingNature] = useState(false);
   const [natureChangeError, setNatureChangeError] = useState<string | null>(
+    null,
+  );
+  const [failedNature, setFailedNature] = useState<NatureAmbienceFamily | null>(
     null,
   );
   const [timerOpen, setTimerOpen] = useState(false);
@@ -296,28 +317,78 @@ function Player({
       );
     });
   }
+  function changeLiveNature(value: NatureAmbienceFamily | null) {
+    if (
+      !matching ||
+      snapshot.status !== "playing" ||
+      selection?.kind !== "adaptive"
+    )
+      return;
+    setChangingNature(true);
+    setNatureChangeError(null);
+    setFailedNature(null);
+    void controller
+      .changeNatureFamily(value)
+      .then((updated) => {
+        setVariant(updated);
+        setNature(value);
+        router.setParams({ nature: value ?? "off" });
+      })
+      .catch((reason) => {
+        const actual = controller.getConsumerSelection();
+        if (
+          actual?.kind === "adaptive" &&
+          actual.program.plan.id === selection.program.plan.id
+        ) {
+          const family =
+            actual.program.plan.natureMix?.enabled === false
+              ? null
+              : (actual.program.plan.natureMix?.selectedFamily ?? null);
+          setVariant(actual.program);
+          setNature(family);
+          router.setParams({ nature: family ?? "off" });
+        }
+        if (!(reason instanceof PlaybackCancelledError)) {
+          setFailedNature(value);
+          setNatureChangeError(
+            reason instanceof Error
+              ? reason.message
+              : "The ambience could not be changed. Music continues.",
+          );
+        }
+      })
+      .finally(() => setChangingNature(false));
+  }
   return (
     <EditorialScreen
-      footer={
-        !otherSessionActive && (
-          <PlaybackTransport
-            fixedFooter
-            canPlay={Boolean(work && ready)}
-            canStop={
-              matching && (playing || busy || snapshot.status === "paused")
-            }
-            isPlaying={playing}
-            busy={busy}
-            onPlayPause={playPause}
-            onStop={() => void controller.stop().catch(() => undefined)}
-            playPauseTestID="consumer-play-pause"
-          />
+      footer={(() => {
+        if (
+          hidePersistentTransport ||
+          inlineConsumerTransport ||
+          otherSessionActive
         )
-      }
+          return null;
+        const transportProps: PlaybackTransportProps = {
+          canPlay: Boolean(work && ready),
+          canStop:
+            matching && (playing || busy || snapshot.status === "paused"),
+          isPlaying: playing,
+          busy,
+          onPlayPause: playPause,
+          onStop: () => void controller.stop().catch(() => undefined),
+          playPauseTestID: "consumer-play-pause",
+        };
+        return renderPersistentTransport ? (
+          renderPersistentTransport(transportProps)
+        ) : (
+          <PlaybackTransport fixedFooter {...transportProps} />
+        );
+      })()}
     >
       <EditorialHeader label={outcome.toUpperCase()} showBack />
       <ConsumerPlaybackSurface
-        hideTransport={!otherSessionActive}
+        hideTransport={!inlineConsumerTransport && !otherSessionActive}
+        transportAfterControls={inlineConsumerTransport}
         previewTransport={otherSessionActive}
         canPlay={Boolean(work && ready)}
         canStop={matching && (playing || busy || snapshot.status === "paused")}
@@ -379,38 +450,7 @@ function Player({
                       snapshot.status === "playing" &&
                       selection?.kind === "adaptive"
                     ) {
-                      setChangingNature(true);
-                      setNatureChangeError(null);
-                      void controller
-                        .changeNatureFamily(value)
-                        .then((updated) => {
-                          setVariant(updated);
-                          setNature(value);
-                          router.setParams({ nature: value ?? "off" });
-                        })
-                        .catch((reason) => {
-                          const actual = controller.getConsumerSelection();
-                          if (
-                            actual?.kind === "adaptive" &&
-                            actual.program.plan.id === selection.program.plan.id
-                          ) {
-                            const family =
-                              actual.program.plan.natureMix?.enabled === false
-                                ? null
-                                : (actual.program.plan.natureMix
-                                    ?.selectedFamily ?? null);
-                            setVariant(actual.program);
-                            setNature(family);
-                            router.setParams({ nature: family ?? "off" });
-                          }
-                          if (!(reason instanceof PlaybackCancelledError))
-                            setNatureChangeError(
-                              reason instanceof Error
-                                ? reason.message
-                                : "The ambience could not be changed. Music continues.",
-                            );
-                        })
-                        .finally(() => setChangingNature(false));
+                      changeLiveNature(value);
                       return;
                     }
                     setVariant(null);
@@ -420,9 +460,28 @@ function Player({
                 />
               )}
               {natureChangeError && (
-                <Text accessibilityLiveRegion="polite">
-                  {natureChangeError}
-                </Text>
+                <>
+                  <Text accessibilityLiveRegion="polite">
+                    {natureChangeError}
+                  </Text>
+                  <Pressable
+                    accessibilityLabel="Retry ambience change"
+                    accessibilityRole="button"
+                    disabled={changingNature}
+                    onPress={() => changeLiveNature(failedNature)}
+                    style={{ minHeight: 48, justifyContent: "center" }}
+                  >
+                    <Text
+                      style={{
+                        color: editorial.ink,
+                        fontFamily: fonts.sansSemiBold,
+                        fontSize: 15,
+                      }}
+                    >
+                      Retry ambience change
+                    </Text>
+                  </Pressable>
+                </>
               )}
               {selection?.kind === "adaptive" &&
                 selection.program.plan.natureMix &&
@@ -483,7 +542,16 @@ function Player({
         }
       />
       {selection?.kind === "adaptive"
-        ? renderNatureReview?.(selection.program, matching, setVariant)
+        ? renderNatureReview?.(selection.program, matching, setVariant, {
+            canPlay: Boolean(work && ready),
+            canStop:
+              matching && (playing || busy || snapshot.status === "paused"),
+            playing,
+            busy,
+            status,
+            onPlayPause: playPause,
+            onStop: () => controller.stop(),
+          })
         : work &&
           renderReviewControls?.(
             work,
@@ -492,6 +560,16 @@ function Player({
               ? Math.max(0, duration * 60 - snapshot.remainingMs / 1000)
               : 0,
             visibleError,
+            {
+              canPlay: Boolean(work && ready),
+              canStop:
+                matching && (playing || busy || snapshot.status === "paused"),
+              playing,
+              busy,
+              status,
+              onPlayPause: playPause,
+              onStop: () => controller.stop(),
+            },
           )}
       {work && isPwaWebSurface() && work.sourceKind === "file" ? (
         <>

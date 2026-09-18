@@ -1,6 +1,10 @@
 import { createHash } from "node:crypto";
 import { readdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
+import {
+  isPublishableShellFile,
+  publishedShellUrl,
+} from "./pwa-precache-policy.mjs";
 
 const root = path.resolve(process.argv[2] ?? "dist/m5-pwa");
 const indexes = JSON.parse(
@@ -31,7 +35,8 @@ const paths = (await files(root))
   .filter(
     (file) =>
       !["sw.js", "precache-manifest.js"].includes(path.relative(root, file)) &&
-      !onDemand.has(path.relative(root, file).split(path.sep).join("/")),
+      !onDemand.has(path.relative(root, file).split(path.sep).join("/")) &&
+      isPublishableShellFile(path.relative(root, file)),
   )
   .sort();
 const digest = createHash("sha256");
@@ -53,9 +58,9 @@ for (const file of paths) {
   digest.update(relative);
   digest.update("\0");
   digest.update(await readFile(file));
-  urls.push(relative === "index.html" ? "/" : `/${relative}`);
+  urls.push(publishedShellUrl(relative));
 }
-for (const required of ["/", "/offline.html", "/offline-file-worker.js"])
+for (const required of ["/", "/offline", "/offline-file-worker.js"])
   if (!urls.includes(required))
     throw new Error(`Missing essential PWA shell file ${required}.`);
 const revision = digest.digest("hex");

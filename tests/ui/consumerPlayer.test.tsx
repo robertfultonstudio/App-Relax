@@ -1,6 +1,8 @@
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
+import { View } from "react-native";
 import ConsumerPlayerScreen from "@/app/listen/[workId]";
 import { CurrentSessionBar } from "@/components/CurrentSessionBar";
+import { PlaybackTransport } from "@/components/PlaybackTransport";
 import { getConsumerWork } from "@/content/consumerCatalog";
 import { createSingleTrackProgram } from "@/domain/audio/consumerTypes";
 import { createConsumerAudioMock, deferred } from "./helpers/consumerAudioMock";
@@ -245,6 +247,22 @@ describe("autonomous consumer player", () => {
     );
     expect(mockAudio.controller.playFromUserGesture).not.toHaveBeenCalled();
     expect(mockAudio.controller.setTimer).not.toHaveBeenCalled();
+  });
+
+  it("delegates one persistent consumer transport without an inline duplicate", async () => {
+    const screen = await render(
+      <ConsumerPlayerScreen
+        renderPersistentTransport={(props) => (
+          <View testID="custom-persistent-transport">
+            <PlaybackTransport {...props} />
+          </View>
+        )}
+      />,
+    );
+    expect(screen.getByTestId("custom-persistent-transport")).toBeTruthy();
+    expect(screen.queryByTestId("fixed-player-controls")).toBeNull();
+    expect(screen.queryByTestId("consumer-inline-transport")).toBeNull();
+    expect(screen.getAllByTestId("playback-transport")).toHaveLength(1);
   });
 
   it("returns to an already playing selection without reload or a second Start", async () => {
