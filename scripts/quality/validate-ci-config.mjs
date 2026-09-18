@@ -126,14 +126,42 @@ const easTool = JSON.parse(
 );
 if (easTool.devDependencies?.["eas-cli"] !== "24.3.0")
   fail("isolated EAS toolchain must pin eas-cli exactly to 24.3.0");
-if (!pkg.scripts?.["ci:eas-archive"]?.includes("tooling/eas"))
-  fail("EAS archive inspection must invoke the isolated toolchain");
+const easConfigCommand = pkg.scripts?.["ci:eas-config"] ?? "";
+const easArchiveCommand = pkg.scripts?.["ci:eas-archive"] ?? "";
+const offlineConfigSource = readFileSync(
+  join(root, "scripts/resolve-eas-config-offline.mjs"),
+  "utf8",
+);
+const offlineArchiveSource = readFileSync(
+  join(root, "scripts/create-eas-archive-offline.mjs"),
+  "utf8",
+);
 if (
-  !pkg.scripts?.["ci:eas-archive"]?.includes(
-    "tooling/eas/node_modules/.bin/eas",
-  )
+  !easConfigCommand.includes("resolve-eas-config-offline.mjs") ||
+  !easConfigCommand.includes("production-android") ||
+  !easConfigCommand.includes("production-ios") ||
+  !offlineConfigSource.includes("@expo/eas-json") ||
+  !offlineConfigSource.includes('"config", "--type", "public", "--json"')
 ) {
-  fail("EAS commands must execute from the repository root");
+  fail(
+    "EAS config validation must resolve profiles locally without an account",
+  );
+}
+if (
+  !easArchiveCommand.includes("pnpm eas:tool:install") ||
+  !easArchiveCommand.includes("create-eas-archive-offline.mjs") ||
+  !offlineArchiveSource.includes("eas-cli") ||
+  !offlineArchiveSource.includes("makeShallowCopyAsync")
+) {
+  fail(
+    "EAS archive inspection must use the isolated toolchain and local .easignore copier",
+  );
+}
+if (
+  easConfigCommand.includes(".bin/eas config") ||
+  easArchiveCommand.includes(".bin/eas build:inspect")
+) {
+  fail("CI EAS validation must not require Expo account authentication");
 }
 for (const platform of ["android", "ios"]) {
   const profile = eas.build?.[`production-${platform}`];
