@@ -18,12 +18,12 @@ non-empty pull request could establish the normal review path.
 
 ## Workflow identity
 
-| Workflow | SHA-256 |
-| --- | --- |
-| `.github/workflows/ci.yml` | `ae869cbae355e168cef0e36097af0691aad8eed8ac74a1fe30a18c7d017b3ad3` |
-| `.github/workflows/pr-policy.yml` | `554432abdb9381b93f800e7fcd1afbf41e9c327dc88fe78097c8d86d797e6125` |
+| Workflow                                | SHA-256                                                            |
+| --------------------------------------- | ------------------------------------------------------------------ |
+| `.github/workflows/ci.yml`              | `ae869cbae355e168cef0e36097af0691aad8eed8ac74a1fe30a18c7d017b3ad3` |
+| `.github/workflows/pr-policy.yml`       | `554432abdb9381b93f800e7fcd1afbf41e9c327dc88fe78097c8d86d797e6125` |
 | `.github/workflows/prepare-release.yml` | `13633aa9c926eabc6eab72f49f2d4852be47e4edffaded8404264b3be73cd56f` |
-| `.github/workflows/release.yml` | `b7bc909f3f48bd4a9d7b922249697bcf1594e034ad83e1bbb3fee206d6b6947b` |
+| `.github/workflows/release.yml`         | `b7bc909f3f48bd4a9d7b922249697bcf1594e034ad83e1bbb3fee206d6b6947b` |
 
 ## Required pull request controls
 
@@ -38,7 +38,7 @@ names. A missing or renamed context is a blocking condition.
 
 ## Scope and stop conditions
 
-This pull request records the bootstrap and exercises the remote checks with a
-real one-file diff. It does not authorize or perform a merge, tag, release,
-deploy, EAS build, store submission, secret change, or environment deployment.
-Those actions remain separate gates.
+This pull request records the bootstrap, exercises the remote checks, and makes
+the EAS configuration and archive gates credential-free. It does not authorize
+or perform a merge, tag, release, deploy, EAS build, store submission, secret
+change, or environment deployment. Those actions remain separate gates.
