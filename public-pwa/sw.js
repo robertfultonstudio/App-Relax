@@ -32,6 +32,10 @@ function isUpdatePath(pathname) {
   return pathname === "/update" || pathname === "/update.html";
 }
 
+function isRootEntryPath(pathname) {
+  return pathname === "/" || pathname === "/index.html";
+}
+
 self.addEventListener("install", (event) => {
   event.waitUntil(
     (async () => {
@@ -68,18 +72,35 @@ self.addEventListener("install", (event) => {
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches
-      .keys()
-      .then((keys) =>
-        Promise.all(
-          keys
-            .filter(
-              (key) =>
-                key.startsWith("ritual-audio-shell-") && key !== SHELL_CACHE,
-            )
-            .map((key) => caches.delete(key)),
-        ),
-      ),
+    (async () => {
+      const keys = await caches.keys();
+      await Promise.all(
+        keys
+          .filter(
+            (key) =>
+              key.startsWith("ritual-audio-shell-") && key !== SHELL_CACHE,
+          )
+          .map((key) => caches.delete(key)),
+      );
+      // A replaced worker cannot rewrite the already-rendered DOM of a client
+      // controlled by its predecessor. Reload only the obsolete root entry;
+      // the current root immediately replaces it with /moments. Listening and
+      // every non-root route remain untouched.
+      const clients = await self.clients.matchAll({
+        type: "window",
+        includeUncontrolled: true,
+      });
+      for (const client of clients) {
+        const url = new URL(client.url);
+        if (
+          url.origin === self.location.origin &&
+          isRootEntryPath(url.pathname) &&
+          typeof client.navigate === "function"
+        )
+          // Do not await: navigation waits for activation to finish.
+          void client.navigate("/");
+      }
+    })(),
   );
 });
 

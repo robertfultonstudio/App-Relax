@@ -6,6 +6,10 @@ function setup(clientUrls: readonly string[] = []) {
   const listeners: Record<string, (event: unknown) => void> = {};
   const entries = new Map<string, unknown>(),
     deleted: string[] = [];
+  const clients = clientUrls.map((url) => ({
+    navigate: jest.fn(async () => undefined),
+    url,
+  }));
   const self = {
     location: { origin: "https://app.test" },
     addEventListener: (name: string, handler: (event: unknown) => void) => {
@@ -18,7 +22,7 @@ function setup(clientUrls: readonly string[] = []) {
     skipWaiting: jest.fn(),
     clients: {
       claim: jest.fn(),
-      matchAll: async () => clientUrls.map((url) => ({ url })),
+      matchAll: async () => clients,
     },
   };
   const fetcher = jest.fn(async () => ({ ok: true, type: "basic" }));
@@ -62,7 +66,7 @@ function setup(clientUrls: readonly string[] = []) {
     });
     return promise;
   }
-  return { event, self, fetcher, entries, deleted };
+  return { event, self, fetcher, entries, deleted, clients };
 }
 
 describe("PWA offline shell and stale-client recovery", () => {
@@ -79,6 +83,19 @@ describe("PWA offline shell and stale-client recovery", () => {
     const t = setup(["https://app.test/listen/a"]);
     await t.event("install");
     expect(t.self.skipWaiting).not.toHaveBeenCalled();
+  });
+  it("reloads only a rejected root client after activation", async () => {
+    const t = setup([
+      "https://app.test/",
+      "https://app.test/moments",
+      "https://app.test/listen/a",
+      "https://other.test/",
+    ]);
+    await t.event("activate");
+    expect(t.clients[0].navigate).toHaveBeenCalledWith("/");
+    for (const client of t.clients.slice(1))
+      expect(client.navigate).not.toHaveBeenCalled();
+    expect(t.self.clients.claim).not.toHaveBeenCalled();
   });
   it("reopens clean routes and query-bearing navigation from cache while offline", async () => {
     const t = setup();

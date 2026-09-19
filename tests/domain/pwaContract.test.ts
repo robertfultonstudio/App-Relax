@@ -308,6 +308,8 @@ describe("PWA contract", () => {
         importScripts: () => undefined,
         self: {
           APP_RELAX_PRECACHE: { revision: "a".repeat(64), urls: [] },
+          clients: { matchAll: async () => [] },
+          location: { origin: "https://relax.test" },
           addEventListener: (
             type: string,
             handler: (typeof handlers)[string],

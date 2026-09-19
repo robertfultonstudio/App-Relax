@@ -177,6 +177,29 @@ async function run() {
     fail("runtime candidate violates the approved visual contract");
     return;
   }
+  const staleUpgrade = spawn(
+    process.execPath,
+    ["--test", "tests/scripts/pwaStaleShellUpgrade.test.mjs"],
+    {
+      cwd: projectRoot,
+      env: {
+        ...process.env,
+        APP_RELAX_CHROME_BINARY: chromeBinary,
+        APP_RELAX_STALE_UPGRADE_REQUIRED: "1",
+        APP_RELAX_VISUAL_ARTIFACT: artifactRoot,
+        APP_RELAX_VISUAL_SCREENSHOT_DIR: evidenceRoot,
+      },
+      stdio: "inherit",
+    },
+  );
+  const staleExitCode = await new Promise((resolveExit) => {
+    staleUpgrade.once("error", () => resolveExit(1));
+    staleUpgrade.once("exit", (code) => resolveExit(code ?? 1));
+  });
+  if (staleExitCode !== 0) {
+    fail("controlled stale-shell upgrade still exposes the rejected root");
+    return;
+  }
   for (const required of [
     "390x844/home.png",
     "390x844/yoga.png",
@@ -185,6 +208,7 @@ async function run() {
     "430x932/yoga.png",
     "430x932/player.png",
     "measurements.json",
+    "stale-shell-upgrade.json",
   ]) {
     if (!existsSync(join(evidenceRoot, required))) {
       fail(`runtime evidence is incomplete (${required})`);
