@@ -1,4 +1,6 @@
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
+import { useState } from "react";
+import { Pressable, Text, View } from "react-native";
 import {
   PwaPlayerReviewControls,
   clampReviewPosition,
@@ -11,6 +13,15 @@ import { createConsumerAudioMock, deferred } from "./helpers/consumerAudioMock";
 let mockPwa = true;
 const mockPush = jest.fn();
 jest.mock("expo-router", () => ({ useRouter: () => ({ push: mockPush }) }));
+const mockShowConsumerPreview = jest.fn();
+const mockSetTechnicalBusy = jest.fn();
+jest.mock("@/pwa-view/PwaViewProvider", () => ({
+  usePwaView: () => ({
+    showConsumerPreview: mockShowConsumerPreview,
+    setTechnicalBusy: mockSetTechnicalBusy,
+    technicalBusy: false,
+  }),
+}));
 const makeAudio = () => {
   const audio = createConsumerAudioMock();
   return {
@@ -54,6 +65,8 @@ beforeEach(() => {
   mockPwa = true;
   mockAudio = makeAudio();
   mockAudio.snapshot.status = "playing";
+  mockShowConsumerPreview.mockClear();
+  mockSetTechnicalBusy.mockClear();
 });
 it("prepares only the next isolated loop while paused; resume cancels without blocking controls", async () => {
   const screen = await render(
@@ -140,7 +153,7 @@ it("shows every Hatha source and both ends of all music and nature joins", async
     />,
   );
   await fireEvent.press(
-    screen.getByRole("button", { name: "Development review controls" }),
+    screen.getByRole("button", { name: "Workbench review controls" }),
   );
   for (const segment of p.plan.segments)
     expect(screen.getByTestId(`review-segment-${segment.index}`)).toBeTruthy();
@@ -167,7 +180,7 @@ it("is absent outside the explicitly selected PWA surface", async () => {
   if (mockPwa) {
     expect(screen.queryByTestId("review-source-file")).toBeNull();
     await fireEvent.press(
-      screen.getByRole("button", { name: "Development review controls" }),
+      screen.getByRole("button", { name: "Workbench review controls" }),
     );
   }
   expect(screen.queryByTestId("private-player-review")).toBeNull();
@@ -177,7 +190,7 @@ it("identifies the actual musical file in review without claiming an inactive se
   if (mockPwa) {
     expect(screen.queryByTestId("review-source-file")).toBeNull();
     await fireEvent.press(
-      screen.getByRole("button", { name: "Development review controls" }),
+      screen.getByRole("button", { name: "Workbench review controls" }),
     );
   }
   expect(screen.getByTestId("review-source-file")).toHaveTextContent(
@@ -200,7 +213,7 @@ it("never loads a different sound or starts playback from a review control", asy
   if (mockPwa) {
     expect(screen.queryByTestId("review-source-file")).toBeNull();
     await fireEvent.press(
-      screen.getByRole("button", { name: "Development review controls" }),
+      screen.getByRole("button", { name: "Workbench review controls" }),
     );
   }
   expect(
@@ -216,7 +229,7 @@ it("seeks Hatha through the controller and exposes its circular-loop test withou
   if (mockPwa) {
     expect(screen.queryByTestId("review-source-file")).toBeNull();
     await fireEvent.press(
-      screen.getByRole("button", { name: "Development review controls" }),
+      screen.getByRole("button", { name: "Workbench review controls" }),
     );
   }
   await fireEvent.press(
@@ -276,7 +289,7 @@ it("range interaction previews while dragging then commits one actual seek", asy
   if (mockPwa) {
     expect(screen.queryByTestId("review-source-file")).toBeNull();
     await fireEvent.press(
-      screen.getByRole("button", { name: "Development review controls" }),
+      screen.getByRole("button", { name: "Workbench review controls" }),
     );
   }
   const slider = screen.getByLabelText("Review position");
@@ -293,7 +306,7 @@ it("range interaction previews while dragging then commits one actual seek", asy
 it("commits keyboard and accessibility range changes without waiting for a pointer release", async () => {
   const screen = await render(<PwaPlayerReviewControls target={single()} />);
   await fireEvent.press(
-    screen.getByRole("button", { name: "Development review controls" }),
+    screen.getByRole("button", { name: "Workbench review controls" }),
   );
   const slider = screen.getByLabelText("Review position");
   await fireEvent(slider, "change", { currentTarget: { value: "120" } });
@@ -314,7 +327,7 @@ it("serializes rapid seeks and surfaces a failed seek instead of claiming succes
   if (mockPwa) {
     expect(screen.queryByTestId("review-source-file")).toBeNull();
     await fireEvent.press(
-      screen.getByRole("button", { name: "Development review controls" }),
+      screen.getByRole("button", { name: "Workbench review controls" }),
     );
   }
   await fireEvent.press(
@@ -342,7 +355,7 @@ it("jumps to actual transition markers and loops incoming/outgoing using the exi
   if (mockPwa) {
     expect(screen.queryByTestId("review-source-file")).toBeNull();
     await fireEvent.press(
-      screen.getByRole("button", { name: "Development review controls" }),
+      screen.getByRole("button", { name: "Workbench review controls" }),
     );
   }
   await fireEvent.press(screen.getByRole("button", { name: "Jump to change" }));
@@ -371,7 +384,7 @@ it("jumps to actual transition markers and loops incoming/outgoing using the exi
     mockAudio.controller.configureAdaptiveAudition,
   ).toHaveBeenLastCalledWith(null);
 });
-it("prepares a validated B variant only after stopping, never autoplaying it", async () => {
+it("previews, undoes and resets a validated session variant without autoplay", async () => {
   const p = program(),
     onVariant = jest.fn();
   const screen = await render(
@@ -382,21 +395,71 @@ it("prepares a validated B variant only after stopping, never autoplaying it", a
   if (mockPwa) {
     expect(screen.queryByTestId("review-source-file")).toBeNull();
     await fireEvent.press(
-      screen.getByRole("button", { name: "Development review controls" }),
+      screen.getByRole("button", { name: "Workbench review controls" }),
     );
   }
-  await fireEvent.press(screen.getByRole("button", { name: "Prepare B" }));
+  await fireEvent.press(screen.getByRole("button", { name: "60 seconds" }));
+  await fireEvent.press(screen.getByRole("button", { name: "Undo" }));
+  expect(onVariant).not.toHaveBeenCalled();
+  expect(
+    screen.getByText("Draft discarded. The active session was not changed."),
+  ).toBeTruthy();
+  await fireEvent.press(screen.getByRole("button", { name: "120 seconds" }));
+  await fireEvent.press(screen.getByRole("button", { name: "Preview" }));
   await waitFor(() => expect(onVariant).toHaveBeenCalledTimes(1));
   expect(onVariant.mock.calls[0][0].plan.transitions[0].durationSeconds).toBe(
-    240,
+    120,
   );
   expect(mockAudio.controller.stop).toHaveBeenCalledTimes(1);
   expect(mockAudio.controller.play).not.toHaveBeenCalled();
   expect(
     mockAudio.controller.startSelectionFromUserGesture,
   ).not.toHaveBeenCalled();
-  await fireEvent.press(screen.getByRole("button", { name: "Restore A" }));
+  await fireEvent.press(screen.getByRole("button", { name: "Undo" }));
   expect(onVariant).toHaveBeenLastCalledWith(p);
+  await fireEvent.press(screen.getByRole("button", { name: "Reset" }));
+  expect(onVariant).toHaveBeenLastCalledWith(p);
+});
+
+it("unmounts technical DOM in consumer preview while preserving Workbench state", async () => {
+  const screen = await render(
+    <PwaPlayerReviewControls target={single()} visible />,
+  );
+  await fireEvent.press(
+    screen.getByRole("button", { name: "Workbench review controls" }),
+  );
+  expect(screen.getByTestId("review-source-file")).toBeTruthy();
+  await screen.rerender(
+    <PwaPlayerReviewControls target={single()} visible={false} />,
+  );
+  expect(screen.queryByTestId("private-player-review")).toBeNull();
+  expect(screen.queryByLabelText("Development transport")).toBeNull();
+  await screen.rerender(<PwaPlayerReviewControls target={single()} visible />);
+  expect(screen.getByTestId("review-source-file")).toBeTruthy();
+});
+
+it("uses the consumer route transport so Ready can start from the unified Workbench bar", async () => {
+  const onPlayPause = jest.fn();
+  const screen = await render(
+    <PwaPlayerReviewControls
+      initiallyOpen
+      target={{ ...single(), matching: false }}
+      transport={{
+        canPlay: true,
+        canStop: false,
+        playing: false,
+        busy: false,
+        status: "Ready",
+        onPlayPause,
+        onStop: jest.fn(),
+      }}
+    />,
+  );
+  const play = screen.getByRole("button", { name: "Play review" });
+  expect(play).toBeEnabled();
+  expect(screen.getByText(/Ready · Continuous/)).toBeTruthy();
+  await fireEvent.press(play);
+  expect(onPlayPause).toHaveBeenCalledTimes(1);
 });
 
 it("keeps the final seek intention while the decoder is busy, without an obsolete seek backlog", async () => {
@@ -451,6 +514,43 @@ it("accumulates rapid next/previous intention but confirms selected joins only a
     [p.plan.transitions[2].startSeconds, true],
   ]);
   expect(screen.getByText(/^SELECTED CHANGE 3 \//)).toBeTruthy();
+});
+
+it("wires twenty completed join changes through the visible Workbench controls", async () => {
+  const p = program();
+  const screen = await render(
+    <PwaPlayerReviewControls
+      initiallyOpen
+      target={{
+        kind: "adaptive",
+        program: p,
+        matching: true,
+        onVariant: jest.fn(),
+      }}
+    />,
+  );
+  const receipt: { change: number; direction: "next" | "previous" }[] = [];
+  for (let change = 1; change <= 20; change++) {
+    const direction = change % 2 === 1 ? "next" : "previous";
+    await fireEvent.press(
+      screen.getByRole("button", {
+        name: direction === "next" ? "Next change" : "Previous change",
+      }),
+    );
+    await waitFor(() =>
+      expect(mockAudio.controller.seekAdaptiveSession).toHaveBeenCalledTimes(
+        change,
+      ),
+    );
+    receipt.push({ change, direction });
+  }
+  expect(receipt).toHaveLength(20);
+  expect(screen.getByText(/^SELECTED CHANGE 1 \/ /)).toBeTruthy();
+  expect(mockAudio.controller.loadProgram).not.toHaveBeenCalled();
+  expect(
+    mockAudio.controller.startSelectionFromUserGesture,
+  ).not.toHaveBeenCalled();
+  console.log("PWA_20_CHANGE_RECEIPT", JSON.stringify(receipt));
 });
 
 it("separates the exact join point, preview lead-in and loop window", async () => {
@@ -639,7 +739,7 @@ it("preserves variant A when the plan identity changes for a prepared B", async 
       target={{ kind: "adaptive", program: p, matching: true, onVariant }}
     />,
   );
-  await fireEvent.press(screen.getByRole("button", { name: "Prepare B" }));
+  await fireEvent.press(screen.getByRole("button", { name: "Preview" }));
   await waitFor(() => expect(onVariant).toHaveBeenCalledTimes(1));
   const b = onVariant.mock.calls[0][0];
   expect(b.plan.id).not.toBe(p.plan.id);
@@ -649,8 +749,132 @@ it("preserves variant A when the plan identity changes for a prepared B", async 
       target={{ kind: "adaptive", program: b, matching: true, onVariant }}
     />,
   );
-  await fireEvent.press(screen.getByRole("button", { name: "Restore A" }));
+  await fireEvent.press(screen.getByRole("button", { name: "Reset" }));
   await waitFor(() => expect(onVariant).toHaveBeenLastCalledWith(p));
+});
+
+it("keeps a stateful preview transaction across rerenders and discards it only after a successful Stop or new run", async () => {
+  const baseline = program();
+  const persistentWrite = jest.fn();
+
+  function StatefulReview() {
+    const [current, setCurrent] = useState(baseline);
+    const [visible, setVisible] = useState(true);
+    const [, setRefresh] = useState(0);
+    return (
+      <View>
+        <Text testID="stateful-plan-id">{current.plan.id}</Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Toggle review view"
+          onPress={() => setVisible((value) => !value)}
+        />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Refresh parent"
+          onPress={() => setRefresh((value) => value + 1)}
+        />
+        <PwaPlayerReviewControls
+          initiallyOpen
+          visible={visible}
+          target={{
+            kind: "adaptive",
+            program: current,
+            matching: true,
+            onVariant: setCurrent,
+          }}
+          transport={{
+            canPlay: true,
+            canStop: true,
+            playing: false,
+            busy: false,
+            status: "Paused",
+            onPlayPause: jest.fn(),
+            onStop: () => mockAudio.controller.stop(),
+          }}
+        />
+      </View>
+    );
+  }
+
+  const screen = await render(<StatefulReview />);
+  await fireEvent.press(screen.getByRole("button", { name: "Preview" }));
+  await waitFor(() =>
+    expect(screen.getByTestId("stateful-plan-id").props.children).not.toBe(
+      baseline.plan.id,
+    ),
+  );
+  await fireEvent.press(
+    screen.getByRole("button", { name: "Toggle review view" }),
+  );
+  expect(screen.queryByTestId("private-player-review")).toBeNull();
+  await fireEvent.press(
+    screen.getByRole("button", { name: "Toggle review view" }),
+  );
+  await fireEvent.press(screen.getByRole("button", { name: "Undo" }));
+  await waitFor(() =>
+    expect(screen.getByTestId("stateful-plan-id")).toHaveTextContent(
+      baseline.plan.id,
+    ),
+  );
+
+  await fireEvent.press(screen.getByRole("button", { name: "120 seconds" }));
+  await fireEvent.press(screen.getByRole("button", { name: "Preview" }));
+  await waitFor(() =>
+    expect(screen.getByTestId("stateful-plan-id").props.children).not.toBe(
+      baseline.plan.id,
+    ),
+  );
+  await fireEvent.press(screen.getByRole("button", { name: "Reset" }));
+  await waitFor(() =>
+    expect(screen.getByTestId("stateful-plan-id")).toHaveTextContent(
+      baseline.plan.id,
+    ),
+  );
+
+  await fireEvent.press(screen.getByRole("button", { name: "60 seconds" }));
+  await fireEvent.press(screen.getByRole("button", { name: "Preview" }));
+  await waitFor(() =>
+    expect(screen.getByTestId("stateful-plan-id").props.children).not.toBe(
+      baseline.plan.id,
+    ),
+  );
+  mockAudio.controller.stop.mockRejectedValueOnce(new Error("Stop failed"));
+  const failedVariant = screen.getByTestId("stateful-plan-id").props.children;
+  await fireEvent.press(screen.getByRole("button", { name: "Stop review" }));
+  await waitFor(() => expect(screen.getByText("Stop failed")).toBeTruthy());
+  expect(screen.getByTestId("stateful-plan-id")).toHaveTextContent(
+    failedVariant,
+  );
+  await fireEvent.press(screen.getByRole("button", { name: "Stop review" }));
+  await waitFor(() =>
+    expect(screen.getByTestId("stateful-plan-id")).toHaveTextContent(
+      baseline.plan.id,
+    ),
+  );
+
+  await fireEvent.press(screen.getByRole("button", { name: "120 seconds" }));
+  await fireEvent.press(screen.getByRole("button", { name: "Preview" }));
+  await waitFor(() =>
+    expect(screen.getByTestId("stateful-plan-id").props.children).not.toBe(
+      baseline.plan.id,
+    ),
+  );
+  mockAudio.setActive(null, 2);
+  await fireEvent.press(screen.getByRole("button", { name: "Refresh parent" }));
+  await waitFor(() =>
+    expect(screen.getByTestId("stateful-plan-id")).toHaveTextContent(
+      baseline.plan.id,
+    ),
+  );
+
+  expect(mockAudio.controller.play).not.toHaveBeenCalled();
+  expect(
+    mockAudio.controller.startSelectionFromUserGesture,
+  ).not.toHaveBeenCalled();
+  expect(mockAudio.controller.prepareReviewSeek).not.toHaveBeenCalled();
+  expect(mockAudio.controller.seekAdaptiveSession).not.toHaveBeenCalled();
+  expect(persistentWrite).not.toHaveBeenCalled();
 });
 
 it("seeks source loop markers exactly and exposes a separate fifteen-second preview", async () => {

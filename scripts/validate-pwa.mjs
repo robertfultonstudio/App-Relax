@@ -2,6 +2,10 @@ import { createHash } from "node:crypto";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  isPublishableShellFile,
+  publishedShellUrl,
+} from "./pwa-precache-policy.mjs";
 
 const projectRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const publicRoot = join(projectRoot, "public-pwa");
@@ -300,7 +304,10 @@ const shellPaths = artifactFiles
       !["sw.js", "precache-manifest.js"].includes(
         relative(artifactRoot, path),
       ) &&
-      !onDemandIndexes.has(relative(artifactRoot, path).replaceAll("\\", "/")),
+      !onDemandIndexes.has(
+        relative(artifactRoot, path).replaceAll("\\", "/"),
+      ) &&
+      isPublishableShellFile(relative(artifactRoot, path)),
   )
   .sort();
 const shellDigest = createHash("sha256").update(serviceWorker);
@@ -309,7 +316,7 @@ let precacheBytes = 0;
 for (const path of shellPaths) {
   const name = relative(artifactRoot, path).replaceAll("\\", "/");
   shellDigest.update(name).update("\0").update(readFileSync(path));
-  expectedUrls.push(name === "index.html" ? "/" : `/${name}`);
+  expectedUrls.push(publishedShellUrl(name));
   precacheBytes += statSync(path).size;
 }
 assert(
@@ -318,7 +325,7 @@ assert(
 );
 assert(
   JSON.stringify(precache.urls) === JSON.stringify(expectedUrls),
-  "precache must contain the complete exact shell",
+  "precache must contain the complete exact published shell",
 );
 assert(precacheBytes <= 20 * 1024 * 1024, "offline shell exceeds 20 MiB");
 assert(
@@ -329,10 +336,16 @@ assert(
 );
 assert(
   !/clients\.claim\s*\(/.test(serviceWorker) &&
-    (serviceWorker.match(/skipWaiting\s*\(/g) ?? []).length === 1 &&
+    (serviceWorker.match(/skipWaiting\s*\(/g) ?? []).length === 2 &&
     serviceWorker.includes('event.data?.type === "APP_RELAX_APPLY_UPDATE"') &&
-    serviceWorker.includes('sender.pathname !== "/update.html"') &&
+    serviceWorker.includes("!isUpdatePath(sender.pathname)") &&
+    serviceWorker.includes(
+      'pathname === "/update" || pathname === "/update.html"',
+    ) &&
+    serviceWorker.includes('pathname === "/" || pathname === "/index.html"') &&
+    serviceWorker.includes('client.navigate("/")') &&
     serviceWorker.includes("includeUncontrolled: true") &&
+    serviceWorker.includes("if (!hasActiveListeningClient(clients))") &&
     /if \(otherApp\) \{[\s\S]*?APP_RELAX_UPDATE_BLOCKED[\s\S]*?return;\s*\}\s*await self\.skipWaiting\(\)/.test(
       serviceWorker,
     ),
@@ -404,9 +417,9 @@ const representativePlayerHtml = readFileSync(
   "utf8",
 );
 assert(
-  representativePlayerHtml.includes('aria-label="Play"') &&
-    representativePlayerHtml.includes("Loading sound"),
-  "static player must expose Play and an honest non-playing loading state",
+  representativePlayerHtml.includes('aria-label="Inizia"') &&
+    representativePlayerHtml.includes("Caricamento"),
+  "static player must expose an Italian start action and an honest non-playing loading state",
 );
 assert(
   !representativePlayerHtml.includes("IPHONE PREVIEW"),

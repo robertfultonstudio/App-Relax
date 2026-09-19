@@ -49,12 +49,14 @@ export function AdaptiveSessionSetup({
   onDurationChange,
   reviewProgramFactory,
   completePractice = false,
+  showDevelopmentLink = true,
 }: {
   outcome: ConsumerOutcomeId;
   qaAvailable?: boolean;
   duration?: SessionDurationMinutes;
   onDurationChange?: (value: SessionDurationMinutes) => void;
   completePractice?: boolean;
+  showDevelopmentLink?: boolean;
   reviewProgramFactory?: (
     input: CreateAdaptiveSessionInput,
   ) => AdaptiveSessionProgram;
@@ -438,12 +440,13 @@ export function AdaptiveSessionSetup({
                 : "Loading sound…"}
       </Text>
       {completePractice &&
+        showDevelopmentLink &&
         !isNativeCatalogPreview() &&
         reviewProgramFactory &&
         selection?.kind === "adaptive" && (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={`Open ${duration}-minute session and development player`}
+            accessibilityLabel={`Open complete ${duration}-minute practice`}
             disabled={busy}
             accessibilityState={{ disabled: busy }}
             onPress={() =>
@@ -452,9 +455,7 @@ export function AdaptiveSessionSetup({
             style={styles.disclosure}
             testID="open-complete-practice-review"
           >
-            <Text style={styles.disclosureTitle}>
-              Session & development player →
-            </Text>
+            <Text style={styles.disclosureTitle}>Open complete practice →</Text>
             <Text style={styles.body}>
               {duration} min ·{" "}
               {

@@ -65,8 +65,9 @@ describe("PWA contract", () => {
 
   it.each([
     { source: "https://relax.test/update.html", clients: [], allowed: true },
+    { source: "https://relax.test/update", clients: [], allowed: true },
     {
-      source: "https://relax.test/update.html",
+      source: "https://relax.test/update",
       clients: ["https://relax.test/listen/respiro-hatha-1-01"],
       allowed: false,
     },
@@ -228,6 +229,7 @@ describe("PWA contract", () => {
     expect(serviceWorker).toContain(
       'event.data?.type === "APP_RELAX_APPLY_UPDATE"',
     );
+    expect(serviceWorker).toContain("if (!hasActiveListeningClient(clients))");
     expect(serviceWorker).not.toContain("self.clients.claim(");
     expect(serviceWorker.indexOf("isAudioRequest(request, url)")).toBeLessThan(
       serviceWorker.indexOf(
@@ -236,7 +238,7 @@ describe("PWA contract", () => {
       ),
     );
     expect(serviceWorker).toContain(
-      '? (await cache.match("/offline.html")) || Response.error()',
+      '? (await cache.match("/offline")) || Response.error()',
     );
     expect(serviceWorker).not.toContain(
       '(await caches.match(request)) ||\n            (await caches.match("/offline.html"))',
@@ -306,6 +308,8 @@ describe("PWA contract", () => {
         importScripts: () => undefined,
         self: {
           APP_RELAX_PRECACHE: { revision: "a".repeat(64), urls: [] },
+          clients: { matchAll: async () => [] },
+          location: { origin: "https://relax.test" },
           addEventListener: (
             type: string,
             handler: (typeof handlers)[string],

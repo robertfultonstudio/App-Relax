@@ -4,11 +4,15 @@ import {
 } from "@/offline/PwaShellReadiness";
 import { PRIVATE_REVIEW_HOST, pwaShellPolicy } from "@/offline/pwaShellPolicy";
 
-const active = {
-  state: "activated",
-  scriptURL: "https://app.test/sw.js",
-} as ServiceWorker;
-function browser(controlled = true, waiting = false) {
+function browser(
+  controlled = true,
+  waiting = false,
+  origin = "https://app.test",
+) {
+  const active = {
+    state: "activated",
+    scriptURL: `${origin}/sw.js`,
+  } as ServiceWorker;
   const registration = {
     active,
     waiting: waiting ? {} : null,
@@ -18,28 +22,28 @@ function browser(controlled = true, waiting = false) {
     ready: Promise.resolve(registration),
     controller: controlled ? active : null,
   } as unknown as ServiceWorkerContainer;
-  return { container, registration };
+  return { active, container, registration };
 }
 
 describe("offline app readiness separate from verified audio", () => {
-  it("exposes private online-only policy without preparing, registering or retrying a shell", async () => {
-    const prepare = jest.fn();
+  it("prepares and verifies the private review shell", async () => {
+    const prepare = jest.fn(async () => ({ controlled: true, complete: true }));
     const gate = new PwaShellReadiness(
       { prepare },
       pwaShellPolicy(`https://${PRIVATE_REVIEW_HOST}`),
     );
-    expect(gate.getSnapshot()).toBe("online-only");
+    expect(gate.getSnapshot()).toBe("unchecked");
     await gate.check();
-    await gate.check();
-    expect(prepare).not.toHaveBeenCalled();
-    expect(gate.getSnapshot()).toBe("online-only");
-    const { container } = browser();
-    const verify = jest.fn();
+    expect(prepare).toHaveBeenCalledTimes(1);
+    expect(gate.getSnapshot()).toBe("ready");
+    const privateOrigin = `https://${PRIVATE_REVIEW_HOST}`;
+    const { active, container } = browser(true, false, privateOrigin);
+    const verify = jest.fn(async () => true);
     await expect(
-      prepareBrowserShell(container, `https://${PRIVATE_REVIEW_HOST}`, verify),
-    ).resolves.toEqual({ controlled: false, complete: false });
-    expect(container.register).not.toHaveBeenCalled();
-    expect(verify).not.toHaveBeenCalled();
+      prepareBrowserShell(container, privateOrigin, verify),
+    ).resolves.toEqual({ controlled: true, complete: true });
+    expect(container.register).toHaveBeenCalledWith("/sw.js", { scope: "/" });
+    expect(verify).toHaveBeenCalledWith(active);
   });
   it.each([
     "http://localhost:8096",
@@ -61,7 +65,7 @@ describe("offline app readiness separate from verified audio", () => {
     expect(gate.getSnapshot()).toBe("reopen");
   });
   it("requires registration, ready, exact controller and complete shell before readiness", async () => {
-    const { container } = browser();
+    const { active, container } = browser();
     const verify = jest.fn(async () => true);
     const gate = new PwaShellReadiness({
       prepare: () => prepareBrowserShell(container, "https://app.test", verify),

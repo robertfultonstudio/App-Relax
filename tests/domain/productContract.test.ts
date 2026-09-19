@@ -208,7 +208,13 @@ describe("product and asset request contracts", () => {
     }
     expect(
       readFileSync(join(projectRoot, "src", "app", "yoga.tsx"), "utf8"),
-    ).toContain('href="/outcome/yoga?practice=complete"');
+    ).toContain('href="/outcome/yoga"');
+    expect(
+      readFileSync(
+        join(projectRoot, "src", "app", "outcome", "[outcomeId].tsx"),
+        "utf8",
+      ),
+    ).toContain('"/outcome/yoga?practice=complete"');
 
     const technicalSource = readFileSync(
       join(projectRoot, "src", "app-qa", "audio-test.tsx"),

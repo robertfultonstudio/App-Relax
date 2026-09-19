@@ -1,0 +1,808 @@
+{
+  "schemaVersion": 1,
+  "phase": "activate",
+  "fileCount": 45,
+  "totalBytes": 2371806490,
+  "files": [
+    {
+      "filename": "SOUNDSCAPE_PIANO_MASSAGE_001_48K24_LOOP.flac",
+      "bytes": 207949157,
+      "sha256": "fc80466d6245df7989e386288f580e3cf45fa29ad65fa2720170d86ac156d01c",
+      "packId": "APP_READY_AUDIO_01"
+    },
+    {
+      "filename": "SOUNDSCAPE_STAR_GENERATOR_001_EMINOR_48K24_LOOP.flac",
+      "bytes": 28751961,
+      "sha256": "ccd0eb85fd71cc8465473360efad5ca2fa62385d44d97e88ebabf841cb0a0274",
+      "packId": "APP_READY_AUDIO_01"
+    },
+    {
+      "filename": "SOUNDSCAPE_STAR_GENERATOR_002_EMINOR_48K24_LOOP.flac",
+      "bytes": 28914365,
+      "sha256": "784679cf2c76f4cb37aca0bd8e8b9e6a4d6bf73a12a8ccd5cb16b817b058aff4",
+      "packId": "APP_READY_AUDIO_01"
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_DREAM_003_PAD_48K24_LOOP.flac",
+      "bytes": 69967075,
+      "sha256": "005e7c9b06c27810cbcad637c211d15b922d9174c598ed11340fc8659c001bdc",
+      "packId": "APP_READY_AUDIO_01"
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_DREAM_003_PIANO_48K24_LOOP.flac",
+      "bytes": 67923646,
+      "sha256": "22194704caa34e47b96e71a0dcc714d190962dd027684ff7331b38b6018c45ab",
+      "packId": "APP_READY_AUDIO_01"
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_FIELD_WAVES_001_EMINOR_48K24_LOOP.flac",
+      "bytes": 25220845,
+      "sha256": "48363d5e81d16c63ea82f095a1d8479fe197e6f1af45ee4c154575952cd620d7",
+      "packId": "APP_READY_AUDIO_01"
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_GENERATOR_002_EMINOR_48K24_LOOP.flac",
+      "bytes": 24875666,
+      "sha256": "e51b0b7dfa9962a31597885398cc98c26c5c3230f0c13f6d23181aa91ebb8652",
+      "packId": "APP_READY_AUDIO_01"
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_GENERATOR_003_PIANO_CMAJ_48K24_LOOP.flac",
+      "bytes": 65467911,
+      "sha256": "0e4343b8536201a5318b2dba27868e07a638dc84065880382b3c3ceb32e9b1d8",
+      "packId": "APP_READY_AUDIO_01"
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_GENERATOR_003_TEXTURE_CMAJ_48K24_LOOP.flac",
+      "bytes": 73786934,
+      "sha256": "0cc934fa3f8dd0d628bb7ed166f29b9fc6a5f25902bbb4519b65befa32845eb3",
+      "packId": "APP_READY_AUDIO_01"
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_GENERATOR_004_PAD_CMAJ_48K24_LOOP.flac",
+      "bytes": 150869422,
+      "sha256": "8597dc842244ca796845262148459af17fcd259590af7d3773381ab2ed2a0199",
+      "packId": "APP_READY_AUDIO_01"
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_GENERATOR_004_PIANO_CMAJ_48K24_LOOP.flac",
+      "bytes": 147267572,
+      "sha256": "56ba3adc283f774b7948375217407cc0e6ef60e57b9f40fc7cd5779b4e5108bd",
+      "packId": "APP_READY_AUDIO_01"
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_GENERATOR_005_PAD_48K24_LOOP.flac",
+      "bytes": 186924668,
+      "sha256": "b6e933633104ed72792429a99aa171ffc6664c48534fad4042eee70ed61dd36f",
+      "packId": "APP_READY_AUDIO_01"
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_GENERATOR_005_PIANO_48K24_LOOP.flac",
+      "bytes": 195138751,
+      "sha256": "7a85f0b0bf941ef465e6d51b459dff545a77bcdecb2afe6f2d879a377eec6da9",
+      "packId": "APP_READY_AUDIO_01"
+    },
+    {
+      "filename": "FIELD_RAIN_001_SILVER_CANOPY_48K24_LOOP.flac",
+      "bytes": 11332198,
+      "sha256": "b2e4c17c8e307152039e9133b5b9021c1a07f6660023c21d07d72a0d92ea64db",
+      "packId": "APP_READY_AUDIO_02_ELEMENTAL_WATER_AIR"
+    },
+    {
+      "filename": "FIELD_RAIN_002_SOFT_WEATHER_48K24_LOOP.flac",
+      "bytes": 6932884,
+      "sha256": "9cb07fd79e1e3070749071c3faea0c6465b2d7f883d3d0c0e0cbc1e990f82a3b",
+      "packId": "APP_READY_AUDIO_02_ELEMENTAL_WATER_AIR"
+    },
+    {
+      "filename": "FIELD_RAIN_003_DEEP_RAIN_48K24_LOOP.flac",
+      "bytes": 4986863,
+      "sha256": "e99f5e1fafd8753ff8ef99844345ea7fcf13285611f29c1de6619ec89976e630",
+      "packId": "APP_READY_AUDIO_02_ELEMENTAL_WATER_AIR"
+    },
+    {
+      "filename": "FIELD_RAIN_004_FINE_RAIN_48K24_LOOP.flac",
+      "bytes": 9982688,
+      "sha256": "539a9e4c88bedb111b0530fbfc42cee7eeb7086eddd7fc29f408ce454063fed5",
+      "packId": "APP_READY_AUDIO_02_ELEMENTAL_WATER_AIR"
+    },
+    {
+      "filename": "FIELD_RAIN_005_MISTED_GARDEN_48K24_LOOP.flac",
+      "bytes": 10802865,
+      "sha256": "0c53ea7b070a029033c07a7a51aa76029f35afb88857f17fbe941c398bb915a1",
+      "packId": "APP_READY_AUDIO_02_ELEMENTAL_WATER_AIR"
+    },
+    {
+      "filename": "FIELD_RAIN_006_QUIET_WEATHER_48K24_LOOP.flac",
+      "bytes": 4665546,
+      "sha256": "964648f934d65079b3b1334de6b17b615c27a4eb816a8b501361499e2cb7c347",
+      "packId": "APP_READY_AUDIO_02_ELEMENTAL_WATER_AIR"
+    },
+    {
+      "filename": "FIELD_RAIN_007_RAIN_VEIL_48K24_LOOP.flac",
+      "bytes": 10561813,
+      "sha256": "ea7ecf311822c57b7e8b7e5a65e704c3fa2d0d65b5a1070f49fadee978a850bb",
+      "packId": "APP_READY_AUDIO_02_ELEMENTAL_WATER_AIR"
+    },
+    {
+      "filename": "FIELD_RAIN_008_SHELTERED_RAIN_48K24_LOOP.flac",
+      "bytes": 5024158,
+      "sha256": "1c4c65f60bac8bf052bc01b4f52742553777038ae67240e4a1f8100b577c735b",
+      "packId": "APP_READY_AUDIO_02_ELEMENTAL_WATER_AIR"
+    },
+    {
+      "filename": "FIELD_RAIN_009_DISTANT_SHOWER_48K24_LOOP.flac",
+      "bytes": 9995858,
+      "sha256": "16f989baef88004d6a90c8a4955c0bec0f5d7434b1d183e8b382c6cfd93b3eff",
+      "packId": "APP_READY_AUDIO_02_ELEMENTAL_WATER_AIR"
+    },
+    {
+      "filename": "FIELD_RAIN_010_LOW_RAIN_48K24_LOOP.flac",
+      "bytes": 2893261,
+      "sha256": "88ca800a745fdb1433de9bafb2c7da33d0974bb60972033110611a3950b7eef3",
+      "packId": "APP_READY_AUDIO_02_ELEMENTAL_WATER_AIR"
+    },
+    {
+      "filename": "FIELD_RAIN_011_RAIN_RECEDING_48K24_LOOP.flac",
+      "bytes": 4745722,
+      "sha256": "bac948d5d0719c78b1c3507380267f926f59a12cc427db9bf1c9cc3efecc1f42",
+      "packId": "APP_READY_AUDIO_02_ELEMENTAL_WATER_AIR"
+    },
+    {
+      "filename": "FIELD_STREAM_001_STONE_CURRENT_48K24_LOOP.flac",
+      "bytes": 11362869,
+      "sha256": "37305d91b0e6991ebebc69b19f8f912ad55d504bef99e750f85d764b7c05b6aa",
+      "packId": "APP_READY_AUDIO_02_ELEMENTAL_WATER_AIR"
+    },
+    {
+      "filename": "FIELD_STREAM_002_MOSS_CURRENT_48K24_LOOP.flac",
+      "bytes": 10924056,
+      "sha256": "7b05acaf1e40aa9a3e4bf87c57881b9512c8019b8dcadbdd333ed1f66eee05e9",
+      "packId": "APP_READY_AUDIO_02_ELEMENTAL_WATER_AIR"
+    },
+    {
+      "filename": "FIELD_STREAM_003_HIDDEN_WATER_48K24_LOOP.flac",
+      "bytes": 12944975,
+      "sha256": "5b97b6e4d9d2c614338296ac6e3410790ea1d055cefdb12798638129bade8d6b",
+      "packId": "APP_READY_AUDIO_02_ELEMENTAL_WATER_AIR"
+    },
+    {
+      "filename": "FIELD_STREAM_004_CLEAR_STREAM_48K24_LOOP.flac",
+      "bytes": 15086307,
+      "sha256": "bd5e15f87c5b5522aa1504ff2660305eac441e072cad4739d69f9315b8db655e",
+      "packId": "APP_READY_AUDIO_02_ELEMENTAL_WATER_AIR"
+    },
+    {
+      "filename": "FIELD_STREAM_005_CEDAR_STREAM_48K24_LOOP.flac",
+      "bytes": 13034831,
+      "sha256": "708c4433c2514cb0aa809e5c6d5e13c59d02410896c86b52349a598cbf5a1f1c",
+      "packId": "APP_READY_AUDIO_02_ELEMENTAL_WATER_AIR"
+    },
+    {
+      "filename": "FIELD_SEA_001_TIDAL_BREATH_48K24_LOOP.flac",
+      "bytes": 25690927,
+      "sha256": "ff21967bb9bd7271522a69b3ca94ee03da958129f562cb94628f126489b9282b",
+      "packId": "APP_READY_AUDIO_02_ELEMENTAL_WATER_AIR"
+    },
+    {
+      "filename": "FIELD_SEA_002_MOON_SHORE_48K24_LOOP.flac",
+      "bytes": 30783723,
+      "sha256": "55e1f47493ab962b81416a1a891c4b57241ff0aeb6ccc6ec23fad8de052b1a1f",
+      "packId": "APP_READY_AUDIO_02_ELEMENTAL_WATER_AIR"
+    },
+    {
+      "filename": "FIELD_SEA_003_OPEN_TIDE_48K24_LOOP.flac",
+      "bytes": 26805900,
+      "sha256": "3e1474bbf664a80b0f5e298a3673ceb77d2d56fff9365ba822796df2ce95a5bb",
+      "packId": "APP_READY_AUDIO_02_ELEMENTAL_WATER_AIR"
+    },
+    {
+      "filename": "FIELD_SEA_004_NIGHT_SHORE_48K24_LOOP.flac",
+      "bytes": 31578010,
+      "sha256": "f4cca6b34e6c55f440f69fe7bc79368edd425944ee623e0718b15666df965067",
+      "packId": "APP_READY_AUDIO_02_ELEMENTAL_WATER_AIR"
+    },
+    {
+      "filename": "FIELD_SEA_005_PEARL_TIDE_48K24_LOOP.flac",
+      "bytes": 30675903,
+      "sha256": "3ffa4826edb449a78225282f1a2e64430aeadaa38ca014c08b2083cca554d288",
+      "packId": "APP_READY_AUDIO_02_ELEMENTAL_WATER_AIR"
+    },
+    {
+      "filename": "FIELD_SEA_006_DISTANT_SURF_48K24_LOOP.flac",
+      "bytes": 18847755,
+      "sha256": "ec3f9343ca2afe1b11fa253d9f27330f249ef678f75ee5e4773b8068549fd8f4",
+      "packId": "APP_READY_AUDIO_02_ELEMENTAL_WATER_AIR"
+    },
+    {
+      "filename": "FIELD_SEA_007_BLUE_INTERVAL_48K24_LOOP.flac",
+      "bytes": 16728723,
+      "sha256": "5336b26544a60a7917303b841e24f29f1e7867d771114a6fc9f7d3fc408b58f9",
+      "packId": "APP_READY_AUDIO_02_ELEMENTAL_WATER_AIR"
+    },
+    {
+      "filename": "ESOTERIC_AIR_001_SECOND_ELEMENT_48K24_LOOP.flac",
+      "bytes": 22037330,
+      "sha256": "78622a42642143f6bb9e18a923b54bcd8b4ce1dfa704b2d84fd1dd8a07dbea1b",
+      "packId": "APP_READY_AUDIO_02_ELEMENTAL_WATER_AIR"
+    },
+    {
+      "filename": "01_soglia_del_respiro_LOOP_48K24.flac",
+      "bytes": 76206653,
+      "sha256": "ec941a5010790587504d80aff21122efdff0307fe59f380692b00331f9254dc0",
+      "packId": "RESPIRO_HATHA_1_LOOPS_20260912"
+    },
+    {
+      "filename": "02_aria_tra_le_mani_LOOP_48K24.flac",
+      "bytes": 93519303,
+      "sha256": "ea39c9c286ecdaf1d10ac85885576857d9e1a8506b62f19148b142ef38424d58",
+      "packId": "RESPIRO_HATHA_1_LOOPS_20260912"
+    },
+    {
+      "filename": "03_onda_e_appoggio_LOOP_48K24.flac",
+      "bytes": 127641991,
+      "sha256": "c0216c897af83e18150fa6bf07fcd8b65fd8a6e662797d1e32c3e17d8dd370c4",
+      "packId": "RESPIRO_HATHA_1_LOOPS_20260912"
+    },
+    {
+      "filename": "04_ampiezza_quieta_LOOP_48K24.flac",
+      "bytes": 119588897,
+      "sha256": "2966066183b4a9015394f9ce89b2e1327bba45937480453c05f8128bf44a86ea",
+      "packId": "RESPIRO_HATHA_1_LOOPS_20260912"
+    },
+    {
+      "filename": "05_terra_mobile_LOOP_48K24.flac",
+      "bytes": 118442374,
+      "sha256": "c1e223caa8446e2d15cf97c045007934af6015872158a803762a9051492a69fd",
+      "packId": "RESPIRO_HATHA_1_LOOPS_20260912"
+    },
+    {
+      "filename": "06_lungo_espiro_LOOP_48K24.flac",
+      "bytes": 97158109,
+      "sha256": "d0aef061e274028cb5d1d8bfe09ed0fb13de414db6f916447c5bf3f94ec1e0c1",
+      "packId": "RESPIRO_HATHA_1_LOOPS_20260912"
+    },
+    {
+      "filename": "07_spazio_che_resta_LOOP_48K24.flac",
+      "bytes": 79177382,
+      "sha256": "d69380e14a82bfdfd783b5cc005e9c61faa4198d92c7b16530c850c4a45d3caa",
+      "packId": "RESPIRO_HATHA_1_LOOPS_20260912"
+    },
+    {
+      "filename": "08_riaprire_lo_spazio_LOOP_48K24.flac",
+      "bytes": 38588643,
+      "sha256": "b1a968a1332543237d46aed751b6fb803cb98ebffbe4345e912f347fc609d54f",
+      "packId": "RESPIRO_HATHA_1_LOOPS_20260912"
+    }
+  ],
+  "alternateFiles": [
+    {
+      "filename": "SOUNDSCAPE_PIANO_MASSAGE_001_48K24_LOOP.wav",
+      "bytes": 339840044,
+      "sha256": "ca1b70f39d4f2168d527f6c636a58de92b6173645358ec2236f5c0c1689f0ffc",
+      "packId": "APP_READY_AUDIO_01"
+    },
+    {
+      "filename": "SOUNDSCAPE_STAR_GENERATOR_001_EMINOR_48K24_LOOP.wav",
+      "bytes": 48960044,
+      "sha256": "32597db81069be7ac6f2a5884de8a16fc2aba83de3af6e121195571e5ff97952",
+      "packId": "APP_READY_AUDIO_01"
+    },
+    {
+      "filename": "SOUNDSCAPE_STAR_GENERATOR_002_EMINOR_48K24_LOOP.wav",
+      "bytes": 48960044,
+      "sha256": "2cdfa8215b4ccbf83ca1f3a52ff6466ddbaf5a7d45de6327de95ef11ed6375cb",
+      "packId": "APP_READY_AUDIO_01"
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_DREAM_003_PAD_48K24_LOOP.wav",
+      "bytes": 130091564,
+      "sha256": "964ba0245cad509b07fefa4e2c67470e8a2d47c45fa98160913961bd50f8ef7f",
+      "packId": "APP_READY_AUDIO_01"
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_DREAM_003_PIANO_48K24_LOOP.wav",
+      "bytes": 130091564,
+      "sha256": "f67bf59b9885cc0f117a801e4a1b9077da0ce9de504fa423d6c802835420af1e",
+      "packId": "APP_READY_AUDIO_01"
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_FIELD_WAVES_001_EMINOR_48K24_LOOP.wav",
+      "bytes": 48962324,
+      "sha256": "857e2b2ebf68ae4fc8968229d5c059cfb6918d600db81841eabe505328abd250",
+      "packId": "APP_READY_AUDIO_01"
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_GENERATOR_002_EMINOR_48K24_LOOP.wav",
+      "bytes": 48960044,
+      "sha256": "8f35c4f8dad2b9385eccb9e14be0072a9e13dc7ee63bf6fda1699c6ebd1ea65b",
+      "packId": "APP_READY_AUDIO_01"
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_GENERATOR_003_PIANO_CMAJ_48K24_LOOP.wav",
+      "bytes": 130176044,
+      "sha256": "122c884735eba9edcb588a5c2afa1f7265b59755964e8c4b7a839d906f474f68",
+      "packId": "APP_READY_AUDIO_01"
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_GENERATOR_003_TEXTURE_CMAJ_48K24_LOOP.wav",
+      "bytes": 130176044,
+      "sha256": "4fe164b6cef9a650a80fc4bb9fd05a76036e679341919245a1c8fe24fb5feedb",
+      "packId": "APP_READY_AUDIO_01"
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_GENERATOR_004_PAD_CMAJ_48K24_LOOP.wav",
+      "bytes": 281089964,
+      "sha256": "7b29675c68fb1dac50463415d083c12cce8a813ab4439397c14c220b021f5b1f",
+      "packId": "APP_READY_AUDIO_01"
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_GENERATOR_004_PIANO_CMAJ_48K24_LOOP.wav",
+      "bytes": 281089964,
+      "sha256": "c24eaf43946960733ea4cd16e5d2b440b8c1a520839573b6689c763a46055a16",
+      "packId": "APP_READY_AUDIO_01"
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_GENERATOR_005_PAD_48K24_LOOP.wav",
+      "bytes": 345312044,
+      "sha256": "b1ab2f7e2ee94589cb2e8efee7c6c5b82b01ddeb899cdd1a7f79334f5dd78879",
+      "packId": "APP_READY_AUDIO_01"
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_GENERATOR_005_PIANO_48K24_LOOP.wav",
+      "bytes": 345312044,
+      "sha256": "30d3b5358ea70502137f0cfc07304be990daa5e0e73880d99c8274d471ad826e",
+      "packId": "APP_READY_AUDIO_01"
+    },
+    {
+      "filename": "01_soglia_del_respiro_LOOP_48K24.wav",
+      "bytes": 134136102,
+      "sha256": "3714eb9736263d29e8cbfdc6857bcf64442f9776aae9377a7c93c70f46e51e49",
+      "packId": "RESPIRO_HATHA_1_LOOPS_20260912"
+    },
+    {
+      "filename": "02_aria_tra_le_mani_LOOP_48K24.wav",
+      "bytes": 167760102,
+      "sha256": "16f27071f7a0b6bdf97cf923acc625d1935d070f860b37e97862282bc59ceaac",
+      "packId": "RESPIRO_HATHA_1_LOOPS_20260912"
+    },
+    {
+      "filename": "03_onda_e_appoggio_LOOP_48K24.wav",
+      "bytes": 237240044,
+      "sha256": "11dd22198bd92d6691ba0bd2a64045657822e026f20f5fea614e57bda1c1588c",
+      "packId": "RESPIRO_HATHA_1_LOOPS_20260912"
+    },
+    {
+      "filename": "04_ampiezza_quieta_LOOP_48K24.wav",
+      "bytes": 237240102,
+      "sha256": "bf4618c89583845c4a484770eb80e621a92bd92cafe950bad396f52bfc9d0ff1",
+      "packId": "RESPIRO_HATHA_1_LOOPS_20260912"
+    },
+    {
+      "filename": "05_terra_mobile_LOOP_48K24.wav",
+      "bytes": 200952102,
+      "sha256": "a18b6e8d85d326a893099a5ec7cc9156db00491007dc2c94c2bd9b8b0c3d699b",
+      "packId": "RESPIRO_HATHA_1_LOOPS_20260912"
+    },
+    {
+      "filename": "06_lungo_espiro_LOOP_48K24.wav",
+      "bytes": 168480102,
+      "sha256": "8c3fb52c0f94900f0d6d684113666f7ef15fee85ab74592b90e39cab3b32fb42",
+      "packId": "RESPIRO_HATHA_1_LOOPS_20260912"
+    },
+    {
+      "filename": "07_spazio_che_resta_LOOP_48K24.wav",
+      "bytes": 132480044,
+      "sha256": "21a350449143f797eb659da0964c747b847efbd987c3cd450a706f9bbfac81db",
+      "packId": "RESPIRO_HATHA_1_LOOPS_20260912"
+    },
+    {
+      "filename": "08_riaprire_lo_spazio_LOOP_48K24.wav",
+      "bytes": 66456102,
+      "sha256": "47cfdaa456cad4e959b0bed2c0b9404094b055c11757f85d00d41685d60ef61a",
+      "packId": "RESPIRO_HATHA_1_LOOPS_20260912"
+    }
+  ],
+  "importFiles": [
+    {
+      "filename": "SOUNDSCAPE_PIANO_MASSAGE_001_48K24_LOOP.flac",
+      "bytes": 207949157,
+      "sha256": "fc80466d6245df7989e386288f580e3cf45fa29ad65fa2720170d86ac156d01c",
+      "packId": "APP_READY_AUDIO_01"
+    },
+    {
+      "filename": "SOUNDSCAPE_STAR_GENERATOR_001_EMINOR_48K24_LOOP.flac",
+      "bytes": 28751961,
+      "sha256": "ccd0eb85fd71cc8465473360efad5ca2fa62385d44d97e88ebabf841cb0a0274",
+      "packId": "APP_READY_AUDIO_01"
+    },
+    {
+      "filename": "SOUNDSCAPE_STAR_GENERATOR_002_EMINOR_48K24_LOOP.flac",
+      "bytes": 28914365,
+      "sha256": "784679cf2c76f4cb37aca0bd8e8b9e6a4d6bf73a12a8ccd5cb16b817b058aff4",
+      "packId": "APP_READY_AUDIO_01"
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_DREAM_003_PAD_48K24_LOOP.flac",
+      "bytes": 69967075,
+      "sha256": "005e7c9b06c27810cbcad637c211d15b922d9174c598ed11340fc8659c001bdc",
+      "packId": "APP_READY_AUDIO_01"
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_DREAM_003_PIANO_48K24_LOOP.flac",
+      "bytes": 67923646,
+      "sha256": "22194704caa34e47b96e71a0dcc714d190962dd027684ff7331b38b6018c45ab",
+      "packId": "APP_READY_AUDIO_01"
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_FIELD_WAVES_001_EMINOR_48K24_LOOP.flac",
+      "bytes": 25220845,
+      "sha256": "48363d5e81d16c63ea82f095a1d8479fe197e6f1af45ee4c154575952cd620d7",
+      "packId": "APP_READY_AUDIO_01"
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_GENERATOR_002_EMINOR_48K24_LOOP.flac",
+      "bytes": 24875666,
+      "sha256": "e51b0b7dfa9962a31597885398cc98c26c5c3230f0c13f6d23181aa91ebb8652",
+      "packId": "APP_READY_AUDIO_01"
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_GENERATOR_003_PIANO_CMAJ_48K24_LOOP.flac",
+      "bytes": 65467911,
+      "sha256": "0e4343b8536201a5318b2dba27868e07a638dc84065880382b3c3ceb32e9b1d8",
+      "packId": "APP_READY_AUDIO_01"
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_GENERATOR_003_TEXTURE_CMAJ_48K24_LOOP.flac",
+      "bytes": 73786934,
+      "sha256": "0cc934fa3f8dd0d628bb7ed166f29b9fc6a5f25902bbb4519b65befa32845eb3",
+      "packId": "APP_READY_AUDIO_01"
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_GENERATOR_004_PAD_CMAJ_48K24_LOOP.flac",
+      "bytes": 150869422,
+      "sha256": "8597dc842244ca796845262148459af17fcd259590af7d3773381ab2ed2a0199",
+      "packId": "APP_READY_AUDIO_01"
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_GENERATOR_004_PIANO_CMAJ_48K24_LOOP.flac",
+      "bytes": 147267572,
+      "sha256": "56ba3adc283f774b7948375217407cc0e6ef60e57b9f40fc7cd5779b4e5108bd",
+      "packId": "APP_READY_AUDIO_01"
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_GENERATOR_005_PAD_48K24_LOOP.flac",
+      "bytes": 186924668,
+      "sha256": "b6e933633104ed72792429a99aa171ffc6664c48534fad4042eee70ed61dd36f",
+      "packId": "APP_READY_AUDIO_01"
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_GENERATOR_005_PIANO_48K24_LOOP.flac",
+      "bytes": 195138751,
+      "sha256": "7a85f0b0bf941ef465e6d51b459dff545a77bcdecb2afe6f2d879a377eec6da9",
+      "packId": "APP_READY_AUDIO_01"
+    },
+    {
+      "filename": "01_soglia_del_respiro_LOOP_48K24.flac",
+      "bytes": 76206653,
+      "sha256": "ec941a5010790587504d80aff21122efdff0307fe59f380692b00331f9254dc0",
+      "packId": "RESPIRO_HATHA_1_LOOPS_20260912"
+    },
+    {
+      "filename": "02_aria_tra_le_mani_LOOP_48K24.flac",
+      "bytes": 93519303,
+      "sha256": "ea39c9c286ecdaf1d10ac85885576857d9e1a8506b62f19148b142ef38424d58",
+      "packId": "RESPIRO_HATHA_1_LOOPS_20260912"
+    },
+    {
+      "filename": "03_onda_e_appoggio_LOOP_48K24.flac",
+      "bytes": 127641991,
+      "sha256": "c0216c897af83e18150fa6bf07fcd8b65fd8a6e662797d1e32c3e17d8dd370c4",
+      "packId": "RESPIRO_HATHA_1_LOOPS_20260912"
+    },
+    {
+      "filename": "04_ampiezza_quieta_LOOP_48K24.flac",
+      "bytes": 119588897,
+      "sha256": "2966066183b4a9015394f9ce89b2e1327bba45937480453c05f8128bf44a86ea",
+      "packId": "RESPIRO_HATHA_1_LOOPS_20260912"
+    },
+    {
+      "filename": "05_terra_mobile_LOOP_48K24.flac",
+      "bytes": 118442374,
+      "sha256": "c1e223caa8446e2d15cf97c045007934af6015872158a803762a9051492a69fd",
+      "packId": "RESPIRO_HATHA_1_LOOPS_20260912"
+    },
+    {
+      "filename": "06_lungo_espiro_LOOP_48K24.flac",
+      "bytes": 97158109,
+      "sha256": "d0aef061e274028cb5d1d8bfe09ed0fb13de414db6f916447c5bf3f94ec1e0c1",
+      "packId": "RESPIRO_HATHA_1_LOOPS_20260912"
+    },
+    {
+      "filename": "07_spazio_che_resta_LOOP_48K24.flac",
+      "bytes": 79177382,
+      "sha256": "d69380e14a82bfdfd783b5cc005e9c61faa4198d92c7b16530c850c4a45d3caa",
+      "packId": "RESPIRO_HATHA_1_LOOPS_20260912"
+    },
+    {
+      "filename": "08_riaprire_lo_spazio_LOOP_48K24.flac",
+      "bytes": 38588643,
+      "sha256": "b1a968a1332543237d46aed751b6fb803cb98ebffbe4345e912f347fc609d54f",
+      "packId": "RESPIRO_HATHA_1_LOOPS_20260912"
+    }
+  ],
+  "readyKey": "review-ready/9bb0300c82594437ef124323e8a62c0ea2d75352633c6279996af741be31adde",
+  "publishFiles": [
+    {
+      "filename": "SOUNDSCAPE_PIANO_MASSAGE_001_48K24_LOOP.flac",
+      "bytes": 207949157,
+      "sha256": "fc80466d6245df7989e386288f580e3cf45fa29ad65fa2720170d86ac156d01c",
+      "packId": "APP_READY_AUDIO_01"
+    },
+    {
+      "filename": "SOUNDSCAPE_STAR_GENERATOR_001_EMINOR_48K24_LOOP.flac",
+      "bytes": 28751961,
+      "sha256": "ccd0eb85fd71cc8465473360efad5ca2fa62385d44d97e88ebabf841cb0a0274",
+      "packId": "APP_READY_AUDIO_01"
+    },
+    {
+      "filename": "SOUNDSCAPE_STAR_GENERATOR_002_EMINOR_48K24_LOOP.flac",
+      "bytes": 28914365,
+      "sha256": "784679cf2c76f4cb37aca0bd8e8b9e6a4d6bf73a12a8ccd5cb16b817b058aff4",
+      "packId": "APP_READY_AUDIO_01"
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_DREAM_003_PAD_48K24_LOOP.flac",
+      "bytes": 69967075,
+      "sha256": "005e7c9b06c27810cbcad637c211d15b922d9174c598ed11340fc8659c001bdc",
+      "packId": "APP_READY_AUDIO_01"
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_DREAM_003_PIANO_48K24_LOOP.flac",
+      "bytes": 67923646,
+      "sha256": "22194704caa34e47b96e71a0dcc714d190962dd027684ff7331b38b6018c45ab",
+      "packId": "APP_READY_AUDIO_01"
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_FIELD_WAVES_001_EMINOR_48K24_LOOP.flac",
+      "bytes": 25220845,
+      "sha256": "48363d5e81d16c63ea82f095a1d8479fe197e6f1af45ee4c154575952cd620d7",
+      "packId": "APP_READY_AUDIO_01"
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_GENERATOR_002_EMINOR_48K24_LOOP.flac",
+      "bytes": 24875666,
+      "sha256": "e51b0b7dfa9962a31597885398cc98c26c5c3230f0c13f6d23181aa91ebb8652",
+      "packId": "APP_READY_AUDIO_01"
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_GENERATOR_003_PIANO_CMAJ_48K24_LOOP.flac",
+      "bytes": 65467911,
+      "sha256": "0e4343b8536201a5318b2dba27868e07a638dc84065880382b3c3ceb32e9b1d8",
+      "packId": "APP_READY_AUDIO_01"
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_GENERATOR_003_TEXTURE_CMAJ_48K24_LOOP.flac",
+      "bytes": 73786934,
+      "sha256": "0cc934fa3f8dd0d628bb7ed166f29b9fc6a5f25902bbb4519b65befa32845eb3",
+      "packId": "APP_READY_AUDIO_01"
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_GENERATOR_004_PAD_CMAJ_48K24_LOOP.flac",
+      "bytes": 150869422,
+      "sha256": "8597dc842244ca796845262148459af17fcd259590af7d3773381ab2ed2a0199",
+      "packId": "APP_READY_AUDIO_01"
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_GENERATOR_004_PIANO_CMAJ_48K24_LOOP.flac",
+      "bytes": 147267572,
+      "sha256": "56ba3adc283f774b7948375217407cc0e6ef60e57b9f40fc7cd5779b4e5108bd",
+      "packId": "APP_READY_AUDIO_01"
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_GENERATOR_005_PAD_48K24_LOOP.flac",
+      "bytes": 186924668,
+      "sha256": "b6e933633104ed72792429a99aa171ffc6664c48534fad4042eee70ed61dd36f",
+      "packId": "APP_READY_AUDIO_01"
+    },
+    {
+      "filename": "SOUNDSCAPE_ZEN_GENERATOR_005_PIANO_48K24_LOOP.flac",
+      "bytes": 195138751,
+      "sha256": "7a85f0b0bf941ef465e6d51b459dff545a77bcdecb2afe6f2d879a377eec6da9",
+      "packId": "APP_READY_AUDIO_01"
+    },
+    {
+      "filename": "FIELD_RAIN_001_SILVER_CANOPY_48K24_LOOP.flac",
+      "bytes": 11332198,
+      "sha256": "b2e4c17c8e307152039e9133b5b9021c1a07f6660023c21d07d72a0d92ea64db",
+      "packId": "APP_READY_AUDIO_02_ELEMENTAL_WATER_AIR"
+    },
+    {
+      "filename": "FIELD_RAIN_002_SOFT_WEATHER_48K24_LOOP.flac",
+      "bytes": 6932884,
+      "sha256": "9cb07fd79e1e3070749071c3faea0c6465b2d7f883d3d0c0e0cbc1e990f82a3b",
+      "packId": "APP_READY_AUDIO_02_ELEMENTAL_WATER_AIR"
+    },
+    {
+      "filename": "FIELD_RAIN_003_DEEP_RAIN_48K24_LOOP.flac",
+      "bytes": 4986863,
+      "sha256": "e99f5e1fafd8753ff8ef99844345ea7fcf13285611f29c1de6619ec89976e630",
+      "packId": "APP_READY_AUDIO_02_ELEMENTAL_WATER_AIR"
+    },
+    {
+      "filename": "FIELD_RAIN_004_FINE_RAIN_48K24_LOOP.flac",
+      "bytes": 9982688,
+      "sha256": "539a9e4c88bedb111b0530fbfc42cee7eeb7086eddd7fc29f408ce454063fed5",
+      "packId": "APP_READY_AUDIO_02_ELEMENTAL_WATER_AIR"
+    },
+    {
+      "filename": "FIELD_RAIN_005_MISTED_GARDEN_48K24_LOOP.flac",
+      "bytes": 10802865,
+      "sha256": "0c53ea7b070a029033c07a7a51aa76029f35afb88857f17fbe941c398bb915a1",
+      "packId": "APP_READY_AUDIO_02_ELEMENTAL_WATER_AIR"
+    },
+    {
+      "filename": "FIELD_RAIN_006_QUIET_WEATHER_48K24_LOOP.flac",
+      "bytes": 4665546,
+      "sha256": "964648f934d65079b3b1334de6b17b615c27a4eb816a8b501361499e2cb7c347",
+      "packId": "APP_READY_AUDIO_02_ELEMENTAL_WATER_AIR"
+    },
+    {
+      "filename": "FIELD_RAIN_007_RAIN_VEIL_48K24_LOOP.flac",
+      "bytes": 10561813,
+      "sha256": "ea7ecf311822c57b7e8b7e5a65e704c3fa2d0d65b5a1070f49fadee978a850bb",
+      "packId": "APP_READY_AUDIO_02_ELEMENTAL_WATER_AIR"
+    },
+    {
+      "filename": "FIELD_RAIN_008_SHELTERED_RAIN_48K24_LOOP.flac",
+      "bytes": 5024158,
+      "sha256": "1c4c65f60bac8bf052bc01b4f52742553777038ae67240e4a1f8100b577c735b",
+      "packId": "APP_READY_AUDIO_02_ELEMENTAL_WATER_AIR"
+    },
+    {
+      "filename": "FIELD_RAIN_009_DISTANT_SHOWER_48K24_LOOP.flac",
+      "bytes": 9995858,
+      "sha256": "16f989baef88004d6a90c8a4955c0bec0f5d7434b1d183e8b382c6cfd93b3eff",
+      "packId": "APP_READY_AUDIO_02_ELEMENTAL_WATER_AIR"
+    },
+    {
+      "filename": "FIELD_RAIN_010_LOW_RAIN_48K24_LOOP.flac",
+      "bytes": 2893261,
+      "sha256": "88ca800a745fdb1433de9bafb2c7da33d0974bb60972033110611a3950b7eef3",
+      "packId": "APP_READY_AUDIO_02_ELEMENTAL_WATER_AIR"
+    },
+    {
+      "filename": "FIELD_RAIN_011_RAIN_RECEDING_48K24_LOOP.flac",
+      "bytes": 4745722,
+      "sha256": "bac948d5d0719c78b1c3507380267f926f59a12cc427db9bf1c9cc3efecc1f42",
+      "packId": "APP_READY_AUDIO_02_ELEMENTAL_WATER_AIR"
+    },
+    {
+      "filename": "FIELD_STREAM_001_STONE_CURRENT_48K24_LOOP.flac",
+      "bytes": 11362869,
+      "sha256": "37305d91b0e6991ebebc69b19f8f912ad55d504bef99e750f85d764b7c05b6aa",
+      "packId": "APP_READY_AUDIO_02_ELEMENTAL_WATER_AIR"
+    },
+    {
+      "filename": "FIELD_STREAM_002_MOSS_CURRENT_48K24_LOOP.flac",
+      "bytes": 10924056,
+      "sha256": "7b05acaf1e40aa9a3e4bf87c57881b9512c8019b8dcadbdd333ed1f66eee05e9",
+      "packId": "APP_READY_AUDIO_02_ELEMENTAL_WATER_AIR"
+    },
+    {
+      "filename": "FIELD_STREAM_003_HIDDEN_WATER_48K24_LOOP.flac",
+      "bytes": 12944975,
+      "sha256": "5b97b6e4d9d2c614338296ac6e3410790ea1d055cefdb12798638129bade8d6b",
+      "packId": "APP_READY_AUDIO_02_ELEMENTAL_WATER_AIR"
+    },
+    {
+      "filename": "FIELD_STREAM_004_CLEAR_STREAM_48K24_LOOP.flac",
+      "bytes": 15086307,
+      "sha256": "bd5e15f87c5b5522aa1504ff2660305eac441e072cad4739d69f9315b8db655e",
+      "packId": "APP_READY_AUDIO_02_ELEMENTAL_WATER_AIR"
+    },
+    {
+      "filename": "FIELD_STREAM_005_CEDAR_STREAM_48K24_LOOP.flac",
+      "bytes": 13034831,
+      "sha256": "708c4433c2514cb0aa809e5c6d5e13c59d02410896c86b52349a598cbf5a1f1c",
+      "packId": "APP_READY_AUDIO_02_ELEMENTAL_WATER_AIR"
+    },
+    {
+      "filename": "FIELD_SEA_001_TIDAL_BREATH_48K24_LOOP.flac",
+      "bytes": 25690927,
+      "sha256": "ff21967bb9bd7271522a69b3ca94ee03da958129f562cb94628f126489b9282b",
+      "packId": "APP_READY_AUDIO_02_ELEMENTAL_WATER_AIR"
+    },
+    {
+      "filename": "FIELD_SEA_002_MOON_SHORE_48K24_LOOP.flac",
+      "bytes": 30783723,
+      "sha256": "55e1f47493ab962b81416a1a891c4b57241ff0aeb6ccc6ec23fad8de052b1a1f",
+      "packId": "APP_READY_AUDIO_02_ELEMENTAL_WATER_AIR"
+    },
+    {
+      "filename": "FIELD_SEA_003_OPEN_TIDE_48K24_LOOP.flac",
+      "bytes": 26805900,
+      "sha256": "3e1474bbf664a80b0f5e298a3673ceb77d2d56fff9365ba822796df2ce95a5bb",
+      "packId": "APP_READY_AUDIO_02_ELEMENTAL_WATER_AIR"
+    },
+    {
+      "filename": "FIELD_SEA_004_NIGHT_SHORE_48K24_LOOP.flac",
+      "bytes": 31578010,
+      "sha256": "f4cca6b34e6c55f440f69fe7bc79368edd425944ee623e0718b15666df965067",
+      "packId": "APP_READY_AUDIO_02_ELEMENTAL_WATER_AIR"
+    },
+    {
+      "filename": "FIELD_SEA_005_PEARL_TIDE_48K24_LOOP.flac",
+      "bytes": 30675903,
+      "sha256": "3ffa4826edb449a78225282f1a2e64430aeadaa38ca014c08b2083cca554d288",
+      "packId": "APP_READY_AUDIO_02_ELEMENTAL_WATER_AIR"
+    },
+    {
+      "filename": "FIELD_SEA_006_DISTANT_SURF_48K24_LOOP.flac",
+      "bytes": 18847755,
+      "sha256": "ec3f9343ca2afe1b11fa253d9f27330f249ef678f75ee5e4773b8068549fd8f4",
+      "packId": "APP_READY_AUDIO_02_ELEMENTAL_WATER_AIR"
+    },
+    {
+      "filename": "FIELD_SEA_007_BLUE_INTERVAL_48K24_LOOP.flac",
+      "bytes": 16728723,
+      "sha256": "5336b26544a60a7917303b841e24f29f1e7867d771114a6fc9f7d3fc408b58f9",
+      "packId": "APP_READY_AUDIO_02_ELEMENTAL_WATER_AIR"
+    },
+    {
+      "filename": "ESOTERIC_AIR_001_SECOND_ELEMENT_48K24_LOOP.flac",
+      "bytes": 22037330,
+      "sha256": "78622a42642143f6bb9e18a923b54bcd8b4ce1dfa704b2d84fd1dd8a07dbea1b",
+      "packId": "APP_READY_AUDIO_02_ELEMENTAL_WATER_AIR"
+    },
+    {
+      "filename": "01_soglia_del_respiro_LOOP_48K24.flac",
+      "bytes": 76206653,
+      "sha256": "ec941a5010790587504d80aff21122efdff0307fe59f380692b00331f9254dc0",
+      "packId": "RESPIRO_HATHA_1_LOOPS_20260912"
+    },
+    {
+      "filename": "02_aria_tra_le_mani_LOOP_48K24.flac",
+      "bytes": 93519303,
+      "sha256": "ea39c9c286ecdaf1d10ac85885576857d9e1a8506b62f19148b142ef38424d58",
+      "packId": "RESPIRO_HATHA_1_LOOPS_20260912"
+    },
+    {
+      "filename": "03_onda_e_appoggio_LOOP_48K24.flac",
+      "bytes": 127641991,
+      "sha256": "c0216c897af83e18150fa6bf07fcd8b65fd8a6e662797d1e32c3e17d8dd370c4",
+      "packId": "RESPIRO_HATHA_1_LOOPS_20260912"
+    },
+    {
+      "filename": "04_ampiezza_quieta_LOOP_48K24.flac",
+      "bytes": 119588897,
+      "sha256": "2966066183b4a9015394f9ce89b2e1327bba45937480453c05f8128bf44a86ea",
+      "packId": "RESPIRO_HATHA_1_LOOPS_20260912"
+    },
+    {
+      "filename": "05_terra_mobile_LOOP_48K24.flac",
+      "bytes": 118442374,
+      "sha256": "c1e223caa8446e2d15cf97c045007934af6015872158a803762a9051492a69fd",
+      "packId": "RESPIRO_HATHA_1_LOOPS_20260912"
+    },
+    {
+      "filename": "06_lungo_espiro_LOOP_48K24.flac",
+      "bytes": 97158109,
+      "sha256": "d0aef061e274028cb5d1d8bfe09ed0fb13de414db6f916447c5bf3f94ec1e0c1",
+      "packId": "RESPIRO_HATHA_1_LOOPS_20260912"
+    },
+    {
+      "filename": "07_spazio_che_resta_LOOP_48K24.flac",
+      "bytes": 79177382,
+      "sha256": "d69380e14a82bfdfd783b5cc005e9c61faa4198d92c7b16530c850c4a45d3caa",
+      "packId": "RESPIRO_HATHA_1_LOOPS_20260912"
+    },
+    {
+      "filename": "08_riaprire_lo_spazio_LOOP_48K24.flac",
+      "bytes": 38588643,
+      "sha256": "b1a968a1332543237d46aed751b6fb803cb98ebffbe4345e912f347fc609d54f",
+      "packId": "RESPIRO_HATHA_1_LOOPS_20260912"
+    }
+  ],
+  "publishReadyKey": "review-ready/9bb0300c82594437ef124323e8a62c0ea2d75352633c6279996af741be31adde"
+}

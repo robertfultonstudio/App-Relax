@@ -7,17 +7,20 @@ import PwaLegalScreen from "@/app-pwa/legal";
 import PwaSettingsScreen from "@/app-pwa/settings";
 import { editorial } from "@/design/editorialTheme";
 import { PWA_SHELL_BOOTSTRAP } from "@/pwa-review/pwaShellBootstrap";
+import { PwaViewProvider } from "@/pwa-view/PwaViewProvider";
 
 const mockDownloadControl = () => (
   <Text testID="download-control">Offline starter control</Text>
 );
 
 jest.mock("expo-router", () => ({
+  useGlobalSearchParams: () => ({ review: "0" }),
   useRouter: () => ({
     push: jest.fn(),
     back: jest.fn(),
     replace: jest.fn(),
     canGoBack: () => false,
+    setParams: jest.fn(),
   }),
 }));
 jest.mock("expo-linear-gradient", () => ({ LinearGradient: "LinearGradient" }));
@@ -47,7 +50,11 @@ describe("coherent consumer information", () => {
   });
 
   it("places the explicit starter download in Settings without fake offline availability", async () => {
-    const screen = await render(<PwaSettingsScreen />);
+    const screen = await render(
+      <PwaViewProvider>
+        <PwaSettingsScreen />
+      </PwaViewProvider>,
+    );
     expect(screen.getByTestId("download-control")).toBeTruthy();
     expect(screen.getByText("Saved sounds")).toBeTruthy();
     expect(

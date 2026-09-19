@@ -7,6 +7,7 @@ import { createPwaPreviewHandler } from "./pwa-preview-server.mjs";
 export function createCurrentPwaPreview({
   projectRoot,
   artifactRoot,
+  audioCatalogRoot,
   losslessRoot,
   port,
 }) {
@@ -43,7 +44,8 @@ export function createCurrentPwaPreview({
   return {
     ...createPwaPreviewHandler({
       artifactRoot,
-      audioCatalogRoot: join(projectRoot, "public/audio-catalog"),
+      audioCatalogRoot:
+        audioCatalogRoot ?? join(projectRoot, "public/audio-catalog"),
       manifestPath: join(projectRoot, "docs/M4_LOCAL_LISTENING_MANIFEST.json"),
       additionalAudioFiles: additions,
       losslessRoot,

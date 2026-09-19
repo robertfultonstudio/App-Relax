@@ -17,18 +17,38 @@ function isAudioRequest(request, url) {
   );
 }
 
+function hasActiveListeningClient(clients) {
+  return clients.some((client) => {
+    const url = new URL(client.url);
+    return (
+      url.origin === self.location.origin &&
+      (url.pathname.startsWith("/listen/") ||
+        url.pathname.startsWith("/adaptive-session/"))
+    );
+  });
+}
+
+function isUpdatePath(pathname) {
+  return pathname === "/update" || pathname === "/update.html";
+}
+
+function isRootEntryPath(pathname) {
+  return pathname === "/" || pathname === "/index.html";
+}
+
 self.addEventListener("install", (event) => {
   event.waitUntil(
     (async () => {
       const cache = await caches.open(SHELL_CACHE);
       try {
-        // Sequential full-shell precache: JS, fonts, artwork and consumer routes.
+        // Sequential published-shell precache: JS, fonts, artwork and canonical
+        // consumer routes. Installation remains atomic and fail-closed.
         for (const url of manifest.urls) {
           const response = await fetch(
             new Request(url, {
               cache: "reload",
               credentials: "same-origin",
-              redirect: "error",
+              redirect: "follow",
             }),
           );
           if (!response.ok || response.type !== "basic")
@@ -39,25 +59,48 @@ self.addEventListener("install", (event) => {
         await caches.delete(SHELL_CACHE);
         throw error;
       }
+      // A stale visual shell is promoted after a complete precache, except while
+      // an audible session is active. Existing clients are never claimed/reloaded.
+      const clients = await self.clients.matchAll({
+        type: "window",
+        includeUncontrolled: true,
+      });
+      if (!hasActiveListeningClient(clients)) await self.skipWaiting();
     })(),
   );
-  // Updates wait for old clients to close; never interrupt an active session.
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches
-      .keys()
-      .then((keys) =>
-        Promise.all(
-          keys
-            .filter(
-              (key) =>
-                key.startsWith("ritual-audio-shell-") && key !== SHELL_CACHE,
-            )
-            .map((key) => caches.delete(key)),
-        ),
-      ),
+    (async () => {
+      const keys = await caches.keys();
+      await Promise.all(
+        keys
+          .filter(
+            (key) =>
+              key.startsWith("ritual-audio-shell-") && key !== SHELL_CACHE,
+          )
+          .map((key) => caches.delete(key)),
+      );
+      // A replaced worker cannot rewrite the already-rendered DOM of a client
+      // controlled by its predecessor. Reload only the obsolete root entry;
+      // the current root immediately replaces it with /moments. Listening and
+      // every non-root route remain untouched.
+      const clients = await self.clients.matchAll({
+        type: "window",
+        includeUncontrolled: true,
+      });
+      for (const client of clients) {
+        const url = new URL(client.url);
+        if (
+          url.origin === self.location.origin &&
+          isRootEntryPath(url.pathname) &&
+          typeof client.navigate === "function"
+        )
+          // Do not await: navigation waits for activation to finish.
+          void client.navigate("/");
+      }
+    })(),
   );
 });
 
@@ -74,7 +117,7 @@ self.addEventListener("message", (event) => {
         const sender = event.source?.url ? new URL(event.source.url) : null;
         if (
           sender?.origin !== self.location.origin ||
-          sender.pathname !== "/update.html"
+          !isUpdatePath(sender.pathname)
         )
           return;
         const clients = await self.clients.matchAll({
@@ -84,8 +127,7 @@ self.addEventListener("message", (event) => {
         const otherApp = clients.some((client) => {
           const url = new URL(client.url);
           return (
-            url.origin === self.location.origin &&
-            url.pathname !== "/update.html"
+            url.origin === self.location.origin && !isUpdatePath(url.pathname)
           );
         });
         if (otherApp) {
@@ -136,7 +178,7 @@ self.addEventListener("fetch", (event) => {
     request.method !== "GET" ||
     url.origin !== self.location.origin ||
     isAudioRequest(request, url) ||
-    url.pathname === "/update.html" ||
+    isUpdatePath(url.pathname) ||
     url.pathname === "/pwa-update.js"
   ) {
     return;
@@ -147,18 +189,16 @@ self.addEventListener("fetch", (event) => {
       const cache = await caches.open(SHELL_CACHE);
       const path = url.pathname;
       const canonical =
-        request.mode === "navigate" &&
-        path !== "/" &&
-        !/\.[a-z0-9]+$/i.test(path)
-          ? `${path.replace(/\/$/, "")}.html`
-          : path;
+        request.mode === "navigate" && path.endsWith(".html")
+          ? path.slice(0, -5) || "/"
+          : path.replace(/\/$/, "") || "/";
       const cached = await cache.match(canonical);
       if (cached) return cached;
       try {
         return await fetch(request);
       } catch {
         return request.mode === "navigate"
-          ? (await cache.match("/offline.html")) || Response.error()
+          ? (await cache.match("/offline")) || Response.error()
           : Response.error();
       }
     })(),

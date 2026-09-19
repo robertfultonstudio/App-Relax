@@ -30,6 +30,7 @@ function joinedText(directory) {
 
 const consumerDirectory = resolve(process.argv[2] ?? "dist/m5-web-consumer");
 const qaDirectory = resolve(process.argv[3] ?? "dist/m5-web-qa");
+const pwaDirectory = process.argv[4] ? resolve(process.argv[4]) : null;
 assert(
   existsSync(consumerDirectory),
   `missing consumer export ${consumerDirectory}`,
@@ -38,6 +39,7 @@ assert(existsSync(qaDirectory), `missing QA export ${qaDirectory}`);
 
 const consumer = joinedText(consumerDirectory);
 const qa = joinedText(qaDirectory);
+const pwa = pwaDirectory ? joinedText(pwaDirectory) : null;
 const consumerAudio = allFiles(consumerDirectory).filter((path) =>
   /\.(?:wav|flac)$/i.test(path),
 );
@@ -59,10 +61,21 @@ for (const forbidden of [
   "AUDIO QA WORKBENCH · DEVELOPMENT ONLY",
   "@app-relax/qa-workbench-draft",
   "qa-workbench",
+  "PWA_DUAL_VIEW_SENTINEL",
 ]) {
   assert(
     !consumer.text.includes(forbidden),
     `consumer export contains ${forbidden}`,
+  );
+}
+if (pwa) {
+  assert(
+    pwa.text.includes("PWA_DUAL_VIEW_SENTINEL"),
+    "PWA export lost the dual-view sentinel",
+  );
+  assert(
+    pwa.text.includes("Vedi come utente"),
+    "PWA export lost the Workbench-to-consumer action",
   );
 }
 assert(
@@ -79,5 +92,5 @@ assert(
 );
 
 console.log(
-  `QA export boundary: PASS (${consumer.files.length} consumer text artifacts and zero audio clean; ${qa.files.length} QA text artifacts contain the sentinel and ${qaAudio.length} technical audio fixtures).`,
+  `QA export boundary: PASS (${consumer.files.length} consumer text artifacts and zero audio clean; ${qa.files.length} QA text artifacts contain the sentinel and ${qaAudio.length} technical audio fixtures${pwa ? `; ${pwa.files.length} PWA text artifacts contain the dual-view sentinel` : ""}).`,
 );

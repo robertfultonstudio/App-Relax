@@ -19,7 +19,7 @@ export function VolumeRange({
       style={{
         flex: 1,
         minWidth: 0,
-        height: 44,
+        height: 48,
         margin: 0,
         accentColor: editorial.lavender,
         touchAction: "none",

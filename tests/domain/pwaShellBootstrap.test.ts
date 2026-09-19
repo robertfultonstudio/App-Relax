@@ -6,25 +6,22 @@ describe("private review shell bootstrap", () => {
     {
       hostname: "app-relax-private-review.robfulton.chatgpt.site",
       scopePath: "/",
-      retire: true,
-      install: false,
+      install: true,
     },
     {
       hostname: "app-relax-private-review.robfulton.chatgpt.site",
       scopePath: "/another-app/",
-      retire: false,
-      install: false,
+      install: true,
     },
-    { hostname: "localhost", scopePath: "/", retire: false, install: true },
+    { hostname: "localhost", scopePath: "/", install: true },
     {
       hostname: "another.chatgpt.site",
       scopePath: "/",
-      retire: false,
       install: true,
     },
   ])(
-    "does not serve an old private shell, without touching unrelated registrations: $hostname $scopePath",
-    async ({ hostname, scopePath, retire, install }) => {
+    "registers the root shell without retiring registrations: $hostname $scopePath",
+    async ({ hostname, scopePath, install }) => {
       const unregister = jest.fn(async () => true);
       const register = jest.fn(async () => undefined);
       const getRegistration = jest.fn(async () => ({
@@ -45,7 +42,7 @@ describe("private review shell bootstrap", () => {
         },
       });
       await load?.();
-      expect(unregister).toHaveBeenCalledTimes(retire ? 1 : 0);
+      expect(unregister).not.toHaveBeenCalled();
       expect(register).toHaveBeenCalledTimes(install ? 1 : 0);
       expect(warn).not.toHaveBeenCalled();
       expect(PWA_SHELL_BOOTSTRAP).not.toMatch(

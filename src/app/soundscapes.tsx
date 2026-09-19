@@ -1,5 +1,6 @@
 import { type Href, useRouter } from "expo-router";
 import { useState } from "react";
+import type { ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { EditorialHeader } from "@/components/EditorialHeader";
 import { EditorialScreen } from "@/components/EditorialScreen";
@@ -28,10 +29,12 @@ export default function SoundscapesScreen({
   musicOnly = false,
   reviewLabel,
   onUnclassifiedWorkSelect,
+  footer,
 }: {
   musicOnly?: boolean;
   reviewLabel?: string;
   onUnclassifiedWorkSelect?: (workId: string) => void;
+  footer?: ReactNode | null;
 } = {}) {
   const router = useRouter();
   const [expandedFamily, setExpandedFamily] = useState<FamilyId | null>(
@@ -57,13 +60,21 @@ export default function SoundscapesScreen({
 
   return (
     <EditorialScreen
-      footer={<ProductTabBar activeTab="soundscapes" />}
+      footer={
+        footer === undefined ? (
+          <ProductTabBar activeTab="soundscapes" />
+        ) : (
+          footer
+        )
+      }
       tone="sky"
     >
       <EditorialHeader
-        actionLabel="Settings"
+        actionLabel={footer === null ? undefined : "Settings"}
         label={musicOnly ? "MUSIC" : "SOUNDS"}
-        onAction={() => router.push("/settings" as Href)}
+        onAction={
+          footer === null ? undefined : () => router.push("/settings" as Href)
+        }
       />
       <Text accessibilityRole="header" style={styles.title}>
         {musicOnly ? "Your music." : "Find your sound."}

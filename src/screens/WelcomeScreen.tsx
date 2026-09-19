@@ -1,89 +1,70 @@
 import { useEffect, useState } from "react";
 import { type Href, useRouter } from "expo-router";
-import {
-  Animated,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-  useWindowDimensions,
-} from "react-native";
+import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { M6_PLAYER_PAINTING } from "@/design/shellArtwork";
 import { editorial } from "@/design/editorialTheme";
 import { fonts } from "@/design/theme";
-import { useReducedMotionPreference } from "@/design/useReducedMotionPreference";
+import {
+  completeWelcome,
+  loadWelcomeCompleted,
+} from "@/state/welcomePersistence";
 
-/** No autoplay or catalogue acquisition at the entrance. Only the painting
- * moves; text stays crisp. Motion is finite, cancellable and optional. */
+/** First-run entrance only. Returning visitors are redirected before any
+ * promotional copy is mounted, so the landing cannot flash on screen. */
 export default function WelcomeScreen() {
   const router = useRouter();
-  const { height } = useWindowDimensions();
-  const reduceMotion = useReducedMotionPreference();
-  const [arrival] = useState(() => new Animated.Value(1));
-  const [touch] = useState(() => new Animated.Value(0));
+  const [resolved, setResolved] = useState(false);
   const [entering, setEntering] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
-    if (reduceMotion) {
-      arrival.stopAnimation();
-      touch.stopAnimation();
-      arrival.setValue(1);
-      touch.setValue(0);
-      return;
-    }
-    arrival.setValue(0);
-    const animation = Animated.timing(arrival, {
-      toValue: 1,
-      duration: 1800,
-      useNativeDriver: Platform.OS !== "web",
-    });
-    animation.start();
+    let live = true;
+    void loadWelcomeCompleted()
+      .then((completed) => {
+        if (!live) return;
+        if (completed) router.replace("/moments" as Href);
+        else setResolved(true);
+      })
+      .catch(() => {
+        if (live) setResolved(true);
+      });
     return () => {
-      animation.stop();
-      touch.stopAnimation();
+      live = false;
     };
-  }, [arrival, touch, reduceMotion]);
-  function respond(pressed: boolean) {
-    if (reduceMotion) return;
-    Animated.timing(touch, {
-      toValue: pressed ? 1 : 0,
-      duration: pressed ? 100 : 240,
-      useNativeDriver: Platform.OS !== "web",
-    }).start();
-  }
+  }, [router]);
+
   function enter() {
     if (entering) return;
     setEntering(true);
-    router.replace("/moments" as Href);
+    setError(null);
+    void completeWelcome()
+      .then(() => router.replace("/moments" as Href))
+      .catch(() => {
+        setEntering(false);
+        setError("Non è stato possibile salvare l’ingresso. Riprova.");
+      });
   }
+
+  if (!resolved) {
+    return (
+      <View
+        accessibilityLabel="Apertura App Relax"
+        style={styles.guard}
+        testID="welcome-entry-guard"
+      />
+    );
+  }
+
   return (
     <View style={styles.screen} testID="welcome-screen">
-      <Animated.Image
+      <Image
         accessible={false}
+        accessibilityIgnoresInvertColors
         source={M6_PLAYER_PAINTING}
         resizeMode="cover"
-        style={[
-          styles.painting,
-          {
-            transform: [
-              {
-                translateY: arrival.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [12, 0],
-                }),
-              },
-              {
-                scale: touch.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [1.025, 1.04],
-                }),
-              },
-            ],
-          },
-        ]}
+        style={styles.painting}
       />
       <LinearGradient
         pointerEvents="none"
@@ -95,13 +76,8 @@ export default function WelcomeScreen() {
         locations={[0, 0.48, 0.92]}
         style={StyleSheet.absoluteFill}
       />
-      <SafeAreaView style={{ flex: 1 }}>
-        <ScrollView
-          contentContainerStyle={[
-            styles.content,
-            { minHeight: Math.max(600, height - 56) },
-          ]}
-        >
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.content}>
           <View style={styles.masthead}>
             <Text style={styles.brand}>App Relax</Text>
             <Text style={styles.aside}>A little space for you</Text>
@@ -116,18 +92,16 @@ export default function WelcomeScreen() {
             </Text>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Choose your moment"
-              accessibilityHint="Enter the activities and listening experience"
+              accessibilityLabel="Scegli il tuo momento"
+              accessibilityHint="Apre le attività e l’esperienza di ascolto"
               accessibilityState={{ busy: entering, disabled: entering }}
               disabled={entering}
-              onPressIn={() => respond(true)}
-              onPressOut={() => respond(false)}
               onPress={enter}
               style={({ pressed }) => [styles.enter, pressed && styles.pressed]}
               testID="welcome-enter"
             >
               <Text style={styles.enterText}>
-                {entering ? "Opening…" : "Choose your moment"}
+                {entering ? "Apertura…" : "Scegli il tuo momento"}
               </Text>
               <View accessible={false} style={styles.arrow}>
                 <View style={styles.arrowHead} />
@@ -136,26 +110,36 @@ export default function WelcomeScreen() {
             <Text style={styles.footnote}>
               Press Play. Leave the phone behind.
             </Text>
+            {error ? (
+              <Text accessibilityRole="alert" style={styles.error}>
+                {error}
+              </Text>
+            ) : null}
           </View>
-        </ScrollView>
+        </View>
       </SafeAreaView>
     </View>
   );
 }
+
 const styles = StyleSheet.create({
+  guard: { flex: 1, backgroundColor: editorial.paper },
   screen: { flex: 1, backgroundColor: editorial.paper },
   painting: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    width: "100%",
+    bottom: 0,
     height: "100%",
+    left: 0,
+    position: "absolute",
+    right: 0,
+    top: 0,
+    width: "100%",
   },
+  safeArea: { flex: 1 },
   content: {
-    flexGrow: 1,
+    flex: 1,
     paddingHorizontal: 28,
     paddingTop: 26,
-    paddingBottom: 32,
+    paddingBottom: 24,
     width: "100%",
     maxWidth: 720,
     alignSelf: "center",
@@ -167,31 +151,28 @@ const styles = StyleSheet.create({
   invitation: { gap: 20 },
   title: {
     fontFamily: fonts.serif,
-    fontSize: 46,
-    lineHeight: 53,
-    letterSpacing: -1.4,
+    fontSize: 34,
+    lineHeight: 40,
+    letterSpacing: -0.9,
     color: editorial.ink,
   },
   description: {
     maxWidth: 280,
     fontFamily: fonts.sans,
-    fontSize: 17,
-    lineHeight: 25,
+    fontSize: 16,
+    lineHeight: 24,
     color: editorial.inkMuted,
   },
   enter: {
-    minHeight: 60,
-    paddingHorizontal: 22,
-    paddingVertical: 16,
-    backgroundColor: "#D9D6E1",
-    borderWidth: 1,
-    borderColor: "#82788F",
+    minHeight: 56,
+    alignSelf: "flex-start",
+    paddingRight: 18,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    gap: 16,
+    justifyContent: "flex-start",
+    gap: 14,
   },
-  pressed: { backgroundColor: "#C9C4D6", borderColor: editorial.ink },
+  pressed: { opacity: 0.72 },
   enterText: {
     fontFamily: fonts.sansSemiBold,
     color: editorial.ink,
@@ -220,5 +201,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 20,
     color: editorial.inkMuted,
+  },
+  error: {
+    color: editorial.rose,
+    fontFamily: fonts.sans,
+    fontSize: 14,
+    lineHeight: 20,
   },
 });

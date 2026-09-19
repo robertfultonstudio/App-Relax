@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
   },
   sideAction: {
     minWidth: 92,
-    minHeight: 44,
+    minHeight: 48,
     alignItems: "flex-end",
     justifyContent: "center",
   },

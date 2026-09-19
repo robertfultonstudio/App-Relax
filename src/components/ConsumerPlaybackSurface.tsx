@@ -1,12 +1,22 @@
 import { type ReactNode, useEffect, useRef } from "react";
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  Image,
+  Pressable,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
 import type { ConsumerOutcomeId } from "@/content/productShell";
-import { M6_PLAYER_PAINTING } from "@/design/shellArtwork";
+import { C3_PLAYER_FULL_BLEED } from "@/design/shellArtwork";
 import { editorial } from "@/design/editorialTheme";
 import { fonts, spacing } from "@/design/theme";
 import { PlaybackTransport } from "./PlaybackTransport";
 import { VolumeRange } from "./VolumeRange";
 import { consumerPlaybackError } from "@/audio/consumerPlaybackError";
+import { FullBleedArtwork } from "./FullBleedArtwork";
 
 export function formatPlaybackTime(milliseconds: number): string {
   const seconds = Math.max(0, Math.ceil(milliseconds / 1000));
@@ -38,9 +48,19 @@ interface ConsumerPlaybackSurfaceProps {
   status?: string;
   onRetry?: () => void;
   hideTransport?: boolean;
+  transportAfterControls?: boolean;
   previewTransport?: boolean;
   preparedSessionNote?: string;
+  immersive?: boolean;
+  onRevealControls?: () => void;
+  atmospheric?: boolean;
+  sessionDescriptor?: string;
+  completed?: boolean;
+  onReturn?: () => void;
 }
+
+export const LISTENING_SCENE_COPY = "Un respiro alla volta.";
+export const LISTENING_SCENE_SUBTITLE = "La natura ti renderà consapevole.";
 
 export function ConsumerPlaybackSurface({
   canPlay,
@@ -67,14 +87,274 @@ export function ConsumerPlaybackSurface({
   status,
   onRetry,
   hideTransport = false,
+  transportAfterControls = false,
   previewTransport = false,
   preparedSessionNote,
+  immersive = false,
+  onRevealControls,
+  atmospheric = false,
+  sessionDescriptor,
+  completed = false,
+  onReturn,
 }: ConsumerPlaybackSurfaceProps) {
+  const { height, width } = useWindowDimensions();
+  const showListeningCopy = title === LISTENING_SCENE_COPY;
+  const artworkHeight = Math.min(360, Math.max(220, height * 0.42));
   const volumePercent = Math.round(volume * 100);
   const lastAudibleVolume = useRef(volume > 0 ? volume : 0.8);
   useEffect(() => {
     if (volume > 0) lastAudibleVolume.current = volume;
   }, [volume]);
+
+  if (atmospheric) {
+    const large = width >= 420 || height >= 900;
+    const actionLabel = isPlaying
+      ? "Pausa"
+      : completed
+        ? "Ascolta di nuovo"
+        : canStop
+          ? "Riprendi"
+          : "Inizia";
+    return (
+      <View
+        style={[styles.atmosphericSurface, { minHeight: height }]}
+        testID="consumer-playback-surface"
+      >
+        <FullBleedArtwork
+          source={C3_PLAYER_FULL_BLEED}
+          testID="player-full-bleed-artwork"
+        />
+        <LinearGradient
+          pointerEvents="none"
+          colors={[
+            "rgba(244,238,230,0.1)",
+            "rgba(244,238,230,0)",
+            "rgba(244,238,230,0.16)",
+          ]}
+          locations={[0, 0.58, 1]}
+          style={StyleSheet.absoluteFill}
+        />
+        {immersive ? (
+          <Pressable
+            accessibilityHint="Mostra Pausa e Interrompi"
+            accessibilityLabel="Mostra controlli di ascolto"
+            accessibilityRole="button"
+            onPress={onRevealControls}
+            style={StyleSheet.absoluteFill}
+            testID="consumer-listening-scene"
+          />
+        ) : null}
+        <SafeAreaView
+          edges={["top", "left", "right"]}
+          pointerEvents="box-none"
+          style={styles.atmosphericSafeArea}
+        >
+          <View
+            pointerEvents={immersive ? "none" : "auto"}
+            style={[
+              styles.atmosphericContent,
+              large && styles.atmosphericContentLarge,
+            ]}
+          >
+            {!immersive ? (
+              <View pointerEvents="none" style={styles.atmosphericHeading}>
+                <Text style={styles.atmosphericBrand}>APP RELAX</Text>
+                <Text
+                  accessibilityRole="header"
+                  nativeID="consumer-screen-title"
+                  style={[
+                    styles.atmosphericTitle,
+                    large && styles.atmosphericTitleLarge,
+                  ]}
+                  testID="consumer-screen-title"
+                >
+                  {title}
+                </Text>
+                {showListeningCopy ? (
+                  <Text
+                    style={styles.atmosphericSubtitle}
+                    testID="listening-scene-subtitle"
+                  >
+                    {LISTENING_SCENE_SUBTITLE}
+                  </Text>
+                ) : null}
+              </View>
+            ) : null}
+            <View
+              pointerEvents="none"
+              style={[
+                styles.atmosphericTimerBlock,
+                large && styles.atmosphericTimerBlockLarge,
+              ]}
+            >
+              <Text
+                accessibilityLabel={`${formatPlaybackTime(remainingMs)} remaining`}
+                style={styles.atmosphericTimer}
+                testID="atmospheric-player-timer"
+              >
+                {formatPlaybackTime(remainingMs)}
+              </Text>
+              {!immersive ? (
+                <Text style={styles.atmosphericTimerLabel}>
+                  Tempo rimanente
+                </Text>
+              ) : null}
+            </View>
+            <View style={styles.atmosphericOpenSpace} />
+            {!immersive ? (
+              <View style={styles.atmosphericControls}>
+                {error ? (
+                  <Text
+                    accessibilityRole="alert"
+                    style={styles.atmosphericError}
+                  >
+                    L’audio non è disponibile. Riprova.
+                  </Text>
+                ) : null}
+                {error && onRetry ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={onRetry}
+                    style={styles.atmosphericTextAction}
+                  >
+                    <Text style={styles.atmosphericActionLabel}>Riprova</Text>
+                  </Pressable>
+                ) : (
+                  <Pressable
+                    accessibilityLabel={actionLabel}
+                    accessibilityRole="button"
+                    accessibilityState={{
+                      disabled: !isPlaying && !canPlay,
+                    }}
+                    disabled={!isPlaying && !canPlay}
+                    onPress={onPlayPause}
+                    style={({ pressed }) => [
+                      styles.atmosphericPrimary,
+                      !isPlaying && !canPlay && styles.disabled,
+                      pressed && styles.atmosphericPressed,
+                    ]}
+                    testID={playPauseTestID}
+                  >
+                    <View style={styles.atmosphericPrimaryDisc}>
+                      <View
+                        style={
+                          isPlaying
+                            ? styles.atmosphericPause
+                            : styles.atmosphericPlay
+                        }
+                      >
+                        {isPlaying ? (
+                          <>
+                            <View style={styles.atmosphericPauseBar} />
+                            <View style={styles.atmosphericPauseBar} />
+                          </>
+                        ) : null}
+                      </View>
+                    </View>
+                  </Pressable>
+                )}
+                {canStop ? (
+                  <Pressable
+                    accessibilityLabel="Interrompi"
+                    accessibilityRole="button"
+                    onPress={onStop}
+                    style={({ pressed }) => [
+                      styles.atmosphericTextAction,
+                      pressed && styles.atmosphericPressed,
+                    ]}
+                  >
+                    <Text style={styles.atmosphericStop}>Interrompi</Text>
+                  </Pressable>
+                ) : null}
+                {completed && onReturn ? (
+                  <Pressable
+                    accessibilityLabel="Torna a Yoga"
+                    accessibilityRole="button"
+                    onPress={onReturn}
+                    style={({ pressed }) => [
+                      styles.atmosphericTextAction,
+                      pressed && styles.atmosphericPressed,
+                    ]}
+                  >
+                    <Text style={styles.atmosphericStop}>Torna a Yoga</Text>
+                  </Pressable>
+                ) : null}
+                {sessionDescriptor ? (
+                  <Text style={styles.atmosphericDescriptor}>
+                    {sessionDescriptor}
+                  </Text>
+                ) : null}
+              </View>
+            ) : null}
+          </View>
+        </SafeAreaView>
+      </View>
+    );
+  }
+
+  if (immersive) {
+    return (
+      <View
+        style={[styles.surface, styles.immersiveSurface, { minHeight: height }]}
+        testID="consumer-playback-surface"
+      >
+        <Image
+          accessible={false}
+          accessibilityIgnoresInvertColors
+          resizeMode="cover"
+          source={C3_PLAYER_FULL_BLEED}
+          style={StyleSheet.absoluteFill}
+        />
+        <View pointerEvents="none" style={styles.immersiveCopyBlock}>
+          <Text style={styles.immersiveBrand}>APP RELAX</Text>
+          <Text
+            accessibilityRole="header"
+            nativeID="consumer-screen-title"
+            style={styles.immersiveTitle}
+            testID="consumer-screen-title"
+          >
+            {title}
+          </Text>
+          {showListeningCopy ? (
+            <Text style={styles.immersiveSubtitle}>
+              {LISTENING_SCENE_SUBTITLE}
+            </Text>
+          ) : null}
+        </View>
+        <Pressable
+          accessibilityHint="Riporta Pausa e Stop sullo schermo"
+          accessibilityLabel="Mostra controlli di ascolto"
+          accessibilityRole="button"
+          onPress={onRevealControls}
+          style={StyleSheet.absoluteFill}
+          testID="consumer-listening-scene"
+        />
+      </View>
+    );
+  }
+
+  const transport = !hideTransport ? (
+    <View style={styles.transport} testID="consumer-inline-transport">
+      {preparedSessionNote ? (
+        <Text style={styles.preparedNote} accessibilityLiveRegion="polite">
+          {preparedSessionNote}
+        </Text>
+      ) : null}
+      <PlaybackTransport
+        previewOnly={previewTransport}
+        canPlay={canPlay}
+        canStop={canStop}
+        isPlaying={isPlaying}
+        onPlayPause={onPlayPause}
+        onStop={onStop}
+        playPauseTestID={playPauseTestID}
+        primaryLabel={preparedSessionNote ? "Start new session" : undefined}
+        playPauseAccessibilityLabel={
+          preparedSessionNote ? "Start new session" : undefined
+        }
+      />
+    </View>
+  ) : null;
 
   return (
     <View testID="consumer-playback-surface" style={styles.surface}>
@@ -84,13 +364,14 @@ export function ConsumerPlaybackSurface({
           style={[
             styles.artwork,
             variant === "session" && styles.sessionArtwork,
+            { height: artworkHeight },
           ]}
         >
           <Image
             accessible={false}
             accessibilityIgnoresInvertColors
             resizeMode="cover"
-            source={M6_PLAYER_PAINTING}
+            source={C3_PLAYER_FULL_BLEED}
             style={{ width: "100%", height: "100%" }}
           />
         </View>
@@ -100,10 +381,15 @@ export function ConsumerPlaybackSurface({
       ) : null}
       <Text
         accessibilityRole="header"
+        nativeID="consumer-screen-title"
         style={[styles.title, variant === "session" && styles.sessionTitle]}
+        testID="consumer-screen-title"
       >
         {title}
       </Text>
+      {showListeningCopy ? (
+        <Text style={styles.subtitle}>{LISTENING_SCENE_SUBTITLE}</Text>
+      ) : null}
       {gateLabel ? <Text style={styles.gate}>{gateLabel}</Text> : null}
       {status ? (
         <Text accessibilityLiveRegion="polite" style={styles.gate}>
@@ -140,28 +426,7 @@ export function ConsumerPlaybackSurface({
         </Pressable>
       ) : null}
 
-      {!hideTransport && (
-        <View style={styles.transport}>
-          {preparedSessionNote ? (
-            <Text style={styles.preparedNote} accessibilityLiveRegion="polite">
-              {preparedSessionNote}
-            </Text>
-          ) : null}
-          <PlaybackTransport
-            previewOnly={previewTransport}
-            canPlay={canPlay}
-            canStop={canStop}
-            isPlaying={isPlaying}
-            onPlayPause={onPlayPause}
-            onStop={onStop}
-            playPauseTestID={playPauseTestID}
-            primaryLabel={preparedSessionNote ? "Start new session" : undefined}
-            playPauseAccessibilityLabel={
-              preparedSessionNote ? "Start new session" : undefined
-            }
-          />
-        </View>
-      )}
+      {!transportAfterControls ? transport : null}
 
       <View style={styles.controls}>
         {options}
@@ -202,42 +467,209 @@ export function ConsumerPlaybackSurface({
         ) : null}
 
         {secondaryOptions}
-        <Text style={styles.note}>{note}</Text>
+        {note ? <Text style={styles.note}>{note}</Text> : null}
       </View>
+      {transportAfterControls ? transport : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  surface: { position: "relative" },
-  artwork: {
+  atmosphericSurface: {
+    backgroundColor: "#F4EEE6",
+    flex: 1,
+    marginHorizontal: -22,
+    overflow: "hidden",
+  },
+  atmosphericSafeArea: { flex: 1 },
+  atmosphericContent: {
+    flex: 1,
+    paddingBottom: 34,
+    paddingHorizontal: 24,
+    paddingTop: 24,
+  },
+  atmosphericContentLarge: {
+    paddingBottom: 40,
+    paddingHorizontal: 28,
+    paddingTop: 28,
+  },
+  atmosphericHeading: {
+    alignItems: "flex-end",
+    alignSelf: "flex-end",
+    maxWidth: 275,
+  },
+  atmosphericBrand: {
+    color: "#20384D",
+    fontFamily: fonts.sansMedium,
+    fontSize: 11,
+    letterSpacing: 3.2,
+    lineHeight: 16,
+    textAlign: "right",
+  },
+  atmosphericTitle: {
+    color: "#20384D",
+    fontFamily: fonts.serifItalic,
+    fontSize: 27,
+    letterSpacing: -0.4,
+    lineHeight: 32,
+    marginTop: 5,
+    textAlign: "right",
+  },
+  atmosphericTitleLarge: { fontSize: 30, lineHeight: 35 },
+  atmosphericSubtitle: {
+    color: "#29353B",
+    fontFamily: fonts.serifItalic,
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 5,
+    maxWidth: 250,
+    textAlign: "right",
+  },
+  atmosphericTimerBlock: {
+    alignItems: "flex-end",
     position: "absolute",
-    top: -72,
-    left: -22,
-    right: -22,
-    height: 844,
+    right: 24,
+    top: 176,
+  },
+  atmosphericTimerBlockLarge: { right: 28, top: 194 },
+  atmosphericTimer: {
+    color: "#20384D",
+    fontFamily: fonts.serif,
+    fontSize: 38,
+    lineHeight: 43,
+    textAlign: "right",
+  },
+  atmosphericTimerLabel: {
+    color: "#29353B",
+    fontFamily: fonts.serifItalic,
+    fontSize: 12,
+    lineHeight: 16,
+    textAlign: "right",
+  },
+  atmosphericOpenSpace: { flex: 1, minHeight: 350 },
+  atmosphericControls: { alignItems: "center", minHeight: 214 },
+  atmosphericPrimary: {
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 86,
+    minWidth: 96,
+  },
+  atmosphericPrimaryDisc: {
+    alignItems: "center",
+    height: 64,
+    justifyContent: "center",
+    width: 64,
+  },
+  atmosphericPlay: {
+    borderBottomColor: "transparent",
+    borderBottomWidth: 10,
+    borderLeftColor: "#20384D",
+    borderLeftWidth: 17,
+    borderTopColor: "transparent",
+    borderTopWidth: 10,
+    height: 0,
+    marginLeft: 3,
+    width: 0,
+  },
+  atmosphericPause: { flexDirection: "row", gap: 5 },
+  atmosphericPauseBar: { backgroundColor: "#20384D", height: 20, width: 5 },
+  atmosphericActionLabel: {
+    color: "#20384D",
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 17,
+    marginTop: 6,
+  },
+  atmosphericTextAction: {
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 48,
+    minWidth: 96,
+  },
+  atmosphericStop: {
+    color: "#20384D",
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 16,
+    textDecorationLine: "underline",
+  },
+  atmosphericDescriptor: {
+    color: "#29353B",
+    fontFamily: fonts.sans,
+    fontSize: 15,
+    lineHeight: 22,
+    marginTop: 4,
+  },
+  atmosphericError: {
+    color: editorial.rose,
+    fontFamily: fonts.sansMedium,
+    fontSize: 15,
+    lineHeight: 22,
+    textAlign: "center",
+  },
+  atmosphericPressed: { backgroundColor: "rgba(32,56,77,0.06)" },
+  surface: { position: "relative" },
+  immersiveSurface: {
+    marginHorizontal: -22,
+    marginTop: -8,
+    overflow: "hidden",
+  },
+  immersiveCopyBlock: {
+    left: 30,
+    position: "absolute",
+    right: 24,
+    top: 34,
+  },
+  immersiveBrand: {
+    color: editorial.ink,
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 13,
+    letterSpacing: 3.2,
+  },
+  immersiveTitle: {
+    color: editorial.ink,
+    fontFamily: fonts.serifItalic,
+    fontSize: 34,
+    lineHeight: 42,
+    marginTop: 24,
+  },
+  immersiveSubtitle: {
+    color: editorial.inkMuted,
+    fontFamily: fonts.sans,
+    fontSize: 15,
+    lineHeight: 22,
+    marginTop: 8,
+  },
+  artwork: {
+    marginLeft: -22,
+    marginRight: -22,
     width: undefined,
   },
-  sessionArtwork: { height: 844 },
+  sessionArtwork: {},
   controls: {
-    marginTop: 160,
+    marginTop: spacing.md,
     paddingTop: 12,
   },
   functionLabel: {
     color: editorial.mineralBlue,
     fontFamily: fonts.sansSemiBold,
-    fontSize: 11,
+    fontSize: 13,
     letterSpacing: 1.2,
     marginTop: spacing.lg,
   },
   title: {
     color: editorial.ink,
     fontFamily: fonts.serif,
-    fontSize: 30,
-    lineHeight: 35,
+    fontSize: 28,
+    lineHeight: 34,
     marginTop: spacing.sm,
   },
-  sessionTitle: { fontSize: 30, lineHeight: 35 },
+  subtitle: {
+    color: editorial.inkMuted,
+    fontFamily: fonts.sans,
+    fontSize: 15,
+    lineHeight: 22,
+    marginTop: 8,
+  },
+  sessionTitle: { fontSize: 28, lineHeight: 34 },
   gate: {
     color: editorial.gold,
     fontFamily: fonts.sansSemiBold,
@@ -248,9 +680,9 @@ const styles = StyleSheet.create({
   timer: {
     color: editorial.ink,
     fontFamily: fonts.serif,
-    fontSize: 58,
-    lineHeight: 64,
-    marginTop: 30,
+    fontSize: 52,
+    lineHeight: 58,
+    marginTop: 18,
     textAlign: "center",
   },
   nowPanel: {
@@ -271,7 +703,7 @@ const styles = StyleSheet.create({
     fontSize: 22,
     marginTop: 3,
   },
-  transport: { marginTop: spacing.md },
+  transport: { marginTop: spacing.xl, marginBottom: spacing.md },
   preparedNote: {
     color: editorial.inkMuted,
     fontFamily: fonts.sans,

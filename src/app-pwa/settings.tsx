@@ -9,15 +9,23 @@ import { DownloadControl } from "@/components/DownloadControl";
 import { REVIEW_REVISION } from "@/content/reviewRevision";
 import { ListeningPreferences } from "@/components/ListeningPreferences";
 import { IndividualTrackReviewLink } from "@/pwa-review/IndividualTrackReview";
+import { usePwaView } from "@/pwa-view/PwaViewProvider";
 
 export default function PwaSettingsScreen() {
   const router = useRouter();
+  const { viewMode } = usePwaView();
+  const workbench = viewMode === "workbench";
   const version = Constants.expoConfig?.version ?? "development";
 
   return (
     <EditorialScreen>
       <EditorialHeader label="SETTINGS" showBack />
-      <Text accessibilityRole="header" style={styles.title}>
+      <Text
+        accessibilityRole="header"
+        nativeID="consumer-screen-title"
+        style={styles.title}
+        testID="consumer-screen-title"
+      >
         A quiet place to begin.
       </Text>
       <Text style={styles.intro}>
@@ -33,7 +41,9 @@ export default function PwaSettingsScreen() {
           value="Listening choices and downloads"
         />
         <SettingRow label="Version" value={version} />
-        <SettingRow label="Review" value={REVIEW_REVISION} last />
+        {workbench ? (
+          <SettingRow label="Review" value={REVIEW_REVISION} last />
+        ) : null}
       </View>
 
       <View style={styles.downloads}>
@@ -61,7 +71,7 @@ export default function PwaSettingsScreen() {
         <Text style={styles.arrow}>→</Text>
       </Pressable>
       <ListeningPreferences />
-      <IndividualTrackReviewLink />
+      {workbench ? <IndividualTrackReviewLink /> : null}
     </EditorialScreen>
   );
 }
@@ -87,8 +97,8 @@ const styles = StyleSheet.create({
   title: {
     color: editorial.ink,
     fontFamily: fonts.serif,
-    fontSize: 40,
-    lineHeight: 44,
+    fontSize: 28,
+    lineHeight: 34,
   },
   intro: {
     color: editorial.inkMuted,

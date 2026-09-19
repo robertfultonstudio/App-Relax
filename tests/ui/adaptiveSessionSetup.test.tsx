@@ -85,7 +85,7 @@ describe("prepared consumer session setup", () => {
     expect(screen.queryByText(/playlist/i)).toBeNull();
     expect(screen.queryByLabelText(/playlist/i)).toBeNull();
     expect(
-      screen.getByLabelText("Open 90-minute session and development player"),
+      screen.getByLabelText("Open complete 90-minute practice"),
     ).toBeTruthy();
     expect(screen.queryByText("Threshold of Breath")).toBeNull();
     await fireEvent.press(screen.getByTestId("open-complete-practice-review"));

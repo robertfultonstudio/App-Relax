@@ -69,6 +69,14 @@ else {
       fail(`ci.yml required-gate does not depend on ${job}`);
   }
 }
+const webArtifactPath = JSON.stringify(ci.jobs?.["web-exports"]?.steps ?? []);
+if (!webArtifactPath.includes("dist/pwa-visual-gate"))
+  fail("ci.yml must retain the PWA visual gate evidence");
+const webArtifactStep = (ci.jobs?.["web-exports"]?.steps ?? []).find((step) =>
+  String(step.uses ?? "").startsWith("actions/upload-artifact@"),
+);
+if (webArtifactStep?.if !== "always()")
+  fail("ci.yml must upload PWA visual evidence even when the gate fails");
 if (release.permissions?.contents !== "write")
   fail("release.yml requires contents: write");
 if (!prPolicy.on?.pull_request) fail("pr-policy.yml must run on pull_request");
@@ -117,6 +125,9 @@ for (const environment of [
 }
 const eas = JSON.parse(readFileSync(join(root, "eas.json"), "utf8"));
 const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
+const webExportsCommand = pkg.scripts?.["ci:web-exports"] ?? "";
+if (!webExportsCommand.includes("pwa:visual-gate"))
+  fail("ci:web-exports must run the mandatory PWA visual gate");
 if (eas.cli?.version !== "24.3.0")
   fail("EAS CLI version must be exactly 24.3.0");
 if (pkg.devDependencies?.["eas-cli"] !== undefined)

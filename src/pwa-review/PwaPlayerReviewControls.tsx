@@ -23,6 +23,8 @@ import { IndividualTrackReviewLink } from "./IndividualTrackReview";
 import { pwaDeliveryFilename } from "./pwaDeliveryFilename";
 import { reviewReadSummary } from "./PwaReadProbe";
 import { PwaReviewScrubber } from "./PwaReviewScrubber";
+import { usePwaView } from "@/pwa-view/PwaViewProvider";
+import type { ReviewTransport } from "@/domain/audio/reviewTransport";
 
 type Target =
   | {
@@ -46,23 +48,47 @@ export const clampReviewPosition = (value: number, duration: number) =>
 export function PwaPlayerReviewControls({
   target,
   initiallyOpen = false,
+  visible = true,
+  transport,
 }: {
   target: Target;
   initiallyOpen?: boolean;
+  visible?: boolean;
+  transport?: ReviewTransport;
 }) {
   const { controller } = useAudioSession();
   const [variantOrigin, setVariantOrigin] = useState<{
     id: string;
     base: AdaptiveSessionProgram;
   } | null>(null);
+  const [transactionEpoch, setTransactionEpoch] = useState(0);
+  const listeningRun = controller.getListeningRun();
+  const previousListeningRun = useRef(listeningRun);
   const identity =
     target.kind === "single" ? target.work.id : target.program.plan.id;
   useEffect(() => {
-    if (isPwaWebSurface() && initiallyOpen && typeof document !== "undefined")
+    const explicitlyConsumer =
+      typeof window !== "undefined" &&
+      new URLSearchParams(window.location?.search ?? "").get("review") === "0";
+    if (
+      visible &&
+      !explicitlyConsumer &&
+      isPwaWebSurface() &&
+      initiallyOpen &&
+      typeof document !== "undefined"
+    )
       document
         .getElementById("development-player")
         ?.scrollIntoView({ block: "start", behavior: "auto" });
-  }, [initiallyOpen, identity]);
+  }, [initiallyOpen, identity, visible]);
+  useEffect(() => {
+    if (previousListeningRun.current === listeningRun) return;
+    previousListeningRun.current = listeningRun;
+    if (target.kind === "adaptive" && variantOrigin?.base)
+      target.onVariant(variantOrigin.base);
+    setVariantOrigin(null);
+    setTransactionEpoch((value) => value + 1);
+  }, [listeningRun, target, variantOrigin]);
   if (!isPwaWebSurface()) return null;
   const base =
     target.kind === "adaptive"
@@ -80,12 +106,26 @@ export function PwaPlayerReviewControls({
           },
         }
       : target;
+  const transactionIdentity =
+    target.kind === "adaptive"
+      ? (variantOrigin?.base.plan.id ?? target.program.plan.id)
+      : target.work.id;
+  const stopAndDiscard = async () => {
+    if (transport) await transport.onStop();
+    else await controller.stop();
+    if (target.kind === "adaptive" && base) target.onVariant(base);
+    setVariantOrigin(null);
+    setTransactionEpoch((value) => value + 1);
+  };
   return (
     <ReviewPanel
-      key={`${identity}:${target.kind === "adaptive" ? (target.program.plan.natureMix?.enabled === false ? "off" : (target.program.plan.natureMix?.selectedFamily ?? "off")) : "single"}:${controller.getListeningRun()}`}
+      key={`${transactionIdentity}:${target.kind}:${listeningRun}:${transactionEpoch}`}
       target={reviewTarget}
       initiallyOpen={initiallyOpen}
       base={base}
+      visible={visible}
+      transport={transport}
+      onDefinitiveStop={stopAndDiscard}
     />
   );
 }
@@ -101,12 +141,19 @@ function ReviewPanel({
   target,
   initiallyOpen,
   base,
+  visible,
+  transport,
+  onDefinitiveStop,
 }: {
   target: Target;
   initiallyOpen: boolean;
   base: AdaptiveSessionProgram | null;
+  visible: boolean;
+  transport?: ReviewTransport;
+  onDefinitiveStop: () => Promise<void>;
 }) {
   const { controller, snapshot } = useAudioSession();
+  const { showConsumerPreview, setTechnicalBusy, technicalBusy } = usePwaView();
   const [open, setOpen] = useState(initiallyOpen);
   const [busy, setBusy] = useState(false);
   const lock = useRef(false);
@@ -140,6 +187,10 @@ function ReviewPanel({
   });
   const [durationB, setDurationB] = useState(240);
   const [curveB, setCurveB] = useState<TransitionCurve>("equal-power");
+  const [checkpoint, setCheckpoint] = useState<AdaptiveSessionProgram | null>(
+    null,
+  );
+  const [draftDirty, setDraftDirty] = useState(false);
   const sourceProgram = target.kind === "adaptive" ? target.program : null;
   const program = useMemo(
     () =>
@@ -219,7 +270,12 @@ function ReviewPanel({
     target.kind === "single" ? target.work.id : target.program.plan.id;
   const warmKey = `${reviewIdentity}:${controller.getListeningRun()}:${warmAt}`;
   const warmMessage =
-    !open || !target.matching || !sourceFile || busy || warmAt === null
+    !visible ||
+    !open ||
+    !target.matching ||
+    !sourceFile ||
+    busy ||
+    warmAt === null
       ? ""
       : snapshot.status !== "paused"
         ? "You can seek during playback. Pause is optional for preparing the next test."
@@ -227,7 +283,14 @@ function ReviewPanel({
           ? warmResult.text
           : `Preparing test at ${time(warmAt)}…`;
   useEffect(() => {
-    if (!open || !target.matching || !sourceFile || busy || warmAt === null) {
+    if (
+      !visible ||
+      !open ||
+      !target.matching ||
+      !sourceFile ||
+      busy ||
+      warmAt === null
+    ) {
       return;
     }
     if (snapshot.status !== "paused") {
@@ -259,6 +322,7 @@ function ReviewPanel({
     };
   }, [
     controller,
+    visible,
     open,
     target.matching,
     sourceFile,
@@ -273,15 +337,17 @@ function ReviewPanel({
   );
   useEffect(() => {
     mounted.current = true;
-    const run = controller.getListeningRun();
     return () => {
       mounted.current = false;
       pendingCommand.current?.resolve();
       pendingCommand.current = null;
-      if (controller.getListeningRun() === run)
-        void controller.configureAdaptiveAudition(null).catch(() => undefined);
     };
   }, [controller]);
+
+  useEffect(() => {
+    setTechnicalBusy(busy);
+    return () => setTechnicalBusy(false);
+  }, [busy, setTechnicalBusy]);
 
   function run(
     action: () => Promise<void>,
@@ -467,49 +533,119 @@ function ReviewPanel({
       );
     }, `Changing audition to ${nextMode}…`);
   }
-  function prepareVariant(which: "A" | "B") {
+  function previewVariant() {
     if (target.kind !== "adaptive" || !base || busy) return;
     void run(async () => {
       if (
-        which === "B" &&
-        (base.plan.endingStrategy === "source-file-boundary-review-only" ||
-          base.plan.endingStrategy === "extended-loop-boundary-review-only")
+        base.plan.endingStrategy === "source-file-boundary-review-only" ||
+        base.plan.endingStrategy === "extended-loop-boundary-review-only"
       )
         throw new Error(
           "This whole-file review keeps exact source boundaries. Changing one fade would cut or repeat music; use transition seek and outgoing/incoming audition instead.",
         );
-      const next =
-        which === "A"
-          ? base
-          : overrideTransition(base, selected, durationB, curveB);
+      const next = overrideTransition(base, selected, durationB, curveB);
       if (!auditPlanAccelerated(next).pass)
         throw new Error("Variant rejected: timeline or overlap safety failed.");
+      const previous = target.program;
       await controller.configureAdaptiveAudition(null);
       await controller.stop();
       setLoop(false);
       target.onVariant(next);
+      setCheckpoint(previous);
+      setDraftDirty(false);
       setMessage(
-        `Variant ${which} prepared. Press Play, then Jump to change. No listening approval implied.`,
+        "Preview applied to this listening run only. Playback remains stopped until Play.",
       );
     });
   }
+
+  function undoVariant() {
+    if (target.kind !== "adaptive" || !base || busy) return;
+    if (draftDirty) {
+      setDurationB(transition?.durationSeconds ?? 240);
+      setCurveB(transition?.curve ?? "equal-power");
+      setDraftDirty(false);
+      setMessage("Draft discarded. The active session was not changed.");
+      return;
+    }
+    if (!checkpoint) return;
+    const previous = checkpoint;
+    void run(async () => {
+      await controller.configureAdaptiveAudition(null);
+      await controller.stop();
+      setLoop(false);
+      target.onVariant(previous);
+      setCheckpoint(null);
+      setMessage("Undo complete. The previous preview checkpoint is active.");
+    }, "Undoing preview…");
+  }
+
+  function resetVariant() {
+    if (target.kind !== "adaptive" || !base || busy) return;
+    void run(async () => {
+      await controller.configureAdaptiveAudition(null);
+      await controller.stop();
+      setLoop(false);
+      setMode("both");
+      auditionState.current.loop = false;
+      auditionState.current.mode = "both";
+      target.onVariant(base);
+      setCheckpoint(null);
+      setDraftDirty(false);
+      const baselineTransition = base.plan.transitions[selected];
+      setDurationB(baselineTransition?.durationSeconds ?? 240);
+      setCurveB(baselineTransition?.curve ?? "equal-power");
+      setMessage("Baseline restored. Playback was not started.");
+    }, "Restoring baseline…");
+  }
+
+  function stopAndDiscardTransaction() {
+    if (busy) return;
+    void run(async () => {
+      await onDefinitiveStop();
+      setLoop(false);
+      setCheckpoint(null);
+      setDraftDirty(false);
+      setMessage(
+        "Stopped. Temporary review changes were discarded; playback remains stopped.",
+      );
+    }, "Stopping and discarding temporary review changes…");
+  }
+
+  if (!visible) return null;
   return (
     <View
       nativeID="development-player"
       style={styles.panel}
       testID="private-player-review"
     >
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Development review controls"
-        accessibilityState={{ expanded: open }}
-        onPress={() => setOpen(!open)}
-        style={styles.headingButton}
-      >
-        <Text style={styles.heading}>
-          DEVELOPMENT REVIEW {open ? "−" : "+"}
-        </Text>
-      </Pressable>
+      <View style={styles.workbenchHeader}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Workbench review controls"
+          accessibilityState={{ expanded: open }}
+          onPress={() => setOpen(!open)}
+          style={styles.headingButton}
+        >
+          <Text
+            nativeID="workbench-title"
+            style={styles.heading}
+            testID="workbench-title"
+          >
+            WORKBENCH {open ? "−" : "+"}
+          </Text>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ busy: technicalBusy, disabled: technicalBusy }}
+          disabled={technicalBusy}
+          onPress={showConsumerPreview}
+          style={[styles.consumerButton, technicalBusy && styles.disabled]}
+          testID="show-consumer-preview"
+        >
+          <Text style={styles.consumerButtonText}>Vedi come utente</Text>
+        </Pressable>
+      </View>
       {!open && (
         <Text style={styles.small}>
           Loop points · all session joins · seek & audition
@@ -533,12 +669,34 @@ function ReviewPanel({
             position={position}
             duration={duration}
             enabled={enabled}
-            playing={snapshot.status === "playing"}
+            playing={transport?.playing ?? snapshot.status === "playing"}
+            canPlay={
+              transport?.canPlay ??
+              (target.matching &&
+                ["ready", "playing", "paused"].includes(snapshot.status))
+            }
+            canStop={
+              transport?.canStop ??
+              (target.matching &&
+                ["playing", "paused", "preparing", "fadingOut"].includes(
+                  snapshot.status,
+                ))
+            }
+            onPlayPause={() =>
+              transport
+                ? transport.onPlayPause()
+                : void (
+                    snapshot.status === "playing"
+                      ? controller.pause()
+                      : controller.playFromUserGesture()
+                  ).catch(() => undefined)
+            }
+            onStop={stopAndDiscardTransaction}
             readPosition={
               program ? controller.getAdaptiveReviewPosition : undefined
             }
             onSeek={seek}
-            status={`${busy ? "Loading point…" : snapshot.status} · ${loop ? "Review loop" : "Continuous"}${transition ? ` · Change ${selected + 1}/${program!.plan.transitions.length}` : " · Individual track"}`}
+            status={`${busy ? "Loading point…" : (transport?.status ?? snapshot.status)} · ${loop ? "Review loop" : "Continuous"}${transition ? ` · Change ${selected + 1}/${program!.plan.transitions.length}` : " · Individual track"}`}
             actions={[
               {
                 label: "Dock previous marker",
@@ -879,14 +1037,17 @@ function ReviewPanel({
                   "extended-loop-boundary-review-only" ? (
                   <>
                     <Text style={styles.heading}>
-                      A / B · CHANGE DURATION & CURVE
+                      SESSION VARIANT · DURATION & CURVE
                     </Text>
                     <View style={styles.row}>
                       {[60, 120, 180, 240, 300].map((value) => (
                         <ReviewButton
                           key={`${value} seconds`}
                           label={`${value} seconds`}
-                          onPress={() => setDurationB(value)}
+                          onPress={() => {
+                            setDurationB(value);
+                            setDraftDirty(true);
+                          }}
                           disabled={busy}
                           active={durationB === value}
                         />
@@ -897,7 +1058,10 @@ function ReviewPanel({
                         <ReviewButton
                           key={value}
                           label={value}
-                          onPress={() => setCurveB(value)}
+                          onPress={() => {
+                            setCurveB(value);
+                            setDraftDirty(true);
+                          }}
                           disabled={busy}
                           active={curveB === value}
                         />
@@ -906,18 +1070,27 @@ function ReviewPanel({
                     <View style={styles.row}>
                       {
                         <ReviewButton
-                          key={"Restore A"}
-                          label={"Restore A"}
-                          onPress={() => prepareVariant("A")}
+                          key={"Preview"}
+                          label={"Preview"}
+                          onPress={previewVariant}
                           disabled={busy}
                           active={false}
                         />
                       }
                       {
                         <ReviewButton
-                          key={"Prepare B"}
-                          label={"Prepare B"}
-                          onPress={() => prepareVariant("B")}
+                          key={"Undo"}
+                          label={"Undo"}
+                          onPress={undoVariant}
+                          disabled={busy || (!draftDirty && !checkpoint)}
+                          active={false}
+                        />
+                      }
+                      {
+                        <ReviewButton
+                          key={"Reset"}
+                          label={"Reset"}
+                          onPress={resetVariant}
                           disabled={busy}
                           active={false}
                         />
@@ -990,13 +1163,30 @@ function ReviewButton({
 
 const styles = StyleSheet.create({
   panel: {
-    paddingBottom: 200,
+    paddingBottom: 230,
     borderTopWidth: 1,
     borderColor: editorial.line,
     marginTop: 24,
     paddingTop: 8,
   },
+  workbenchHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
   headingButton: { minHeight: 48, justifyContent: "center" },
+  consumerButton: {
+    minHeight: 48,
+    paddingHorizontal: 14,
+    justifyContent: "center",
+    backgroundColor: editorial.ink,
+  },
+  consumerButtonText: {
+    color: editorial.paperLight,
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 14,
+  },
   heading: {
     fontFamily: fonts.sansSemiBold,
     fontSize: 12,

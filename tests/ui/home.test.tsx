@@ -3,7 +3,10 @@ import { StyleSheet } from "react-native";
 import HomeScreen from "@/app/moments";
 import PwaHome from "@/app-pwa/moments";
 import { CONSUMER_OUTCOMES, PRODUCT_TABS } from "@/content/productShell";
-import { M6_HOME_PAINTING } from "@/design/shellArtwork";
+import {
+  M6_HOME_PAINTING,
+  RITUALS_HOME_BACKGROUND,
+} from "@/design/shellArtwork";
 import { createConsumerAudioMock } from "./helpers/consumerAudioMock";
 
 const mockPush = jest.fn();
@@ -26,13 +29,41 @@ jest.mock("@/state/lastListeningPersistence", () => ({
 }));
 
 describe("compact outcome-first Home", () => {
-  it("keeps the private PWA need-first without a promoted music catalogue", async () => {
+  it("renders the private PWA as one full-bleed field with one vertical destination list", async () => {
     const screen = await render(<PwaHome />);
     expect(screen.queryByTestId("home-music-library")).toBeNull();
     expect(screen.queryByText(/music library|MUSIC-REVIEW/)).toBeNull();
+    expect(screen.getByText("Scegli il tuo momento")).toBeTruthy();
+    expect(screen.queryByText("What do you need right now?")).toBeNull();
+    const list = screen.getByTestId("outcome-list");
+    expect(within(list).getAllByRole("button")).toHaveLength(6);
+    expect(StyleSheet.flatten(list.props.style).flexDirection).not.toBe("row");
+    const labels = [
+      "Meditazione",
+      "Yoga",
+      "Massaggio",
+      "Relax",
+      "Sonno",
+      "Concentrazione",
+    ];
     expect(
-      within(screen.getByTestId("outcome-grid")).getAllByRole("button"),
-    ).toHaveLength(6);
+      within(list)
+        .getAllByRole("button")
+        .map((item) => item.props.accessibilityLabel),
+    ).toEqual(labels);
+    for (const label of labels) {
+      const destination = within(list).getByRole("button", { name: label });
+      const style = StyleSheet.flatten(destination.props.style);
+      expect(style.minHeight).toBeGreaterThanOrEqual(48);
+      expect(style.borderWidth ?? 0).toBe(0);
+      expect(style.borderRadius ?? 0).toBe(0);
+      expect(style.backgroundColor).toBeUndefined();
+    }
+    expect(
+      screen.getByTestId("home-full-bleed-artwork", {
+        includeHiddenElements: true,
+      }).props.source,
+    ).toBe(RITUALS_HOME_BACKGROUND);
     expect(
       mockAudio.controller.startSelectionFromUserGesture,
     ).not.toHaveBeenCalled();

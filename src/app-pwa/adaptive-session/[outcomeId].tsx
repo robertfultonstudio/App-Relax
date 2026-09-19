@@ -1,19 +1,19 @@
 import { getPwaOutcomeStaticParams } from "@/content/pwaStaticRoutes";
 import { useSyncExternalStore } from "react";
-import { useLocalSearchParams } from "expo-router";
 import { Text } from "react-native";
 import { EditorialScreen } from "@/components/EditorialScreen";
 import AdaptiveSessionPlayerScreen from "../../app/adaptive-session/[outcomeId]";
 import { PwaPlayerReviewControls } from "@/pwa-review/PwaPlayerReviewControls";
 import { createWholeFileReviewProgram } from "@/pwa-review/createWholeFileReviewProgram";
+import { usePwaView } from "@/pwa-view/PwaViewProvider";
 
 const subscribe = () => () => {};
 const clientReady = () => true;
 const serverReady = () => false;
 
 export default function PwaSessionPlayer() {
-  const { review } = useLocalSearchParams<{ review?: string }>();
-  const reviewOpen = review !== "0";
+  const { viewMode } = usePwaView();
+  const workbench = viewMode === "workbench";
   // Static exports do not know the requested query or session seed. Hydrate a
   // stable shell before creating the actual client plan, never a different plan.
   const hydrated = useSyncExternalStore(subscribe, clientReady, serverReady);
@@ -25,12 +25,14 @@ export default function PwaSessionPlayer() {
     );
   return (
     <AdaptiveSessionPlayerScreen
+      hidePersistentTransport={workbench}
       reviewProgramFactory={createWholeFileReviewProgram}
-      renderReviewControls={(program, matching, onVariant) => (
+      renderReviewControls={(program, matching, onVariant, transport) => (
         <PwaPlayerReviewControls
-          key={`${program.plan.seed}:${reviewOpen}`}
-          initiallyOpen={reviewOpen}
+          initiallyOpen
+          visible={workbench}
           target={{ kind: "adaptive", program, matching, onVariant }}
+          transport={transport}
         />
       )}
     />

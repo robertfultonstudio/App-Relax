@@ -1,6 +1,6 @@
 import "react-native-gesture-handler";
 import { useFonts } from "expo-font";
-import { Stack } from "expo-router";
+import { Stack, usePathname } from "expo-router";
 import Head from "expo-router/head";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
@@ -13,6 +13,8 @@ import { colors } from "@/design/theme";
 import { fontAssets } from "@/design/fontAssets";
 import { useReducedMotionPreference } from "@/design/useReducedMotionPreference";
 import { CurrentSessionBar } from "@/components/CurrentSessionBar";
+import { PwaViewProvider, usePwaView } from "@/pwa-view/PwaViewProvider";
+import { PwaListeningNavigation } from "@/pwa-view/PwaListeningNavigation";
 
 void SplashScreen.preventAutoHideAsync();
 
@@ -31,20 +33,49 @@ export default function PwaRootLayout() {
   return (
     <SafeAreaProvider>
       <AudioProvider createDriver={createPwaAudioGraphDriver}>
-        <Head>
-          <title>App Relax</title>
-        </Head>
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: colors.background },
-            animation: reducedMotion ? "none" : "fade",
-            animationDuration: 200,
-          }}
-        />
-        <CurrentSessionBar />
-        <StatusBar style="dark" />
+        <PwaViewProvider>
+          <Head>
+            <title>App Relax</title>
+            <meta
+              content="PWA_DUAL_VIEW_SENTINEL"
+              name="app-relax-build-surface"
+            />
+            <style>{`
+              button:focus-visible,
+              a:focus-visible,
+              [role="button"]:focus-visible,
+              [role="tab"]:focus-visible,
+              input:focus-visible,
+              summary:focus-visible {
+                outline: 2px solid #397260 !important;
+                outline-offset: 2px !important;
+              }
+            `}</style>
+          </Head>
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: colors.background },
+              animation: reducedMotion ? "none" : "fade",
+              animationDuration: 180,
+            }}
+          />
+          <PwaChrome />
+          <StatusBar style="dark" />
+        </PwaViewProvider>
       </AudioProvider>
     </SafeAreaProvider>
+  );
+}
+
+function PwaChrome() {
+  const path = usePathname();
+  const { viewMode } = usePwaView();
+  if (path === "/") return null;
+  return (
+    <>
+      {viewMode === "workbench" ? <CurrentSessionBar showReviewCopy /> : null}
+      <PwaListeningNavigation />
+    </>
   );
 }

@@ -1,130 +1,57 @@
-# M6 — confronto della direzione 1–2 con l'app reale
+# App Relax PWA redesign — design QA
 
-## Chiusura del 17 settembre 2026
+Candidate: `PWA-DUAL-VIEW.1-REDESIGN-LOCAL` · app `1.1.0`
+Date: 2026-09-18
+Scope: private owner-only PWA. This report does not certify native, store, listening, rights, or physical-device behavior.
 
-[F] Gate integrato locale PASS:103 suite/761 test,55 tooling, Expo20/20,
-export PWA e validatori verdi. Pubblicazione privata autorizzata e completata;
-report definitivo `docs/M6_CLOSEOUT.md`. Le sezioni seguenti sono cronologia.
+## Visual verdict
 
-Confronti finali realmente ispezionati: `dist/m6-closeout/home-comparison.png`
-e `player-comparison.png`, con source normalizzata e screenshot `*-visible.png`
-a390×844. Gli screenshot CDP con scala/crop diversi, compresi `player.png` e
-le vecchie prove high-DPR, non sono evidenza valida di nitidezza. Nessun filtro
-di sharpening inventato e nessun falso screenshot Retina.
+`READY FOR A-D / A-T RECHECK` for the frozen local PWA candidate.
 
-Titolo reale ZenMinchoRegular30px, opacity1, nessunfilter/ombra/transform;
-font locale custom già verificato. Corpo Hanken, controlli opachi, tab netti;
-entrambi i volumi visibili. Pitture non testuali, nessuna nuova animazione,
-copy funzionale e navigazione conservati. Il giudizio estetico finale su
-telefono resta dell'utente; contrasto su ogni pixel pittorico non certificato.
+- [F] Home is a mobile-first 2×3 activity grid at 390×844 and 430×932. At 844×390 it becomes a bounded 3×2 grid.
+- [F] Persistent Home, Hatha, and Settings navigation uses original React Native vector marks: a house, a seated Hatha figure, and a gear. No raster crop or filled tab rectangle is used.
+- [F] Every navigation target is 58 px high. Exactly one tab exposes selected/current state and roving `tabIndex=0`; the selected hairline and mark use restrained jade.
+- [F] Hatha remains selected on `/yoga`, `/outcome/yoga`, and `/adaptive-session/yoga`, including the complete-practice redirect.
+- [F] Consumer player uses the approved player painting, function-first title, timer, 48 px main-volume control, and one dominant Play action.
+- [F] The consumer transport is persistent in a 126 px shelf directly above navigation. Its spacer reduces the scroll viewport so content ends one pixel before the shelf.
+- [F] At top, midpoint, and maximum scroll for 390×844, 430×932, and 844×390, Play remains fully visible, visible control/shelf intersections are zero, and navigation touches but never overlaps the shelf.
+- [F] `review=0` removes Workbench DOM and technical transport. Workbench keeps one fixed technical transport and an explicit “Vedi come utente” action.
+- [F] Keyboard focus has a two-pixel jade outline; reduced-motion removes tile entrance animation.
 
-Hatha90/Rain avviata; Pause, Join start352,79s, review loop322,79s e Stop
-verificati, tre barre concordi. Inventario45 registrazioni raggiungibile;
-nessun errore console finale. Test locale non equivale ad ascolto approvato.
+## Interaction and accessibility evidence
 
-Final result: passed per QA locale delimitata. Nessun blocco implementativo
-M6 residuo; test fisici, nuova APK e commit canonico restano gate separati.
+- [F] Short Home activation navigates Home; the rendered web control fires Workbench at exactly 1,200 ms and not at 1,199 ms.
+- [F] Movement beyond 10 px, scroll, secondary pointer, blur, pointer cancellation, and unmount cancel the owner gesture without navigation.
+- [F] `Alt+Shift+Enter` and the custom accessibility action provide non-pointer entry to Workbench.
+- [F] View switching updates the query without remounting the audio provider or player and moves focus to the destination heading.
+- [F] Preview/Undo/Reset now retain one transaction identity across plan rerenders. A definitive successful Stop restores the baseline; a failed Stop preserves the provisional variant for Retry; a new run restores the baseline.
+- [F] The stateful review test records no implicit prepare, start, play, or seek during Preview/Undo/Reset/Stop cleanup.
+- [F] Full functional suite: 107 suites, 800 tests, all passing. Tooling suite: 65 tests, 63 passing and two documented fixture skips.
 
-## Ultima revisione richiesta dall'utente
+## Responsive screenshots inspected after paint
 
-La preferenza successiva richiede font più caratterizzati, trasporto pastello
-sfumato e tab sempre riconoscibili. Supera il fondo bianco e la tipografia del
-riferimento iniziale: non si cerca di ricopiare quei due dettagli respinti.
+- `evidence/after-r5/welcome-final-r5-390x844.png`
+- `evidence/after-r5/home-final-r5-390x844.png`
+- `evidence/after-r5/home-final-r5-430x932.png`
+- `evidence/after-r5/home-final-r5-844x390.png`
+- `evidence/after-r5/meditation-final-r5-390x844.png`
+- `evidence/after-r5/hatha-final-r5-390x844.png`
+- `evidence/after-r5/settings-final-r5-390x844.png`
+- `evidence/after-r5/player-consumer-{top,mid,max}-r5-390x844.png`
+- `evidence/after-r5/player-consumer-{top,mid,max}-r5-430x932.png`
+- `evidence/after-r5/player-consumer-{top,mid,max}-r5-844x390.png`
+- `evidence/after-r5/player-workbench-final-r5-390x844.png`
 
-Verificati e aperti i confronti `home-pastel-comparison.png` e
-`player-pastel-comparison.png`, source normalizzata a sinistra e nuova app
-390×844 a destra. Screenshot individuali `home-pastel.png`, `player-pastel.png`.
-Titoli Zen Mincho, corpo Hanken; font locale effettivo verificato nel browser.
-Lavatura lavanda/cipria sul solo fondo trasporto, nessuna ombra sulle icone;
-Stop ha un contorno, Play/Pause resta pieno. Tab rettilinei con contorno netto,
-selezione giada e stato assistivo; non dissolti nel dipinto. Pitture, gerarchia,
-copy e flusso conservati. Entrambi i volumi restano visibili a 390×844.
+All files were captured from the exported PWA at exact viewport dimensions after fonts and images settled. The r5 geometry receipt reports a reserved scroll boundary, fully visible Play at all nine scroll/viewport checkpoints, 48 px minimum control height, 58 px navigation targets, zero undersized consumer targets, zero visible transport intersections, and zero technical DOM nodes in consumer view. The Meditation capture visibly contains Home, Hatha, and Settings.
 
-103 suite/760 test, incluso contrasto ≥4,5:1 del testo e ≥3:1 dei contorni tab,
-target ≥44 px e assenza di opacità sui simboli abilitati. Nessuna animazione.
-Risultato QA locale: passed. Approvazione estetica di questa nuova iterazione
-ancora dell'utente; nessuna nuova prova su telefono o pubblicazione implicita.
+## Success-readiness boundary
 
-## Prove della prima iterazione
+| Lane                                                   | Verdict                                  | Evidence boundary                                                                                                                    |
+| ------------------------------------------------------ | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Promise and first useful outcome                       | READY FOR CONTROLLED TEST                | Activity → player → one Play is implemented; audible start still needs the authenticated remote and user gesture.                    |
+| Experience and accessibility                           | READY FOR INDEPENDENT RECHECK            | Component, DOM, focus, keyboard, gesture-cancel, exact viewport, semantic tabs, and before/after navigation evidence is present.     |
+| Technical reliability                                  | READY FOR CONTROLLED TEST                | 800 functional tests, 308 audio tests, tooling, validators, Doctor 20/20, and consumer/QA/native/PWA export boundaries pass.         |
+| Human listening and physical iPhone                    | NON DETERMINATO — EVIDENZA INSUFFICIENTE | No local screenshot, test suite, or export proves listening quality, Bluetooth, lock screen, battery, or standalone iPhone behavior. |
+| Rights, market preference, retention, economics, store | NON DETERMINATO — EVIDENZA INSUFFICIENTE | Outside this bounded PWA redesign milestone.                                                                                         |
 
-Source visual truth: `output/m6-design-review/mobile-v2/01-home.png` e
-`02-player.png`, entrambi 853×1844; copie Figma verificate `3:2` e `3:3`.
-Implementazione: `dist/m6-review/home-final.png`, `player-final.png`.
-Viewport e screenshot: 390×844 CSS/pixel, DPR 1. Source ridimensionata
-proporzionalmente a 390×843/844, senza cornice. Il contenitore del browser
-inizialmente aveva uno zoom incoerente: quei primi scatti non sono prova finale.
-
-Confronti realmente aperti come input affiancato:
-`dist/m6-review/home-comparison.png`, `player-comparison.png` (780×866,
-22 px di intestazione). Stato: Home con ultima sessione, player Playing
-con Rain e review chiusa esplicitamente. Il tempo/volume differisce dal mock
-perché il player è reale. Esaminato anche player con dock QA aperto.
-
-## Findings e correzioni
-
-- [P1, risolto] Il dipinto player ereditava la larghezza intrinseca 853 px e
-  perdeva la luna. Corretto con contenitore relativo e immagine 100%.
-- [P1, risolto] L'estensione del dipinto sotto la testata copriva Back.
-  Gerarchia dei livelli corretta; Back visibile nella prova finale.
-- [P2, risolto] Natura ripetuta due volte e timer fra i volumi portavano il
-  volume principale sotto il trasporto. Tolta la duplicazione; timer facoltativo
-  spostato dopo i volumi. Entrambi gli slider visibili nella prova finale.
-- [P2, risolto] Sfondo Home fermo mentre scorreva la griglia: lo sfondo ora
-  appartiene al contenuto scorrevole e mantiene la composizione alta 844 px.
-- [P2, risolto] Slider nativo non marcato accessible: corretto, test di touch,
-  limiti, azioni assistive e disabled superati.
-
-Cronologia: prime prove `home.png`, `player-review.png` e `player-consumer.png`
-sono intermedie, non deliverable. Le correzioni sopra sono state ricatturate;
-gli scatti `*-final.png` e i confronti sono quelli successivi alle correzioni.
-
-## Cinque superfici obbligatorie
-
-- Tipografia: Newsreader Regular e Manrope reali e locali; timer verificato
-  via font effettivamente renderizzato. Titoli e controlli leggibili, niente
-  testo dentro i dipinti. Misure un poco più grandi del raster sono intenzionali
-  per leggibilità; il raster generativo non definisce metriche font esatte.
-- Spazi/layout: due colonne, sei accessi, nessuna card aggiunta. Trasporto
-  persistente 64 px e target ≥44 px; due volumi visibili a 390×844.
-  Il contenuto secondario scorre, non viene rimosso quando il dock è presente.
-- Colori: carta avorio, inchiostro minerale, selezioni lavanda; nessuna ombra
-  davanti al simbolo Pause. Contrasti dei token coperti dalle regressioni;
-  contrasto di ogni pixel pittorico e screen reader fisico non certificati.
-- Immagini: le pitture originali ripulite dal testo sono JPEG registrati,
-  non ricostruzioni CSS/SVG. Luna, acqua, erbe e composizione coerenti. I soggetti
-  sono decorativi e non sostituiscono i target o le etichette.
-- Copy: sei funzioni prima dei titoli; niente nomi musicali nella Home/player
-  normale. `Ocean waves` completo, Play/Pause/Stop e Mute espliciti.
-
-Deviazioni intenzionali: Settings testuale al posto dell'ingranaggio,
-Home/Hatha testuali (nessun loto vietato), Back conserva la navigazione reale,
-stato Playing al posto della frase decorativa, volumi con Mute scritto anziché
-icona ambigua, timer disponibile scorrendo. Dock opaco per leggibilità stabile.
-Queste differenze sono scelte funzionali, non una dichiarazione di replica pixel-perfect.
-
-## Interazioni e responsive
-
-Play, Pause, Stop, ultima sessione, cambio Rain/Ocean, slider/mute separati,
-Hatha 90 minuti e seek verso giunzioni provati nel browser integrato.
-La Home a 320×568 non ha overflow orizzontale; i target misurano138×190;
-Focus resta raggiungibile scorrendo. Test nativi coprono fontScale elevato
-e controlli disabilitati. Nessuna nuova animazione introdotta.
-
-I simboli e il testo sono leggibili a dimensione nativa nei confronti;
-non occorre un ulteriore crop ingrandito per valutarli. I vecchi warning di
-service worker appartengono al server sostituito; il percorso update locale
-è stato poi verificato sul bundle finale. Nessuna approvazione audio implicita.
-
-## Implementation checklist
-
-- [x] Risolvere i cinque difetti riprodotti e ricatturare.
-- [x] Confrontare source e runtime affiancati, non soltanto aprire file separati.
-- [x] Preservare controller, review e catalogo esterno.
-- [x] Test automatici e export PWA validi.
-- [ ] Gate Expo patch e successiva approvazione/pubblicazione separati.
-- [ ] Nuovo ascolto e accessibilità su telefono: non provati da screenshot.
-
-final result: passed
-
-Il risultato riguarda la QA visiva locale sopra delimitata, non la chiusura
-del gate integrato M6, la PWA online o una release Android/iOS.
+Strongest verified value: the activity choice, adult vector navigation, and player are immediate and coherent while the technical Workbench remains available on the same session. Largest unresolved risk: authenticated remote audio and standalone iPhone behavior still require C6 delivery verification and a physical user test.

@@ -28,6 +28,7 @@ import type {
   CreateAdaptiveSessionInput,
 } from "@/domain/sessions/types";
 import type { ConsumerSelection } from "@/domain/audio/consumerSelection";
+import type { ReviewTransport } from "@/domain/audio/reviewTransport";
 import {
   createAdaptiveSessionHistoryStore,
   createConsumerSessionSeed,
@@ -39,6 +40,7 @@ const historyStore = createAdaptiveSessionHistoryStore();
 export default function AdaptiveSessionPlayerScreen({
   renderReviewControls,
   reviewProgramFactory = platformReviewProgramFactory,
+  hidePersistentTransport = false,
 }: {
   reviewProgramFactory?: (
     input: CreateAdaptiveSessionInput,
@@ -47,7 +49,9 @@ export default function AdaptiveSessionPlayerScreen({
     program: AdaptiveSessionProgram,
     matching: boolean,
     onVariant: (program: AdaptiveSessionProgram) => void,
+    transport: ReviewTransport,
   ) => ReactNode;
+  hidePersistentTransport?: boolean;
 } = {}) {
   const params = useLocalSearchParams<{
     outcomeId?: string;
@@ -222,6 +226,21 @@ export default function AdaptiveSessionPlayerScreen({
     result.error ??
     prepared.error ??
     (matching ? snapshot.error : null);
+  const status = visibleError
+    ? "Could not play"
+    : busy
+      ? "Preparing sound…"
+      : playing
+        ? snapshot.status === "fadingOut"
+          ? "Finishing"
+          : "Playing"
+        : matching && snapshot.status === "completed"
+          ? "Completed"
+          : matching && snapshot.status === "paused"
+            ? "Paused"
+            : ready
+              ? "Ready"
+              : "Loading sound…";
   function playPause() {
     if (!selection) return;
     setError(null);
@@ -242,6 +261,7 @@ export default function AdaptiveSessionPlayerScreen({
   return (
     <EditorialScreen
       footer={
+        !hidePersistentTransport &&
         !otherSessionActive && (
           <PlaybackTransport
             fixedFooter
@@ -267,23 +287,7 @@ export default function AdaptiveSessionPlayerScreen({
         contextLabel=""
         error={visibleError}
         isPlaying={playing}
-        status={
-          visibleError
-            ? "Could not play"
-            : busy
-              ? "Preparing sound…"
-              : playing
-                ? snapshot.status === "fadingOut"
-                  ? "Finishing"
-                  : "Playing"
-                : matching && snapshot.status === "completed"
-                  ? "Completed"
-                  : matching && snapshot.status === "paused"
-                    ? "Paused"
-                    : ready
-                      ? "Ready"
-                      : "Loading sound…"
-        }
+        status={status}
         note="Your session keeps playing while you browse. Return using the current-session bar."
         onPlayPause={playPause}
         onStop={() => void controller.stop().catch(() => undefined)}
@@ -417,10 +421,24 @@ export default function AdaptiveSessionPlayerScreen({
         }
       />
       {program &&
-        renderReviewControls?.(program, matching, (next) => {
-          if (selection?.kind === "adaptive")
-            setReviewSelection({ ...selection, program: next });
-        })}
+        renderReviewControls?.(
+          program,
+          matching,
+          (next) => {
+            if (selection?.kind === "adaptive")
+              setReviewSelection({ ...selection, program: next });
+          },
+          {
+            canPlay: Boolean(program && ready),
+            canStop:
+              matching && (playing || busy || snapshot.status === "paused"),
+            playing,
+            busy,
+            status,
+            onPlayPause: playPause,
+            onStop: () => controller.stop(),
+          },
+        )}
       {visibleError ? (
         <Pressable
           accessibilityRole="button"

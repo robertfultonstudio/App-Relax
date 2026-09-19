@@ -50,8 +50,11 @@ export function VolumeRange({
       onResponderGrant={change}
       onResponderMove={change}
       style={{
-        flex: 1,
-        minHeight: 44,
+        flexBasis: 0,
+        flexGrow: 1,
+        flexShrink: 0,
+        height: 48,
+        minHeight: 48,
         justifyContent: "center",
         opacity: disabled ? 0.45 : 1,
       }}

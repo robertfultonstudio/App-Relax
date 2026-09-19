@@ -52,9 +52,13 @@ export type ListeningNatureFactory = (
 export function ImmediateSessionSetup({
   outcome,
   createNatureProgram,
+  atmospheric = false,
+  initialNature = null,
 }: {
   outcome: ConsumerOutcomeId;
   createNatureProgram?: ListeningNatureFactory;
+  atmospheric?: boolean;
+  initialNature?: NatureAmbienceFamily | null;
 }) {
   const router = useRouter();
   const { controller } = useAudioSession();
@@ -65,7 +69,9 @@ export function ImmediateSessionSetup({
   const [newSession, setNewSession] = useState(false);
   const currentActivity = useCurrentActivity(outcome);
   const [error, setError] = useState<string | null>(null);
-  const [nature, setNature] = useState<NatureAmbienceFamily | null>(null);
+  const [nature, setNature] = useState<NatureAmbienceFamily | null>(
+    initialNature,
+  );
   const [selectionAttempt, setSelectionAttempt] = useState(0);
   const [work, setWork] = useState<ConsumerAudioWork | null>(null);
   useEffect(() => {
@@ -144,6 +150,25 @@ export function ImmediateSessionSetup({
     !currentActivity || newSession,
   );
   const failure = error ?? candidate.error ?? prepared.error;
+  const statusCopy = failure
+    ? atmospheric
+      ? null
+      : "Could not load. Please retry."
+    : !work
+      ? atmospheric
+        ? "Caricamento"
+        : "No sound available for this activity."
+      : starting
+        ? atmospheric
+          ? "Avvio…"
+          : "Starting…"
+        : prepared.ready
+          ? atmospheric
+            ? `${duration} min`
+            : `${duration} min · Ready`
+          : atmospheric
+            ? "Caricamento"
+            : "Preparing your sound…";
   function start() {
     if (!selection || !prepared.ready || starting) return;
     setStarting(true);
@@ -173,8 +198,11 @@ export function ImmediateSessionSetup({
     );
   return (
     <View testID="immediate-session-setup">
-      <Text style={styles.note}>Press Play. Leave the phone behind.</Text>
-      {controller.getConsumerSelection() &&
+      {!atmospheric ? (
+        <Text style={styles.note}>Press Play. Leave the phone behind.</Text>
+      ) : null}
+      {!atmospheric &&
+      controller.getConsumerSelection() &&
       ["playing", "paused", "preparing", "fadingOut"].includes(
         controller.getSnapshot().status,
       ) ? (
@@ -187,6 +215,7 @@ export function ImmediateSessionSetup({
           value={nature}
           disabled={starting}
           disabledMessage="Starting your session…"
+          variant={atmospheric ? "atmospheric" : "default"}
           onChange={(family) => {
             if (starting) return;
             setError(null);
@@ -196,7 +225,7 @@ export function ImmediateSessionSetup({
       ) : null}
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={policy.startLabel}
+        accessibilityLabel={atmospheric ? "Inizia" : policy.startLabel}
         accessibilityState={{
           disabled: !prepared.ready || starting,
           busy: starting,
@@ -205,32 +234,40 @@ export function ImmediateSessionSetup({
         onPress={start}
         style={({ pressed }) => [
           styles.primary,
+          atmospheric && styles.atmosphericPrimary,
           (!prepared.ready || starting) && styles.disabled,
-          pressed && { opacity: 0.75, transform: [{ scale: 0.96 }] },
+          pressed &&
+            (atmospheric ? styles.atmosphericPressed : styles.primaryPressed),
         ]}
         testID="start-immediate-session"
       >
         {starting ? (
           <ActivityIndicator color={editorial.paperLight} />
         ) : (
-          <TransportSymbol kind="play" light />
+          <>
+            <TransportSymbol kind="play" light={!atmospheric} />
+            <Text
+              style={[
+                styles.primaryText,
+                atmospheric && styles.atmosphericPrimaryText,
+              ]}
+            >
+              {atmospheric ? "Inizia" : policy.startLabel}
+            </Text>
+          </>
         )}
       </Pressable>
-      <Text accessibilityLiveRegion="polite" style={styles.status}>
-        {failure
-          ? "Could not load. Please retry."
-          : !work
-            ? "No sound available for this activity."
-            : starting
-              ? "Starting…"
-              : prepared.ready
-                ? `${duration} min · Ready`
-                : "Preparing your sound…"}
-      </Text>
+      {statusCopy ? (
+        <Text accessibilityLiveRegion="polite" style={styles.status}>
+          {statusCopy}
+        </Text>
+      ) : null}
       {failure ? (
         <View>
           <Text accessibilityRole="alert" style={styles.error}>
-            {consumerPlaybackError(failure)}
+            {atmospheric
+              ? "L’audio non è disponibile. Riprova."
+              : consumerPlaybackError(failure)}
           </Text>
           <Pressable
             accessibilityRole="button"
@@ -242,7 +279,9 @@ export function ImmediateSessionSetup({
             }}
             style={styles.disclosure}
           >
-            <Text style={styles.note}>Retry loading</Text>
+            <Text style={styles.note}>
+              {atmospheric ? "Riprova" : "Retry loading"}
+            </Text>
           </Pressable>
         </View>
       ) : null}
@@ -254,7 +293,13 @@ export function ImmediateSessionSetup({
         style={styles.disclosure}
       >
         <Text style={styles.note}>
-          {timerOpen ? "Close timer −" : `Timer · ${duration} min +`}
+          {atmospheric
+            ? timerOpen
+              ? "Chiudi durata −"
+              : `Durata · ${duration} min +`
+            : timerOpen
+              ? "Close timer −"
+              : `Timer · ${duration} min +`}
         </Text>
       </Pressable>
       {timerOpen ? (
@@ -281,18 +326,30 @@ const styles = StyleSheet.create({
   },
   primary: {
     backgroundColor: editorial.ink,
-    height: 68,
-    width: 68,
-    borderRadius: 34,
+    minHeight: 56,
+    width: "100%",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 24,
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 18,
+  },
+  atmosphericPrimary: {
+    alignSelf: "center",
+    backgroundColor: "transparent",
+    flexDirection: "column",
+    gap: 6,
+    minHeight: 72,
+    width: 96,
   },
   primaryText: {
     color: editorial.paperLight,
     fontFamily: fonts.sansSemiBold,
-    fontSize: 19,
+    fontSize: 16,
   },
+  atmosphericPrimaryText: { color: editorial.ink, fontSize: 17 },
+  atmosphericPressed: { opacity: 0.75 },
+  primaryPressed: { opacity: 0.75, transform: [{ scale: 0.96 }] },
   status: {
     color: editorial.inkMuted,
     fontFamily: fonts.sans,
