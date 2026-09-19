@@ -37,32 +37,32 @@
     {
       "key": "player-full-bleed",
       "file": "player-full-bleed.png",
-      "sourceArtifact": "repository:assets/images/backgrounds/m6/player.jpg",
-      "sourceSha256": "89a937acbc05b7bad87175272e1f71b2483fac3350fa27722e90dede72d5b96d",
-      "historicalSourceArtifact": "codex-generated-image:019fec7b-07ab-7e50-b974-99cbc704a158/exec-36ce2b75-15c6-44cc-aad7-54fa52fc928a.png",
-      "historicalSourceSha256": "3670987c92f3dacf31c09c938ea67230963076f23dca2d4861901a44131f21ab",
-      "sourcePixelSha256": "17a7fb2b0d5bf147c04cddc6c360bcdc3902a9a1d8bd93238764ee4a5fd5be1e",
-      "sourceWidth": 853,
-      "sourceHeight": 1844,
+      "sourceArtifact": "repository:assets/images/backgrounds/player-presence-minima-source.png",
+      "sourceSha256": "87724132e08a2ab7cb5887d991018dbeae9ae08f9d2026ec31d03d5e7f909c4c",
+      "historicalSourceArtifact": "task:01a0b6b3-29c3-7ea3-9092-2441282fa3ea/hybrid-clean-plate.png",
+      "historicalSourceSha256": "87724132e08a2ab7cb5887d991018dbeae9ae08f9d2026ec31d03d5e7f909c4c",
+      "sourcePixelSha256": "20526d9855ff3c530ea1d6b64f981c31f2c6c41ec3bee9da6688eb0cc748aa31",
+      "sourceWidth": 1024,
+      "sourceHeight": 1536,
       "sourceCrop": {
+        "left": 82,
+        "right": 82,
+        "top": 0,
+        "bottom": 0
+      },
+      "retainedPixelSha256": "fd1bd6ad9798b10208d0210647faf9cf2ea9c4953032bd9a8e510fee4f3519b6",
+      "retainedWidth": 860,
+      "retainedHeight": 1536,
+      "targetWidth": 860,
+      "targetHeight": 1536,
+      "padding": {
         "left": 0,
         "right": 0,
         "top": 0,
         "bottom": 0
       },
-      "retainedPixelSha256": "17a7fb2b0d5bf147c04cddc6c360bcdc3902a9a1d8bd93238764ee4a5fd5be1e",
-      "retainedWidth": 853,
-      "retainedHeight": 1844,
-      "targetWidth": 860,
-      "targetHeight": 1864,
-      "padding": {
-        "left": 3,
-        "right": 4,
-        "top": 10,
-        "bottom": 10
-      },
-      "bytes": 2922546,
-      "sha256": "7eb30a4ed958c08fb917f511b014d25e47f2efdfa5b30af6f807b1992c645e99"
+      "bytes": 2381357,
+      "sha256": "e748f0505ed64b384e91ab6a790c69c5c02676ec98e657394b9e582f67f7abec"
     }
   ]
 }

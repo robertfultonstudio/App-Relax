@@ -11,6 +11,7 @@ import {
   resolve,
 } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createCurrentPwaPreview } from "../current-pwa-preview.mjs";
 
 const projectRoot = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
 const artifactRoot = resolve(
@@ -31,6 +32,16 @@ const chromeCandidates = [
 const chromeBinary = chromeCandidates.find((candidate) =>
   existsSync(candidate),
 );
+const audioCatalogRoot = process.env.APP_RELAX_AUDIO_CATALOG_ROOT;
+const losslessRoot = process.env.APP_RELAX_LOSSLESS_ROOT;
+const playbackAvailable = Boolean(
+  audioCatalogRoot &&
+    losslessRoot &&
+    existsSync(audioCatalogRoot) &&
+    existsSync(losslessRoot),
+);
+const requirePlayback =
+  process.env.APP_RELAX_VISUAL_REQUIRE_PLAYBACK === "1";
 
 function fail(message) {
   console.error(`PWA visual delivery gate: FAIL — ${message}`);
@@ -88,9 +99,15 @@ async function run() {
     fail("Chrome/Chromium is required; the gate is not allowed to skip");
     return;
   }
+  if (requirePlayback && !playbackAvailable) {
+    fail(
+      "active-player evidence requires APP_RELAX_AUDIO_CATALOG_ROOT and APP_RELAX_LOSSLESS_ROOT",
+    );
+    return;
+  }
 
   rmSync(evidenceRoot, { recursive: true, force: true });
-  const server = createServer((request, response) => {
+  let requestHandler = (request, response) => {
     let path;
     try {
       path = resolveArtifact(
@@ -109,7 +126,10 @@ async function run() {
       "Content-Type": contentType(path),
     });
     response.end(readFileSync(path));
-  });
+  };
+  const server = createServer((request, response) =>
+    requestHandler(request, response),
+  );
 
   await new Promise((resolveListen, reject) => {
     server.once("error", reject);
@@ -120,6 +140,15 @@ async function run() {
     server.close();
     fail("could not allocate the isolated preview server");
     return;
+  }
+  if (playbackAvailable) {
+    requestHandler = createCurrentPwaPreview({
+      projectRoot,
+      artifactRoot,
+      audioCatalogRoot,
+      losslessRoot,
+      port: address.port,
+    }).handler;
   }
 
   const child = spawn(
@@ -133,6 +162,8 @@ async function run() {
         APP_RELAX_VISUAL_BASE_URL: `http://127.0.0.1:${address.port}`,
         APP_RELAX_VISUAL_CONTRACT_ONLY: "1",
         APP_RELAX_VISUAL_REQUIRED: "1",
+        APP_RELAX_VISUAL_PLAYBACK_AVAILABLE: playbackAvailable ? "1" : "0",
+        APP_RELAX_VISUAL_REQUIRE_PLAYBACK: requirePlayback ? "1" : "0",
         APP_RELAX_VISUAL_SCREENSHOT_DIR: evidenceRoot,
       },
       stdio: "inherit",

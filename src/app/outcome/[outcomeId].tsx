@@ -58,11 +58,12 @@ export default function OutcomeSessionScreen({
   }>();
   const outcome = CONSUMER_OUTCOMES.find((item) => item.id === outcomeId);
   const completePractice = outcomeId === "yoga" && practice === "complete";
-  if (outcomeId === "yoga" && immersiveYoga && !completePractice) {
+  if (outcome && immersiveYoga && !completePractice) {
     return (
-      <ImmersiveYogaContent
+      <ImmersiveOutcomeContent
         createNatureProgram={createNatureProgram}
         initialNature={nature === "rain" || nature === "sea" ? nature : null}
+        outcomeId={outcome.id}
       />
     );
   }
@@ -85,21 +86,61 @@ export default function OutcomeSessionScreen({
   );
 }
 
-function ImmersiveYogaContent({
+const IMMERSIVE_OUTCOME_COPY: Readonly<
+  Record<ConsumerOutcomeId, { title: string; subtitle: string }>
+> = {
+  meditation: {
+    title: "Ritorna al respiro.",
+    subtitle: "Lascia spazio a ciò che c’è.",
+  },
+  yoga: {
+    title: "Un respiro alla volta.",
+    subtitle: "La natura ti renderà consapevole.",
+  },
+  massage: {
+    title: "Lascia andare il peso.",
+    subtitle: "Il suono prepara lo spazio.",
+  },
+  relax: {
+    title: "Ora puoi rallentare.",
+    subtitle: "Non c’è nulla da inseguire.",
+  },
+  sleep: {
+    title: "La sera può cominciare.",
+    subtitle: "Il resto può aspettare.",
+  },
+  focus: {
+    title: "Una cosa alla volta.",
+    subtitle: "Il rumore rimane fuori.",
+  },
+};
+
+function ImmersiveOutcomeContent({
   createNatureProgram,
   initialNature,
+  outcomeId,
 }: {
   createNatureProgram?: ListeningNatureFactory;
   initialNature: "rain" | "sea" | null;
+  outcomeId: ConsumerOutcomeId;
 }) {
   const router = useRouter();
   const { height, width } = useWindowDimensions();
   const large = width >= 420 || height >= 900;
+  const outcome = CONSUMER_OUTCOMES.find((item) => item.id === outcomeId)!;
+  const copy = IMMERSIVE_OUTCOME_COPY[outcomeId];
   return (
-    <View style={styles.immersiveRoot} testID="yoga-atmospheric-screen">
+    <View
+      style={styles.immersiveRoot}
+      testID={`${outcomeId}-atmospheric-screen`}
+    >
       <FullBleedArtwork
-        source={C3_PLAYER_FULL_BLEED}
-        testID="yoga-full-bleed-artwork"
+        source={
+          outcomeId === "yoga"
+            ? C3_PLAYER_FULL_BLEED
+            : OUTCOME_ARTWORK[outcomeId]
+        }
+        testID={`${outcomeId}-full-bleed-artwork`}
       />
       <LinearGradient
         pointerEvents="none"
@@ -138,7 +179,7 @@ function ImmersiveYogaContent({
               large && styles.immersiveEyebrowLarge,
             ]}
           >
-            YOGA
+            {outcome.functionLabel}
           </Text>
           <Text
             accessibilityRole="header"
@@ -146,17 +187,15 @@ function ImmersiveYogaContent({
             style={[styles.immersiveTitle, large && styles.immersiveTitleLarge]}
             testID="consumer-screen-title"
           >
-            Un respiro alla volta.
+            {copy.title}
           </Text>
-          <Text style={styles.immersiveSubtitle}>
-            La natura ti renderà consapevole.
-          </Text>
+          <Text style={styles.immersiveSubtitle}>{copy.subtitle}</Text>
           <View style={styles.immersiveSpacer} />
           <ImmediateSessionSetup
             atmospheric
             createNatureProgram={createNatureProgram}
             initialNature={initialNature}
-            outcome="yoga"
+            outcome={outcomeId}
           />
         </ScrollView>
       </SafeAreaView>

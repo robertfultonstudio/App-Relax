@@ -28,6 +28,10 @@ function hasActiveListeningClient(clients) {
   });
 }
 
+function isUpdatePath(pathname) {
+  return pathname === "/update" || pathname === "/update.html";
+}
+
 self.addEventListener("install", (event) => {
   event.waitUntil(
     (async () => {
@@ -92,7 +96,7 @@ self.addEventListener("message", (event) => {
         const sender = event.source?.url ? new URL(event.source.url) : null;
         if (
           sender?.origin !== self.location.origin ||
-          sender.pathname !== "/update.html"
+          !isUpdatePath(sender.pathname)
         )
           return;
         const clients = await self.clients.matchAll({
@@ -102,8 +106,7 @@ self.addEventListener("message", (event) => {
         const otherApp = clients.some((client) => {
           const url = new URL(client.url);
           return (
-            url.origin === self.location.origin &&
-            url.pathname !== "/update.html"
+            url.origin === self.location.origin && !isUpdatePath(url.pathname)
           );
         });
         if (otherApp) {
@@ -154,7 +157,7 @@ self.addEventListener("fetch", (event) => {
     request.method !== "GET" ||
     url.origin !== self.location.origin ||
     isAudioRequest(request, url) ||
-    url.pathname === "/update.html" ||
+    isUpdatePath(url.pathname) ||
     url.pathname === "/pwa-update.js"
   ) {
     return;

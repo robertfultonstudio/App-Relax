@@ -65,8 +65,9 @@ describe("PWA contract", () => {
 
   it.each([
     { source: "https://relax.test/update.html", clients: [], allowed: true },
+    { source: "https://relax.test/update", clients: [], allowed: true },
     {
-      source: "https://relax.test/update.html",
+      source: "https://relax.test/update",
       clients: ["https://relax.test/listen/respiro-hatha-1-01"],
       allowed: false,
     },

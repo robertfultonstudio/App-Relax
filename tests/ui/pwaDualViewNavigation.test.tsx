@@ -9,6 +9,7 @@ import {
 } from "@/pwa-view/PwaBottomNavigation";
 import {
   isPwaNavigationHidden,
+  isPwaListeningRoute,
   PwaListeningNavigation,
 } from "@/pwa-view/PwaListeningNavigation";
 import type { PlaybackStatus } from "@/domain/audio/types";
@@ -109,13 +110,21 @@ it.each([
   },
 );
 
-it("removes Home, Hatha and Impostazioni during listening, then restores them on Ready", async () => {
+it.each([
+  ["/listen/white-noise", true],
+  ["/adaptive-session/yoga", true],
+  ["/moments", false],
+] as const)("maps route %s to listening=%s", (path, listening) => {
+  expect(isPwaListeningRoute(path)).toBe(listening);
+});
+
+it("removes Home, Hatha and Impostazioni throughout the listening route", async () => {
   const screen = await render(
     <PwaViewProvider>
       <PwaListeningNavigation />
     </PwaViewProvider>,
   );
-  expect(screen.getByTestId("pwa-bottom-navigation")).toBeTruthy();
+  expect(screen.queryByTestId("pwa-bottom-navigation")).toBeNull();
 
   mockPlaybackStatus = "playing";
   await screen.rerender(
@@ -136,6 +145,14 @@ it("removes Home, Hatha and Impostazioni during listening, then restores them on
   expect(screen.queryByRole("tab", { name: "Impostazioni" })).toBeNull();
 
   mockPlaybackStatus = "ready";
+  await screen.rerender(
+    <PwaViewProvider>
+      <PwaListeningNavigation />
+    </PwaViewProvider>,
+  );
+  expect(screen.queryByTestId("pwa-bottom-navigation")).toBeNull();
+
+  mockPath = "/moments";
   await screen.rerender(
     <PwaViewProvider>
       <PwaListeningNavigation />

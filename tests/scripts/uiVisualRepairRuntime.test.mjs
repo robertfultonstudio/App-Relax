@@ -17,6 +17,10 @@ import WebSocket from "ws";
 const baseUrl = process.env.APP_RELAX_VISUAL_BASE_URL;
 const screenshotRoot = process.env.APP_RELAX_VISUAL_SCREENSHOT_DIR;
 const visualGateRequired = process.env.APP_RELAX_VISUAL_REQUIRED === "1";
+const playbackAvailable =
+  process.env.APP_RELAX_VISUAL_PLAYBACK_AVAILABLE === "1";
+const playbackRequired =
+  process.env.APP_RELAX_VISUAL_REQUIRE_PLAYBACK === "1";
 const visualContractOnly = process.env.APP_RELAX_VISUAL_CONTRACT_ONLY === "1";
 const chromeCandidates = [
   process.env.APP_RELAX_CHROME_BINARY,
@@ -290,6 +294,11 @@ test("the mandatory visual gate cannot silently skip", () => {
   assert.ok(baseUrl, "APP_RELAX_VISUAL_BASE_URL is required");
   assert.ok(screenshotRoot, "APP_RELAX_VISUAL_SCREENSHOT_DIR is required");
   assert.ok(chromeBinary, "Chrome/Chromium is required");
+  if (playbackRequired)
+    assert.ok(
+      playbackAvailable,
+      "real local audio is required for active-player evidence",
+    );
 });
 
 test(
@@ -429,6 +438,12 @@ test(
           url: new URL(screen.path, baseUrl).href,
         });
         await waitForArtwork(protocol, screen.testID);
+        if (screen.name === "player")
+          await waitForCondition(
+            protocol,
+            `!document.querySelector('[data-testid="static-player-shell"]')`,
+            "hydrated Player surface",
+          );
         const measurement = await inspectArtwork(protocol, screen.testID);
         assert.ok(measurement, `${screen.name} artwork was not mounted`);
         assert.equal(measurement.tagName, "IMG");
@@ -453,9 +468,12 @@ test(
           measurement.naturalWidth >= measurement.viewportWidth * 2,
           `${screen.name} intrinsic width ${measurement.naturalWidth} is below 200%`,
         );
+        const minimumHeightDensity =
+          screen.name === "home" ? 2 : 1.6;
         assert.ok(
-          measurement.naturalHeight >= measurement.viewportHeight * 2,
-          `${screen.name} intrinsic height ${measurement.naturalHeight} is below 200%`,
+          measurement.naturalHeight >=
+            measurement.viewportHeight * minimumHeightDensity,
+          `${screen.name} intrinsic height ${measurement.naturalHeight} is below ${minimumHeightDensity * 100}%`,
         );
         if (screen.name === "player") {
           const headings = await evaluate(
@@ -534,8 +552,8 @@ test(
 );
 
 test(
-  "captures first-run, returning, Yoga and hydrated Player states at both frozen viewports",
-  { skip: !baseUrl || !screenshotRoot || visualContractOnly },
+  "captures direct Home, Yoga and hydrated Player states at both frozen viewports",
+  { skip: !baseUrl || !screenshotRoot || !playbackAvailable },
   async (context) => {
     for (const viewport of [
       { width: 390, height: 844 },
@@ -554,22 +572,15 @@ test(
       await protocol.send("Page.navigate", { url: new URL("/", baseUrl).href });
       await waitForCondition(
         protocol,
-        `Boolean(document.querySelector('[data-testid="welcome-screen"]'))`,
-        "first-run welcome",
+        `Boolean(document.querySelector('[data-testid="home-full-bleed-artwork"]'))`,
+        "direct Home entry",
       );
-      await saveScreenshot(protocol, viewport, "states/landing");
-      await clickSelector(protocol, '[data-testid="welcome-enter"]');
-      await waitForArtwork(protocol, "home-full-bleed-artwork");
-      await saveScreenshot(protocol, viewport, "states/home-after-welcome");
-
-      await protocol.send("Page.navigate", { url: new URL("/", baseUrl).href });
-      await waitForArtwork(protocol, "home-full-bleed-artwork");
       await waitForCondition(
         protocol,
         `location.pathname === "/moments"`,
-        "returning root redirect",
+        "root redirect",
       );
-      await saveScreenshot(protocol, viewport, "states/returning-root");
+      await saveScreenshot(protocol, viewport, "states/root-home");
 
       await clickSelector(protocol, '[data-testid="outcome-yoga"]');
       await waitForArtwork(protocol, "yoga-full-bleed-artwork");

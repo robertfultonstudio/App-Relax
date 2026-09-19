@@ -38,17 +38,21 @@ const specs = [
   },
   {
     key: "player-full-bleed",
-    source: join(projectRoot, "assets/images/backgrounds/m6/player.jpg"),
-    sourceArtifact: "repository:assets/images/backgrounds/m6/player.jpg",
+    source: join(
+      projectRoot,
+      "assets/images/backgrounds/player-presence-minima-source.png",
+    ),
+    sourceArtifact:
+      "repository:assets/images/backgrounds/player-presence-minima-source.png",
     sourceSha256:
-      "89a937acbc05b7bad87175272e1f71b2483fac3350fa27722e90dede72d5b96d",
+      "87724132e08a2ab7cb5887d991018dbeae9ae08f9d2026ec31d03d5e7f909c4c",
     historicalSourceArtifact:
-      "codex-generated-image:019fec7b-07ab-7e50-b974-99cbc704a158/exec-36ce2b75-15c6-44cc-aad7-54fa52fc928a.png",
+      "task:01a0b6b3-29c3-7ea3-9092-2441282fa3ea/hybrid-clean-plate.png",
     historicalSourceSha256:
-      "3670987c92f3dacf31c09c938ea67230963076f23dca2d4861901a44131f21ab",
-    sourceSize: [853, 1844],
-    sourceCrop: { left: 0, right: 0, top: 0, bottom: 0 },
-    targetSize: [860, 1864],
+      "87724132e08a2ab7cb5887d991018dbeae9ae08f9d2026ec31d03d5e7f909c4c",
+    sourceSize: [1024, 1536],
+    sourceCrop: { left: 82, right: 82, top: 0, bottom: 0 },
+    targetSize: [860, 1536],
     output: join(
       projectRoot,
       "assets/images/backgrounds/m6/player-full-bleed.png",

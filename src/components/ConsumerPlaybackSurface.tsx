@@ -127,9 +127,9 @@ export function ConsumerPlaybackSurface({
         <LinearGradient
           pointerEvents="none"
           colors={[
-            "rgba(244,238,230,0.26)",
-            "rgba(244,238,230,0.01)",
-            "rgba(244,238,230,0.42)",
+            "rgba(244,238,230,0.1)",
+            "rgba(244,238,230,0)",
+            "rgba(244,238,230,0.16)",
           ]}
           locations={[0, 0.58, 1]}
           style={StyleSheet.absoluteFill}
@@ -180,16 +180,26 @@ export function ConsumerPlaybackSurface({
                 ) : null}
               </View>
             ) : null}
-            <Text
-              accessibilityLabel={`${formatPlaybackTime(remainingMs)} remaining`}
+            <View
+              pointerEvents="none"
               style={[
-                styles.atmosphericTimer,
-                large && styles.atmosphericTimerLarge,
+                styles.atmosphericTimerBlock,
+                large && styles.atmosphericTimerBlockLarge,
               ]}
-              testID="atmospheric-player-timer"
             >
-              {formatPlaybackTime(remainingMs)}
-            </Text>
+              <Text
+                accessibilityLabel={`${formatPlaybackTime(remainingMs)} remaining`}
+                style={styles.atmosphericTimer}
+                testID="atmospheric-player-timer"
+              >
+                {formatPlaybackTime(remainingMs)}
+              </Text>
+              {!immersive ? (
+                <Text style={styles.atmosphericTimerLabel}>
+                  Tempo rimanente
+                </Text>
+              ) : null}
+            </View>
             <View style={styles.atmosphericOpenSpace} />
             {!immersive ? (
               <View style={styles.atmosphericControls}>
@@ -241,9 +251,6 @@ export function ConsumerPlaybackSurface({
                         ) : null}
                       </View>
                     </View>
-                    <Text style={styles.atmosphericActionLabel}>
-                      {actionLabel}
-                    </Text>
                   </Pressable>
                 )}
                 {canStop ? (
@@ -486,42 +493,59 @@ const styles = StyleSheet.create({
     paddingHorizontal: 28,
     paddingTop: 28,
   },
-  atmosphericHeading: { maxWidth: 310 },
+  atmosphericHeading: {
+    alignItems: "flex-end",
+    alignSelf: "flex-end",
+    maxWidth: 275,
+  },
   atmosphericBrand: {
     color: "#20384D",
-    fontFamily: fonts.sansSemiBold,
-    fontSize: 12,
-    letterSpacing: 2.4,
+    fontFamily: fonts.sansMedium,
+    fontSize: 11,
+    letterSpacing: 3.2,
     lineHeight: 16,
+    textAlign: "right",
   },
   atmosphericTitle: {
     color: "#20384D",
-    fontFamily: fonts.serif,
-    fontSize: 40,
-    letterSpacing: -1.1,
-    lineHeight: 44,
-    marginTop: 10,
+    fontFamily: fonts.serifItalic,
+    fontSize: 27,
+    letterSpacing: -0.4,
+    lineHeight: 32,
+    marginTop: 5,
+    textAlign: "right",
   },
-  atmosphericTitleLarge: { fontSize: 44, lineHeight: 48 },
+  atmosphericTitleLarge: { fontSize: 30, lineHeight: 35 },
   atmosphericSubtitle: {
     color: "#29353B",
-    fontFamily: fonts.sans,
-    fontSize: 15,
-    lineHeight: 22,
-    marginTop: 10,
-    maxWidth: 260,
+    fontFamily: fonts.serifItalic,
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 5,
+    maxWidth: 250,
+    textAlign: "right",
   },
+  atmosphericTimerBlock: {
+    alignItems: "flex-end",
+    position: "absolute",
+    right: 24,
+    top: 176,
+  },
+  atmosphericTimerBlockLarge: { right: 28, top: 194 },
   atmosphericTimer: {
     color: "#20384D",
     fontFamily: fonts.serif,
-    fontSize: 30,
-    lineHeight: 36,
-    position: "absolute",
-    right: 24,
+    fontSize: 38,
+    lineHeight: 43,
     textAlign: "right",
-    top: 96,
   },
-  atmosphericTimerLarge: { right: 28, top: 108 },
+  atmosphericTimerLabel: {
+    color: "#29353B",
+    fontFamily: fonts.serifItalic,
+    fontSize: 12,
+    lineHeight: 16,
+    textAlign: "right",
+  },
   atmosphericOpenSpace: { flex: 1, minHeight: 350 },
   atmosphericControls: { alignItems: "center", minHeight: 214 },
   atmosphericPrimary: {
@@ -532,9 +556,6 @@ const styles = StyleSheet.create({
   },
   atmosphericPrimaryDisc: {
     alignItems: "center",
-    borderColor: "#20384D",
-    borderRadius: 32,
-    borderWidth: 1,
     height: 64,
     justifyContent: "center",
     width: 64,
