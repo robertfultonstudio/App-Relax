@@ -36,12 +36,11 @@ const audioCatalogRoot = process.env.APP_RELAX_AUDIO_CATALOG_ROOT;
 const losslessRoot = process.env.APP_RELAX_LOSSLESS_ROOT;
 const playbackAvailable = Boolean(
   audioCatalogRoot &&
-    losslessRoot &&
-    existsSync(audioCatalogRoot) &&
-    existsSync(losslessRoot),
+  losslessRoot &&
+  existsSync(audioCatalogRoot) &&
+  existsSync(losslessRoot),
 );
-const requirePlayback =
-  process.env.APP_RELAX_VISUAL_REQUIRE_PLAYBACK === "1";
+const requirePlayback = process.env.APP_RELAX_VISUAL_REQUIRE_PLAYBACK === "1";
 
 function fail(message) {
   console.error(`PWA visual delivery gate: FAIL — ${message}`);

@@ -20,7 +20,7 @@ test("C3 full-bleed derivation preserves every retained source pixel without res
     report.map(({ sourceArtifact }) => sourceArtifact),
     [
       "repository:assets/images/backgrounds/rituals-home-v1.jpg",
-      "repository:assets/images/backgrounds/m6/player.jpg",
+      "repository:assets/images/backgrounds/player-presence-minima-source.png",
     ],
   );
   assert.deepEqual(report[0].sourceCrop, {
@@ -33,7 +33,7 @@ test("C3 full-bleed derivation preserves every retained source pixel without res
     report.map(({ targetWidth, targetHeight }) => [targetWidth, targetHeight]),
     [
       [860, 1864],
-      [860, 1864],
+      [860, 1536],
     ],
   );
 });

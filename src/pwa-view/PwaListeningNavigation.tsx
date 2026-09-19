@@ -17,8 +17,7 @@ export function isPwaNavigationHidden(status: PlaybackStatus): boolean {
 
 export function isPwaListeningRoute(pathname: string): boolean {
   return (
-    pathname.startsWith("/listen/") ||
-    pathname.startsWith("/adaptive-session/")
+    pathname.startsWith("/listen/") || pathname.startsWith("/adaptive-session/")
   );
 }
 

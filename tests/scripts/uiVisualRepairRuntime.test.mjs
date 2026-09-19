@@ -19,8 +19,7 @@ const screenshotRoot = process.env.APP_RELAX_VISUAL_SCREENSHOT_DIR;
 const visualGateRequired = process.env.APP_RELAX_VISUAL_REQUIRED === "1";
 const playbackAvailable =
   process.env.APP_RELAX_VISUAL_PLAYBACK_AVAILABLE === "1";
-const playbackRequired =
-  process.env.APP_RELAX_VISUAL_REQUIRE_PLAYBACK === "1";
+const playbackRequired = process.env.APP_RELAX_VISUAL_REQUIRE_PLAYBACK === "1";
 const visualContractOnly = process.env.APP_RELAX_VISUAL_CONTRACT_ONLY === "1";
 const chromeCandidates = [
   process.env.APP_RELAX_CHROME_BINARY,
@@ -468,8 +467,7 @@ test(
           measurement.naturalWidth >= measurement.viewportWidth * 2,
           `${screen.name} intrinsic width ${measurement.naturalWidth} is below 200%`,
         );
-        const minimumHeightDensity =
-          screen.name === "home" ? 2 : 1.6;
+        const minimumHeightDensity = screen.name === "home" ? 2 : 1.6;
         assert.ok(
           measurement.naturalHeight >=
             measurement.viewportHeight * minimumHeightDensity,
