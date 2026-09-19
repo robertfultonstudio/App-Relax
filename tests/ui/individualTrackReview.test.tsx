@@ -327,15 +327,20 @@ it("keeps one PWA route and listening run through 20 live ambience changes, Retr
     cancelNatureFamilyChange: jest.fn(),
   });
   const screen = await player();
-  expect(screen.getByRole("button", { name: "Pause" })).toBeEnabled();
+  expect(screen.getByRole("button", { name: "Pausa" })).toBeEnabled();
   expect(
     screen.getByRole("radio", { name: "Ambience Rain", checked: true }),
   ).toBeEnabled();
+  const revealControls = async () => {
+    const listeningScene = screen.queryByTestId("consumer-listening-scene");
+    if (listeningScene) await fireEvent.press(listeningScene);
+  };
   const programId = current.plan.id;
   const remainingMs = mockAudio.snapshot.remainingMs;
   const deadlineMs = mockAudio.snapshot.deadlineMs;
 
   for (let index = 0; index < 20; index += 1) {
+    await revealControls();
     const family = index % 2 === 0 ? "sea" : "rain";
     const name = family === "sea" ? "Ambience Ocean waves" : "Ambience Rain";
     await fireEvent.press(screen.getByRole("radio", { name }));
@@ -351,12 +356,14 @@ it("keeps one PWA route and listening run through 20 live ambience changes, Retr
   }
 
   failNext = true;
+  await revealControls();
   await fireEvent.press(
     screen.getByRole("radio", { name: "Ambience Ocean waves" }),
   );
   await waitFor(() =>
     expect(screen.getByText("Injected ambience change failure")).toBeTruthy(),
   );
+  await revealControls();
   expect(
     screen.getByRole("radio", { name: "Ambience Rain", checked: true }),
   ).toBeTruthy();
@@ -365,6 +372,7 @@ it("keeps one PWA route and listening run through 20 live ambience changes, Retr
   ).not.toHaveBeenCalled();
   expect(mockAudio.controller.prepareSelection).not.toHaveBeenCalled();
 
+  await revealControls();
   await fireEvent.press(
     screen.getByRole("button", { name: "Retry ambience change" }),
   );
@@ -379,7 +387,8 @@ it("keeps one PWA route and listening run through 20 live ambience changes, Retr
   expect(change).toHaveBeenCalledTimes(22);
   expect(current.plan.id).toBe(programId);
 
-  await fireEvent.press(screen.getByRole("button", { name: "Pause" }));
+  await revealControls();
+  await fireEvent.press(screen.getByRole("button", { name: "Pausa" }));
   expect(mockAudio.controller.pause).toHaveBeenCalledTimes(1);
   mockAudio.publish({ status: "paused" });
   mockParams = { ...mockParams, review: "1" };
