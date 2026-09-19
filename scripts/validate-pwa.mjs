@@ -411,9 +411,9 @@ const representativePlayerHtml = readFileSync(
   "utf8",
 );
 assert(
-  representativePlayerHtml.includes('aria-label="Play"') &&
-    representativePlayerHtml.includes("Loading sound"),
-  "static player must expose Play and an honest non-playing loading state",
+  representativePlayerHtml.includes('aria-label="Inizia"') &&
+    representativePlayerHtml.includes("Caricamento"),
+  "static player must expose an Italian start action and an honest non-playing loading state",
 );
 assert(
   !representativePlayerHtml.includes("IPHONE PREVIEW"),

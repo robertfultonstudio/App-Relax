@@ -101,7 +101,7 @@ it.each([
   ["paused", true],
   ["fadingOut", true],
   ["ready", false],
-  ["completed", false],
+  ["completed", true],
 ] satisfies [PlaybackStatus, boolean][])(
   "maps %s to navigation hidden=%s",
   (status, hidden) => {
@@ -109,7 +109,7 @@ it.each([
   },
 );
 
-it("removes Home, Hatha and Settings for playing and paused, then restores them on Ready", async () => {
+it("removes Home, Hatha and Impostazioni during listening, then restores them on Ready", async () => {
   const screen = await render(
     <PwaViewProvider>
       <PwaListeningNavigation />
@@ -133,7 +133,7 @@ it("removes Home, Hatha and Settings for playing and paused, then restores them 
   );
   expect(screen.queryByRole("tab", { name: "Home" })).toBeNull();
   expect(screen.queryByRole("tab", { name: "Hatha" })).toBeNull();
-  expect(screen.queryByRole("tab", { name: "Settings" })).toBeNull();
+  expect(screen.queryByRole("tab", { name: "Impostazioni" })).toBeNull();
 
   mockPlaybackStatus = "ready";
   await screen.rerender(
@@ -147,7 +147,19 @@ afterEach(async () => {
   await cleanup();
 });
 
-it("keeps D-105 Workbench default", async () => {
+it("opens the consumer surface by default", async () => {
+  const consumer = await render(
+    <PwaViewProvider>
+      <Probe />
+    </PwaViewProvider>,
+  );
+  expect(consumer.getByTestId("view-mode")).toHaveTextContent(
+    "consumer-preview",
+  );
+});
+
+it("keeps Workbench available when review=1 is explicit", async () => {
+  mockParams = { review: "1" };
   const workbench = await render(
     <PwaViewProvider>
       <Probe />
@@ -169,6 +181,7 @@ it("opens consumer preview when review=0 is explicit", async () => {
 });
 
 it("switches view with params only and announces both directions", async () => {
+  mockParams = { review: "1" };
   const screen = await render(
     <PwaViewProvider>
       <Probe />

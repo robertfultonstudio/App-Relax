@@ -11,6 +11,7 @@ export function NatureAmbienceChoice({
   offDisabled = false,
   changing = false,
   onCancel,
+  variant = "default",
   disabledMessage = "Stop to change the ambience. Its volume and mute stay available while listening.",
 }: {
   value: NatureAmbienceFamily | null;
@@ -19,19 +20,27 @@ export function NatureAmbienceChoice({
   offDisabled?: boolean;
   changing?: boolean;
   onCancel?: () => void;
+  variant?: "default" | "atmospheric";
   disabledMessage?: string;
 }) {
   return (
-    <View style={{ gap: 8, marginVertical: 16 }}>
-      <Text
-        style={{
-          fontFamily: fonts.sans,
-          color: editorial.inkMuted,
-          fontSize: 15,
-        }}
-      >
-        Natural ambience · optional
-      </Text>
+    <View
+      style={{
+        gap: variant === "atmospheric" ? 0 : 8,
+        marginVertical: variant === "atmospheric" ? 0 : 16,
+      }}
+    >
+      {variant === "default" ? (
+        <Text
+          style={{
+            fontFamily: fonts.sans,
+            color: editorial.inkMuted,
+            fontSize: 15,
+          }}
+        >
+          Natural ambience · optional
+        </Text>
+      ) : null}
       <View
         accessibilityRole="radiogroup"
         accessibilityLabel="Natural ambience"
@@ -39,9 +48,19 @@ export function NatureAmbienceChoice({
       >
         {(
           [
-            { value: null, label: "Off" },
-            { value: "rain", label: "Rain" },
-            { value: "sea", label: "Ocean waves" },
+            {
+              value: null,
+              label: variant === "atmospheric" ? "Nessuno" : "Off",
+            },
+            {
+              value: "rain",
+              label: variant === "atmospheric" ? "Pioggia" : "Rain",
+            },
+            {
+              value: "sea",
+              label:
+                variant === "atmospheric" ? "Onde oceaniche" : "Ocean waves",
+            },
           ] as const
         ).map((option) => (
           <Pressable
@@ -54,7 +73,7 @@ export function NatureAmbienceChoice({
                 ))}
             key={option.label}
             accessibilityRole="radio"
-            accessibilityLabel={`Ambience ${option.label}`}
+            accessibilityLabel={`${variant === "atmospheric" ? "Ambiente" : "Ambience"} ${option.label}`}
             accessibilityState={{
               checked: value === option.value,
               disabled:
@@ -74,8 +93,13 @@ export function NatureAmbienceChoice({
               justifyContent: "center",
               alignItems: "center",
               borderBottomWidth: value === option.value ? 2 : 0,
-              borderColor: editorial.lavender,
-              backgroundColor: pressed ? "#DAD7E2" : "transparent",
+              borderColor:
+                variant === "atmospheric" ? editorial.ink : editorial.lavender,
+              backgroundColor: pressed
+                ? variant === "atmospheric"
+                  ? "rgba(32,56,77,0.06)"
+                  : "#DAD7E2"
+                : "transparent",
               opacity:
                 disabled || changing || (offDisabled && option.value === null)
                   ? 0.6
@@ -84,8 +108,11 @@ export function NatureAmbienceChoice({
           >
             <Text
               style={{
-                fontFamily: fonts.sans,
-                fontSize: 15,
+                fontFamily:
+                  variant === "atmospheric" && value === option.value
+                    ? fonts.sansSemiBold
+                    : fonts.sans,
+                fontSize: variant === "atmospheric" ? 16 : 15,
                 textAlign: "center",
                 color: editorial.ink,
               }}
@@ -95,7 +122,7 @@ export function NatureAmbienceChoice({
           </Pressable>
         ))}
       </View>
-      {changing && (
+      {changing && variant === "default" && (
         <Text
           accessibilityLiveRegion="polite"
           style={{ color: editorial.inkMuted, fontSize: 14 }}
@@ -104,7 +131,7 @@ export function NatureAmbienceChoice({
           Stop ends playback.
         </Text>
       )}
-      {changing && onCancel && (
+      {changing && onCancel && variant === "default" && (
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Cancel ambience change"
@@ -114,7 +141,7 @@ export function NatureAmbienceChoice({
           <Text style={{ color: editorial.ink }}>Cancel ambience change</Text>
         </Pressable>
       )}
-      {disabled && (
+      {disabled && variant === "default" && (
         <Text
           style={{
             fontFamily: fonts.sans,

@@ -94,6 +94,29 @@ it("surfaces preparation failures and retries the same file without autoplay", a
   ).not.toHaveBeenCalled();
 });
 
+it("shows one Italian atmospheric alert and one retry action without duplicated English copy", async () => {
+  mockAudio.controller.prepareSelection.mockRejectedValueOnce(
+    new Error("Network unavailable"),
+  );
+  const screen = await render(
+    <ImmediateSessionSetup atmospheric outcome="yoga" />,
+  );
+  await waitFor(() =>
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "L’audio non è disponibile. Riprova.",
+    ),
+  );
+  expect(screen.getAllByRole("alert")).toHaveLength(1);
+  expect(screen.getAllByRole("button", { name: "Riprova" })).toHaveLength(1);
+  expect(screen.queryByText("Could not load. Please retry.")).toBeNull();
+  expect(
+    screen.queryByText(
+      "This sound could not play. Retry loading, or choose another activity.",
+    ),
+  ).toBeNull();
+  expect(screen.queryByText("Retry loading")).toBeNull();
+});
+
 it("keeps the same music through rain, waves, timer and Off without autoplay", async () => {
   const screen = await render(
     <ImmediateSessionSetup

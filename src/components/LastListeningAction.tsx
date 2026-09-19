@@ -33,8 +33,10 @@ import type {
 export function LastListeningAction({
   reviewProgramFactory,
   compact = false,
+  atmospheric = false,
 }: {
   compact?: boolean;
+  atmospheric?: boolean;
   reviewProgramFactory?: (
     input: CreateAdaptiveSessionInput,
   ) => AdaptiveSessionProgram;
@@ -125,14 +127,17 @@ export function LastListeningAction({
   return (
     <View
       style={{
-        borderTopWidth: compact ? 0 : 1,
+        borderTopWidth: compact || atmospheric ? 0 : 1,
         borderColor: editorial.lineStrong,
-        marginVertical: 10,
+        marginTop: atmospheric ? 30 : 10,
+        marginBottom: 10,
       }}
     >
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Play your last session"
+        accessibilityLabel={
+          atmospheric ? "Riprendi l'ultimo ascolto" : "Play your last session"
+        }
         accessibilityState={{
           disabled: !prepared.ready || starting,
           busy: starting,
@@ -155,26 +160,39 @@ export function LastListeningAction({
               setStarting(false);
             });
         }}
-        style={{ minHeight: 56, justifyContent: "center" }}
+        style={({ pressed }) => ({
+          minHeight: 56,
+          justifyContent: "center",
+          backgroundColor:
+            atmospheric && pressed ? "rgba(32,56,77,0.06)" : "transparent",
+        })}
       >
         <Text
           style={{
-            fontFamily: compact ? fonts.sans : fonts.serif,
-            fontSize: compact ? 16 : 23,
+            fontFamily: compact && !atmospheric ? fonts.sans : fonts.serif,
+            fontSize: atmospheric ? 18 : compact ? 16 : 23,
             color: editorial.ink,
           }}
         >
-          {starting ? "Starting…" : "Play your last session →"}
+          {starting
+            ? atmospheric
+              ? "Apertura…"
+              : "Starting…"
+            : atmospheric
+              ? "Riprendi l'ultimo ascolto →"
+              : "Play your last session →"}
         </Text>
-        <Text
-          style={{
-            fontFamily: fonts.sans,
-            fontSize: 14,
-            color: editorial.inkMuted,
-          }}
-        >
-          {title} · {duration} min{prepared.ready ? "" : " · Loading…"}
-        </Text>
+        {!atmospheric ? (
+          <Text
+            style={{
+              fontFamily: fonts.sans,
+              fontSize: 14,
+              color: editorial.inkMuted,
+            }}
+          >
+            {title} · {duration} min{prepared.ready ? "" : " · Loading…"}
+          </Text>
+        ) : null}
       </Pressable>
       {error || prepared.error ? (
         <Pressable

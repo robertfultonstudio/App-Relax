@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "method": "center-crop-width-and-mirror-pad-minimum-no-resample",
+  "generator": "scripts/derive-full-bleed-artwork.mjs",
+  "jimpCompactVersion": "0.16.1",
+  "assets": [
+    {
+      "key": "home-full-bleed",
+      "file": "home-full-bleed.png",
+      "sourceArtifact": "repository:assets/images/backgrounds/rituals-home-v1.jpg",
+      "sourceSha256": "93815a818e3284ad49966a5465cb35588aef79fe5c7f2c2608921e1d2decf560",
+      "historicalSourceArtifact": "codex-generated-image:019fec7b-07ab-7e50-b974-99cbc704a158/exec-2793319e-6892-448e-9789-b2887cefd5e8.png",
+      "historicalSourceSha256": "bdb63bbb1b1b1f3c0c25c5d5070b2b7a914404866769b38ffd63941f1eabdfb4",
+      "sourcePixelSha256": "da94d78648a44f563d466f37860e4d243e5b4212436360edf99792e72caed78a",
+      "sourceWidth": 864,
+      "sourceHeight": 1821,
+      "sourceCrop": {
+        "left": 2,
+        "right": 2,
+        "top": 0,
+        "bottom": 0
+      },
+      "retainedPixelSha256": "e1e5ddaba1d004962feddabe1442904e2cbb5e1d2b0bb9fad5d98c65ab1701ae",
+      "retainedWidth": 860,
+      "retainedHeight": 1821,
+      "targetWidth": 860,
+      "targetHeight": 1864,
+      "padding": {
+        "left": 0,
+        "right": 0,
+        "top": 21,
+        "bottom": 22
+      },
+      "bytes": 2259322,
+      "sha256": "3678acaf5c56c5579d80cdc12fa04a1777671059b358e0e57baaf982b456ba16"
+    },
+    {
+      "key": "player-full-bleed",
+      "file": "player-full-bleed.png",
+      "sourceArtifact": "repository:assets/images/backgrounds/m6/player.jpg",
+      "sourceSha256": "89a937acbc05b7bad87175272e1f71b2483fac3350fa27722e90dede72d5b96d",
+      "historicalSourceArtifact": "codex-generated-image:019fec7b-07ab-7e50-b974-99cbc704a158/exec-36ce2b75-15c6-44cc-aad7-54fa52fc928a.png",
+      "historicalSourceSha256": "3670987c92f3dacf31c09c938ea67230963076f23dca2d4861901a44131f21ab",
+      "sourcePixelSha256": "17a7fb2b0d5bf147c04cddc6c360bcdc3902a9a1d8bd93238764ee4a5fd5be1e",
+      "sourceWidth": 853,
+      "sourceHeight": 1844,
+      "sourceCrop": {
+        "left": 0,
+        "right": 0,
+        "top": 0,
+        "bottom": 0
+      },
+      "retainedPixelSha256": "17a7fb2b0d5bf147c04cddc6c360bcdc3902a9a1d8bd93238764ee4a5fd5be1e",
+      "retainedWidth": 853,
+      "retainedHeight": 1844,
+      "targetWidth": 860,
+      "targetHeight": 1864,
+      "padding": {
+        "left": 3,
+        "right": 4,
+        "top": 10,
+        "bottom": 10
+      },
+      "bytes": 2922546,
+      "sha256": "7eb30a4ed958c08fb917f511b014d25e47f2efdfa5b30af6f807b1992c645e99"
+    }
+  ]
+}

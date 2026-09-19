@@ -1,13 +1,23 @@
 import { type Href, useRouter } from "expo-router";
 import type { ReactNode } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
 import { EditorialScreen } from "@/components/EditorialScreen";
 import { OutcomeGridTile } from "@/components/OutcomeGridTile";
 import { LastListeningAction } from "@/components/LastListeningAction";
+import { FullBleedArtwork } from "@/components/FullBleedArtwork";
 import { ProductTabBar } from "@/components/ProductTabBar";
 import { CONSUMER_OUTCOMES } from "@/content/productShell";
 import { editorial } from "@/design/editorialTheme";
-import { M6_HOME_PAINTING } from "@/design/shellArtwork";
+import { C3_HOME_FULL_BLEED, M6_HOME_PAINTING } from "@/design/shellArtwork";
 import { fonts, spacing } from "@/design/theme";
 import { platformReviewProgramFactory } from "@/domain/sessions/platformSessionFactories";
 import type {
@@ -31,6 +41,15 @@ export default function MomentsScreen({
   showHeaderSettings?: boolean;
 } = {}) {
   const router = useRouter();
+
+  if (activityArtwork) {
+    return (
+      <AtmosphericHome
+        reviewProgramFactory={reviewProgramFactory}
+        onOpen={(route) => router.push(route as Href)}
+      />
+    );
+  }
 
   return (
     <EditorialScreen
@@ -96,7 +115,161 @@ export default function MomentsScreen({
   );
 }
 
+const HOME_LABELS = {
+  meditation: "Meditazione",
+  yoga: "Yoga",
+  massage: "Massaggio",
+  relax: "Relax",
+  sleep: "Sonno",
+  focus: "Concentrazione",
+} as const;
+
+function AtmosphericHome({
+  onOpen,
+  reviewProgramFactory,
+}: {
+  onOpen: (route: string) => void;
+  reviewProgramFactory?: (
+    input: CreateAdaptiveSessionInput,
+  ) => AdaptiveSessionProgram;
+}) {
+  const { height, width } = useWindowDimensions();
+  const large = width >= 420 || height >= 900;
+  return (
+    <View style={styles.atmosphericRoot} testID="atmospheric-home">
+      <FullBleedArtwork
+        source={C3_HOME_FULL_BLEED}
+        testID="home-full-bleed-artwork"
+      />
+      <LinearGradient
+        pointerEvents="none"
+        colors={[
+          "rgba(244,238,230,0.38)",
+          "rgba(244,238,230,0.08)",
+          "rgba(244,238,230,0.42)",
+        ]}
+        locations={[0, 0.56, 1]}
+        style={StyleSheet.absoluteFill}
+      />
+      <SafeAreaView edges={["top", "left", "right"]} style={styles.safeArea}>
+        <ScrollView
+          contentContainerStyle={[
+            styles.atmosphericContent,
+            large && styles.atmosphericContentLarge,
+          ]}
+          showsVerticalScrollIndicator={false}
+          testID="home-atmospheric-scroll"
+        >
+          <Text style={styles.eyebrow}>APP RELAX</Text>
+          <Text
+            accessibilityRole="header"
+            nativeID="consumer-screen-title"
+            style={[
+              styles.atmosphericTitle,
+              large && styles.atmosphericTitleLarge,
+            ]}
+            testID="consumer-screen-title"
+          >
+            Scegli il tuo momento
+          </Text>
+          <View
+            accessibilityLabel="Scegli il tuo momento"
+            style={[
+              styles.destinationList,
+              large && styles.destinationListLarge,
+            ]}
+            testID="outcome-list"
+          >
+            {CONSUMER_OUTCOMES.map((outcome) => (
+              <Pressable
+                accessibilityHint="Apre l’attività e prepara l’ascolto"
+                accessibilityLabel={HOME_LABELS[outcome.id]}
+                accessibilityRole="button"
+                key={outcome.id}
+                onPress={() => onOpen(`/outcome/${outcome.id}`)}
+                style={({ pressed }) => [
+                  styles.destination,
+                  pressed && styles.atmosphericPressed,
+                ]}
+                testID={`outcome-${outcome.id}`}
+              >
+                <Text
+                  style={[
+                    styles.destinationLabel,
+                    large && styles.destinationLabelLarge,
+                  ]}
+                >
+                  {HOME_LABELS[outcome.id]}
+                </Text>
+                <Text accessible={false} style={styles.destinationArrow}>
+                  →
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+          <LastListeningAction
+            reviewProgramFactory={reviewProgramFactory}
+            atmospheric
+          />
+        </ScrollView>
+      </SafeAreaView>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  atmosphericRoot: {
+    flex: 1,
+    backgroundColor: "#F4EEE6",
+    overflow: "hidden",
+  },
+  safeArea: { flex: 1 },
+  atmosphericContent: {
+    flexGrow: 1,
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 88,
+  },
+  atmosphericContentLarge: { paddingHorizontal: 28, paddingTop: 28 },
+  eyebrow: {
+    color: "#20384D",
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 12,
+    lineHeight: 16,
+    letterSpacing: 2.4,
+  },
+  atmosphericTitle: {
+    color: "#20384D",
+    fontFamily: fonts.serif,
+    fontSize: 40,
+    lineHeight: 44,
+    letterSpacing: -1.1,
+    marginTop: 48,
+    maxWidth: 330,
+  },
+  atmosphericTitleLarge: { fontSize: 44, lineHeight: 48, marginTop: 56 },
+  destinationList: { marginTop: 74 },
+  destinationListLarge: { marginTop: 90 },
+  destination: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    minHeight: 56,
+    width: "100%",
+  },
+  destinationLabel: {
+    color: "#20384D",
+    fontFamily: fonts.serif,
+    fontSize: 20,
+    lineHeight: 26,
+  },
+  destinationLabelLarge: { fontSize: 22, lineHeight: 28 },
+  destinationArrow: {
+    color: "#20384D",
+    fontFamily: fonts.sans,
+    fontSize: 16,
+  },
+  atmosphericPressed: { backgroundColor: "rgba(32,56,77,0.06)" },
   mobileHeader: {
     flexDirection: "row",
     alignItems: "center",

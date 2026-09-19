@@ -7,6 +7,7 @@ const HIDDEN_DURING_LISTENING = new Set<PlaybackStatus>([
   "playing",
   "paused",
   "fadingOut",
+  "completed",
 ]);
 
 export function isPwaNavigationHidden(status: PlaybackStatus): boolean {

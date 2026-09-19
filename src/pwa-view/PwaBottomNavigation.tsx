@@ -9,7 +9,7 @@ import { usePwaView } from "./PwaViewProvider";
 const destinations = [
   { id: "home", label: "Home", route: "/moments" },
   { id: "hatha", label: "Hatha", route: "/yoga" },
-  { id: "settings", label: "Settings", route: "/settings" },
+  { id: "settings", label: "Impostazioni", route: "/settings" },
 ] as const;
 export const PWA_HOME_LONG_PRESS_MS = 1200;
 export const PWA_HOME_MOVE_TOLERANCE_PX = 10;
@@ -331,6 +331,13 @@ export function PwaBottomNavigation() {
               <Text style={[styles.label, selected && styles.labelSelected]}>
                 {destination.label}
               </Text>
+              <View
+                accessible={false}
+                style={[
+                  styles.activeMark,
+                  selected && styles.activeMarkVisible,
+                ]}
+              />
             </Pressable>
           );
         })}
@@ -341,29 +348,28 @@ export function PwaBottomNavigation() {
 
 const styles = StyleSheet.create({
   safeArea: {
-    backgroundColor: "rgba(248,244,236,0.985)",
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: editorial.lineStrong,
+    backgroundColor: "transparent",
+    bottom: 0,
+    left: 0,
+    position: "absolute",
+    right: 0,
+    zIndex: 40,
   },
   bar: {
-    minHeight: 58,
+    minHeight: 64,
     flexDirection: "row",
     alignItems: "stretch",
-    paddingHorizontal: 8,
+    paddingHorizontal: 12,
   },
   tab: {
     flex: 1,
-    minHeight: 58,
+    minHeight: 64,
     alignItems: "center",
     justifyContent: "center",
     gap: 2,
-    borderTopWidth: 2,
-    borderTopColor: "transparent",
   },
-  selected: {
-    borderTopColor: editorial.jade,
-  },
-  pressed: { opacity: 0.78, transform: [{ scale: 0.985 }] },
+  selected: {},
+  pressed: { backgroundColor: "rgba(32,56,77,0.06)" },
   iconFrame: {
     width: 30,
     height: 25,
@@ -503,5 +509,12 @@ const styles = StyleSheet.create({
     lineHeight: 15,
     letterSpacing: 0.2,
   },
-  labelSelected: { color: editorial.jade },
+  labelSelected: { color: editorial.ink, fontFamily: fonts.sansSemiBold },
+  activeMark: {
+    backgroundColor: "transparent",
+    height: 2,
+    marginTop: 2,
+    width: 16,
+  },
+  activeMarkVisible: { backgroundColor: editorial.ink },
 });

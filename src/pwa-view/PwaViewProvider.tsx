@@ -28,16 +28,16 @@ export function PwaViewProvider({ children }: PropsWithChildren) {
   const router = useRouter();
   const { review } = useGlobalSearchParams<{ review?: string }>();
   const [viewMode, setViewMode] = useState<PwaViewMode>(() =>
-    review === "0" ? "consumer-preview" : "workbench",
+    review === "1" ? "workbench" : "consumer-preview",
   );
   const [technicalBusy, setTechnicalBusy] = useState(false);
   const [announcement, setAnnouncement] = useState("");
   const lastExplicitReview = useRef(
-    review === "0" || review === "1" ? review : null,
+    review === "0" || review === "1" ? review : "0",
   );
 
   useEffect(() => {
-    const normalized = review === "0" ? "0" : "1";
+    const normalized = review === "1" ? "1" : "0";
     if (lastExplicitReview.current === normalized) return;
     lastExplicitReview.current = normalized;
     setViewMode(normalized === "0" ? "consumer-preview" : "workbench");

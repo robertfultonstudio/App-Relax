@@ -11,6 +11,7 @@ export default function PwaOutcome() {
       reviewProgramFactory={createWholeFileReviewProgram}
       createNatureProgram={createListeningNatureProgram}
       showDevelopmentLink={viewMode === "workbench"}
+      immersiveYoga={viewMode === "consumer-preview"}
     />
   );
 }

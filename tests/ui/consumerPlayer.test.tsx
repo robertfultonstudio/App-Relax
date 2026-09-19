@@ -16,6 +16,7 @@ import type { AdaptiveSessionProgram } from "@/domain/sessions/types";
 
 let mockAudio = createConsumerAudioMock();
 let mockParams: Record<string, string>;
+const mockReplace = jest.fn();
 jest.mock("expo-router", () => ({
   useFocusEffect: (callback: () => void) => {
     const { useEffect } = jest.requireActual("react");
@@ -24,7 +25,12 @@ jest.mock("expo-router", () => ({
   useLocalSearchParams: () => mockParams,
   useGlobalSearchParams: () => mockParams,
   usePathname: () => `/listen/${mockParams.workId}`,
-  useRouter: () => ({ back: jest.fn(), setParams: jest.fn(), push: jest.fn() }),
+  useRouter: () => ({
+    back: jest.fn(),
+    setParams: jest.fn(),
+    push: jest.fn(),
+    replace: mockReplace,
+  }),
 }));
 jest.mock("expo-linear-gradient", () => ({ LinearGradient: "LinearGradient" }));
 jest.mock("@/audio/AudioProvider", () => ({
@@ -208,6 +214,7 @@ describe("autonomous consumer player", () => {
   );
   beforeEach(() => {
     mockAudio = createConsumerAudioMock();
+    mockReplace.mockClear();
     mockParams = {
       workId: "field-sea-003-open-tide",
       outcome: "massage",
@@ -320,7 +327,9 @@ describe("autonomous consumer player", () => {
       const screen = await render(<ConsumerPlayerScreen />);
 
       expect(screen.getByText(LISTENING_SCENE_COPY)).toBeTruthy();
-      expect(screen.queryByText("La natura ti renderà consapevole")).toBeNull();
+      expect(
+        screen.getByText("La natura ti renderà consapevole."),
+      ).toBeTruthy();
       expect(screen.getByRole("button", { name: "Pausa" })).toBeEnabled();
 
       await act(async () => jest.advanceTimersByTime(899));
@@ -354,6 +363,79 @@ describe("autonomous consumer player", () => {
       jest.clearAllTimers();
       jest.useRealTimers();
     }
+  });
+
+  it("keeps the atmospheric timer visible while its integrated controls auto-hide", async () => {
+    jest.useFakeTimers();
+    try {
+      const work = getConsumerWork(mockParams.workId)!;
+      mockAudio.setActive({
+        kind: "single",
+        program: createSingleTrackProgram(work, "massage"),
+        outcome: "massage",
+        durationMinutes: 90,
+      });
+      mockAudio.publish({
+        status: "playing",
+        workId: work.id,
+        remainingMs: 89 * 60_000,
+      });
+      const screen = await render(<ConsumerPlayerScreen atmospheric />);
+
+      expect(
+        screen.getByRole("header", { name: "Un respiro alla volta." }),
+      ).toBeTruthy();
+      expect(
+        screen.getByText("La natura ti renderà consapevole."),
+      ).toBeTruthy();
+      expect(screen.queryByText("Presenza minima")).toBeNull();
+      expect(
+        screen.getByTestId("player-full-bleed-artwork", {
+          includeHiddenElements: true,
+        }),
+      ).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Pausa" })).toBeEnabled();
+      expect(screen.getByRole("button", { name: "Interrompi" })).toBeEnabled();
+      expect(screen.queryByTestId("playback-transport")).toBeNull();
+
+      await act(async () =>
+        jest.advanceTimersByTime(LISTENING_CONTROLS_AUTO_HIDE_MS),
+      );
+      expect(screen.getByTestId("consumer-listening-scene")).toBeTruthy();
+      expect(screen.getByTestId("atmospheric-player-timer")).toHaveTextContent(
+        "89:00",
+      );
+      expect(screen.queryByRole("button", { name: "Pausa" })).toBeNull();
+      expect(screen.queryByRole("button", { name: "Interrompi" })).toBeNull();
+    } finally {
+      jest.clearAllTimers();
+      jest.useRealTimers();
+    }
+  });
+
+  it("offers replay and return to Yoga when an atmospheric session completes", async () => {
+    mockParams = {
+      workId: "respiro-hatha-1-01",
+      outcome: "yoga",
+      duration: "30",
+      nature: "off",
+    };
+    const work = getConsumerWork(mockParams.workId)!;
+    mockAudio.setActive({
+      kind: "single",
+      program: createSingleTrackProgram(work, "yoga"),
+      outcome: "yoga",
+      durationMinutes: 30,
+    });
+    mockAudio.publish({ status: "completed", workId: work.id, remainingMs: 0 });
+    const screen = await render(<ConsumerPlayerScreen atmospheric />);
+
+    await fireEvent.press(
+      screen.getByRole("button", { name: "Ascolta di nuovo" }),
+    );
+    expect(mockAudio.controller.playFromUserGesture).toHaveBeenCalledTimes(1);
+    await fireEvent.press(screen.getByRole("button", { name: "Torna a Yoga" }));
+    expect(mockReplace).toHaveBeenCalledWith("/outcome/yoga?nature=off");
   });
 
   it("re-prepares a changed duration without mutating the current timer or starting audio", async () => {

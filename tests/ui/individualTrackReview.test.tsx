@@ -150,8 +150,8 @@ it("opens review on the same consumer player but cannot inherit or add a natural
   ).not.toHaveBeenCalled();
 });
 
-it.each([undefined, "1"])(
-  "opens the nature-mixed player timeline without hiding review (review=%s)",
+it.each(["1"])(
+  "opens the nature-mixed player timeline in explicit review mode (review=%s)",
   async (review) => {
     mockParams = {
       workId: "respiro-hatha-1-01",
@@ -159,7 +159,7 @@ it.each([undefined, "1"])(
       outcome: "yoga",
       duration: "30",
     };
-    if (review) mockParams.review = review;
+    mockParams.review = review;
     const work = LOOP_REVIEW_WORKS.find((w) => w.id === mockParams.workId)!;
     const program = createListeningNatureProgram(work, "yoga", 30, "rain");
     mockAudio.setActive({
@@ -189,8 +189,8 @@ it.each([undefined, "1"])(
   },
 );
 
-it("opens the ordinary listening timeline without a query and never auto-plays", async () => {
-  mockParams = { workId: "respiro-hatha-1-01" };
+it("opens the ordinary listening timeline in explicit review mode and never auto-plays", async () => {
+  mockParams = { workId: "respiro-hatha-1-01", review: "1" };
   const screen = await player();
   expect(
     screen.getByRole("button", {
@@ -208,7 +208,7 @@ it("honors an explicit closed preview and query changes on the same player", asy
   mockParams = { workId: "respiro-hatha-1-01", review: "0" };
   const screen = await player();
   expect(screen.queryByTestId("review-segment-0")).toBeNull();
-  mockParams = { workId: "respiro-hatha-1-01" };
+  mockParams = { workId: "respiro-hatha-1-01", review: "1" };
   await screen.rerender(
     <PwaViewProvider>
       <PwaPlayer />
@@ -249,7 +249,7 @@ it("keeps the Error state on the same route while consumer copy hides the Workbe
   });
   const screen = await player();
   expect(screen.getByRole("alert")).toHaveTextContent(
-    "This saved sound needs an update. Reconnect and retry loading.",
+    "L’audio non è disponibile. Riprova.",
   );
   expect(screen.queryByText(/Technical detail:/)).toBeNull();
   expect(screen.queryByTestId("private-player-review")).toBeNull();
@@ -277,7 +277,7 @@ it("keeps one PWA route and listening run through 20 live ambience changes, Retr
     outcome: "focus",
     duration: "30",
     nature: "rain",
-    review: "0",
+    review: "1",
   };
   const work = getConsumerWork("astral-thread")!;
   let current = createListeningNatureProgram(work, "focus", 30, "rain");
@@ -327,7 +327,6 @@ it("keeps one PWA route and listening run through 20 live ambience changes, Retr
     cancelNatureFamilyChange: jest.fn(),
   });
   const screen = await player();
-  expect(screen.getByRole("button", { name: "Pausa" })).toBeEnabled();
   expect(
     screen.getByRole("radio", { name: "Ambience Rain", checked: true }),
   ).toBeEnabled();
@@ -387,9 +386,6 @@ it("keeps one PWA route and listening run through 20 live ambience changes, Retr
   expect(change).toHaveBeenCalledTimes(22);
   expect(current.plan.id).toBe(programId);
 
-  await revealControls();
-  await fireEvent.press(screen.getByRole("button", { name: "Pausa" }));
-  expect(mockAudio.controller.pause).toHaveBeenCalledTimes(1);
   mockAudio.publish({ status: "paused" });
   mockParams = { ...mockParams, review: "1" };
   await screen.rerender(

@@ -1,5 +1,5 @@
 import { type ReactNode, useEffect, useMemo, useState } from "react";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { type Href, useLocalSearchParams, useRouter } from "expo-router";
 import { Pressable, Text } from "react-native";
 import { useAudioSession } from "@/audio/AudioProvider";
 import { PlaybackCancelledError } from "@/audio/AudioSessionController";
@@ -52,6 +52,8 @@ import type {
 } from "@/domain/sessions/types";
 
 type PlayerExtensions = {
+  atmospheric?: boolean;
+  disableAutoHide?: boolean;
   hidePersistentTransport?: boolean;
   inlineConsumerTransport?: boolean;
   renderPersistentTransport?: (props: PlaybackTransportProps) => ReactNode;
@@ -78,6 +80,8 @@ type PlayerExtensions = {
 
 export const LISTENING_CONTROLS_AUTO_HIDE_MS = 900;
 export default function ConsumerPlayerScreen({
+  atmospheric = false,
+  disableAutoHide = false,
   renderReviewControls,
   createNatureProgram = platformNatureProgramFactory,
   renderNatureReview,
@@ -95,6 +99,8 @@ export default function ConsumerPlayerScreen({
     <Player
       key={`${params.workId}:${params.outcome ?? ""}:${params.duration ?? ""}`}
       {...params}
+      atmospheric={atmospheric}
+      disableAutoHide={disableAutoHide}
       renderReviewControls={renderReviewControls}
       createNatureProgram={createNatureProgram}
       renderNatureReview={renderNatureReview}
@@ -115,6 +121,8 @@ function Player({
   inlineConsumerTransport = false,
   renderPersistentTransport,
   nature: natureParam,
+  atmospheric = false,
+  disableAutoHide = false,
 }: {
   workId: string;
   outcome?: string;
@@ -299,6 +307,7 @@ function Player({
   }, [controlsSynchronized, playbackState]);
   useEffect(() => {
     if (
+      disableAutoHide ||
       !controlsSynchronized ||
       playbackState !== "playing" ||
       controlState.mode !== "auto"
@@ -309,8 +318,9 @@ function Player({
       LISTENING_CONTROLS_AUTO_HIDE_MS,
     );
     return () => clearTimeout(timer);
-  }, [controlState.mode, controlsSynchronized, playbackState]);
+  }, [controlState.mode, controlsSynchronized, disableAutoHide, playbackState]);
   const immersive =
+    !disableAutoHide &&
     playbackState === "playing" &&
     controlsSynchronized &&
     controlState.mode === "hidden";
@@ -358,6 +368,21 @@ function Player({
       );
     });
   }
+  function stopListening() {
+    void controller
+      .stop()
+      .then(() => {
+        if (atmospheric)
+          router.replace(
+            `/outcome/${outcome}?nature=${nature ?? "off"}` as Href,
+          );
+      })
+      .catch(() => undefined);
+  }
+  function returnToOutcome() {
+    if (atmospheric)
+      router.replace(`/outcome/${outcome}?nature=${nature ?? "off"}` as Href);
+  }
   function changeLiveNature(value: NatureAmbienceFamily | null) {
     if (
       !matching ||
@@ -402,10 +427,15 @@ function Player({
   }
   return (
     <EditorialScreen
-      contentStyle={immersive ? { paddingBottom: 0, paddingTop: 0 } : undefined}
-      scrollEnabled={!immersive}
+      contentStyle={
+        atmospheric || immersive
+          ? { paddingBottom: 0, paddingTop: 0 }
+          : undefined
+      }
+      scrollEnabled={!immersive && !atmospheric}
       footer={(() => {
         if (
+          atmospheric ||
           hidePersistentTransport ||
           inlineConsumerTransport ||
           otherSessionActive ||
@@ -419,7 +449,7 @@ function Player({
           isPlaying: playing,
           busy,
           onPlayPause: playPause,
-          onStop: () => void controller.stop().catch(() => undefined),
+          onStop: stopListening,
           playPauseTestID: "consumer-play-pause",
           playLabel: "Avvia ascolto",
           pauseLabel: "Pausa",
@@ -432,15 +462,19 @@ function Player({
         );
       })()}
     >
-      {!immersive ? (
+      {!immersive && !atmospheric ? (
         <EditorialHeader label={outcome.toUpperCase()} showBack />
       ) : null}
       <ConsumerPlaybackSurface
+        atmospheric={atmospheric}
+        completed={matching && snapshot.status === "completed"}
         immersive={immersive}
         onRevealControls={() =>
           setControlState({ playbackState, mode: "visible" })
         }
-        hideTransport={!inlineConsumerTransport && !otherSessionActive}
+        hideTransport={
+          atmospheric || (!inlineConsumerTransport && !otherSessionActive)
+        }
         transportAfterControls={inlineConsumerTransport}
         previewTransport={otherSessionActive}
         canPlay={Boolean(work && ready)}
@@ -475,12 +509,20 @@ function Player({
               : "Return Home and choose an activity."
         }
         onPlayPause={playPause}
-        onStop={() => void controller.stop().catch(() => undefined)}
+        onReturn={returnToOutcome}
+        onStop={stopListening}
         onVolumeChange={(value) => void controller.setVolume(value)}
         volumeDisabled={!matching || busy}
         outcome={outcome}
         remainingMs={matching ? snapshot.remainingMs : duration * 60000}
         title={work ? LISTENING_SCENE_COPY : "Sound unavailable"}
+        sessionDescriptor={`${
+          nature === "rain"
+            ? "Pioggia"
+            : nature === "sea"
+              ? "Onde oceaniche"
+              : "Nessuno"
+        } · ${duration} min`}
         volume={snapshot.volume}
         playPauseTestID="consumer-play-pause"
         options={

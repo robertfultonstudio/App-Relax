@@ -132,7 +132,7 @@ describe("consumer product tabs", () => {
   it.each(CONSUMER_OUTCOMES)(
     "wires optional nature into the actual PWA $id entry route before Play",
     async (outcome) => {
-      mockParams = { outcomeId: outcome.id };
+      mockParams = { outcomeId: outcome.id, review: "1" };
       const screen = await render(
         <PwaViewProvider>
           <PwaOutcome />
@@ -196,6 +196,42 @@ describe("consumer product tabs", () => {
       );
     },
   );
+
+  it("renders the consumer Yoga route as one atmospheric full-bleed field", async () => {
+    mockParams = { outcomeId: "yoga", review: "0" };
+    const screen = await render(
+      <PwaViewProvider>
+        <PwaOutcome />
+      </PwaViewProvider>,
+    );
+
+    expect(screen.getByTestId("yoga-atmospheric-screen")).toBeTruthy();
+    expect(
+      screen.getByTestId("yoga-full-bleed-artwork", {
+        includeHiddenElements: true,
+      }),
+    ).toBeTruthy();
+    expect(screen.getByText("YOGA")).toBeTruthy();
+    expect(
+      screen.getByRole("header", { name: "Un respiro alla volta." }),
+    ).toBeTruthy();
+    expect(screen.getByText("La natura ti renderà consapevole.")).toBeTruthy();
+    expect(
+      screen.getByRole("radio", { name: "Ambiente Nessuno" }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("radio", { name: "Ambiente Pioggia" }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("radio", { name: "Ambiente Onde oceaniche" }),
+    ).toBeTruthy();
+    await waitFor(() =>
+      expect(screen.getByTestId("start-immediate-session")).toBeEnabled(),
+    );
+    expect(screen.getByText("Inizia")).toBeTruthy();
+    expect(screen.queryByTestId("outcome-artwork-yoga")).toBeNull();
+    expect(screen.queryByText("Start your yoga session")).toBeNull();
+  });
 
   it("offers complete Hatha separately and preserves an actual multi-file practice", async () => {
     mockParams = { outcomeId: "yoga" };
