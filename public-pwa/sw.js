@@ -17,6 +17,17 @@ function isAudioRequest(request, url) {
   );
 }
 
+function hasActiveListeningClient(clients) {
+  return clients.some((client) => {
+    const url = new URL(client.url);
+    return (
+      url.origin === self.location.origin &&
+      (url.pathname.startsWith("/listen/") ||
+        url.pathname.startsWith("/adaptive-session/"))
+    );
+  });
+}
+
 self.addEventListener("install", (event) => {
   event.waitUntil(
     (async () => {
@@ -40,9 +51,15 @@ self.addEventListener("install", (event) => {
         await caches.delete(SHELL_CACHE);
         throw error;
       }
+      // A stale visual shell is promoted after a complete precache, except while
+      // an audible session is active. Existing clients are never claimed/reloaded.
+      const clients = await self.clients.matchAll({
+        type: "window",
+        includeUncontrolled: true,
+      });
+      if (!hasActiveListeningClient(clients)) await self.skipWaiting();
     })(),
   );
-  // Updates wait for old clients to close; never interrupt an active session.
 });
 
 self.addEventListener("activate", (event) => {

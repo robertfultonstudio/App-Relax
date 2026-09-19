@@ -336,10 +336,11 @@ assert(
 );
 assert(
   !/clients\.claim\s*\(/.test(serviceWorker) &&
-    (serviceWorker.match(/skipWaiting\s*\(/g) ?? []).length === 1 &&
+    (serviceWorker.match(/skipWaiting\s*\(/g) ?? []).length === 2 &&
     serviceWorker.includes('event.data?.type === "APP_RELAX_APPLY_UPDATE"') &&
     serviceWorker.includes('sender.pathname !== "/update.html"') &&
     serviceWorker.includes("includeUncontrolled: true") &&
+    serviceWorker.includes("if (!hasActiveListeningClient(clients))") &&
     /if \(otherApp\) \{[\s\S]*?APP_RELAX_UPDATE_BLOCKED[\s\S]*?return;\s*\}\s*await self\.skipWaiting\(\)/.test(
       serviceWorker,
     ),

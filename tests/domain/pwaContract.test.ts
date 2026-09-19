@@ -228,6 +228,7 @@ describe("PWA contract", () => {
     expect(serviceWorker).toContain(
       'event.data?.type === "APP_RELAX_APPLY_UPDATE"',
     );
+    expect(serviceWorker).toContain("if (!hasActiveListeningClient(clients))");
     expect(serviceWorker).not.toContain("self.clients.claim(");
     expect(serviceWorker.indexOf("isAudioRequest(request, url)")).toBeLessThan(
       serviceWorker.indexOf(

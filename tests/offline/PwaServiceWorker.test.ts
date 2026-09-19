@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { runInNewContext } from "node:vm";
 
-function setup() {
+function setup(clientUrls: readonly string[] = []) {
   const listeners: Record<string, (event: unknown) => void> = {};
   const entries = new Map<string, unknown>(),
     deleted: string[] = [];
@@ -16,7 +16,10 @@ function setup() {
       urls: ["/", "/offline", "/listen/a", "/app.js", "/font.woff2"],
     },
     skipWaiting: jest.fn(),
-    clients: { claim: jest.fn() },
+    clients: {
+      claim: jest.fn(),
+      matchAll: async () => clientUrls.map((url) => ({ url })),
+    },
   };
   const fetcher = jest.fn(async () => ({ ok: true, type: "basic" }));
   const cache = {
@@ -62,15 +65,20 @@ function setup() {
   return { event, self, fetcher, entries, deleted };
 }
 
-describe("PWA offline shell and non-interrupting updates", () => {
-  it("preloads the whole declared shell without claiming clients or activating early", async () => {
+describe("PWA offline shell and stale-client recovery", () => {
+  it("promotes a complete replacement shell with no listening client and never claims existing clients", async () => {
     const t = setup();
     await t.event("install");
     expect([...t.entries.keys()]).toEqual(t.self.APP_RELAX_PRECACHE.urls);
+    expect(t.self.skipWaiting).toHaveBeenCalledTimes(1);
     await t.event("activate");
-    expect(t.self.skipWaiting).not.toHaveBeenCalled();
     expect(t.self.clients.claim).not.toHaveBeenCalled();
     expect(t.deleted).toEqual(["ritual-audio-shell-old"]);
+  });
+  it("keeps the active worker when a listening client is open", async () => {
+    const t = setup(["https://app.test/listen/a"]);
+    await t.event("install");
+    expect(t.self.skipWaiting).not.toHaveBeenCalled();
   });
   it("reopens clean routes and query-bearing navigation from cache while offline", async () => {
     const t = setup();
