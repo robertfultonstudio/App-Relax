@@ -14,6 +14,7 @@ export function PwaConsumerTransportDock(props: PlaybackTransportProps) {
   const dockRef = useRef<HTMLDivElement>(null);
   const [navHeight, setNavHeight] = useState(FALLBACK_NAV_HEIGHT);
   const [dockHeight, setDockHeight] = useState(FALLBACK_DOCK_HEIGHT);
+  const listening = props.canStop;
 
   useEffect(() => {
     const navigation = document.querySelector<HTMLElement>(
@@ -42,13 +43,15 @@ export function PwaConsumerTransportDock(props: PlaybackTransportProps) {
       ref={dockRef}
       style={{
         position: "fixed",
-        bottom: navHeight,
+        bottom: listening ? 0 : navHeight,
         left: 0,
         right: 0,
         zIndex: 35,
-        background: editorial.paperDeep,
-        borderTop: `1px solid ${editorial.lineStrong}`,
-        padding: "8px 18px",
+        background: listening
+          ? `linear-gradient(to bottom, rgba(236, 228, 226, 0), ${editorial.paperDeep} 34%, ${editorial.paperDeep})`
+          : editorial.paperDeep,
+        borderTop: listening ? "none" : `1px solid ${editorial.lineStrong}`,
+        padding: listening ? "28px 18px 8px" : "8px 18px",
       }}
     >
       <PlaybackTransport {...props} />
@@ -57,12 +60,14 @@ export function PwaConsumerTransportDock(props: PlaybackTransportProps) {
 
   return (
     <>
-      <View
-        accessibilityElementsHidden
-        importantForAccessibility="no-hide-descendants"
-        style={{ height: dockHeight, flexShrink: 0 }}
-        testID="consumer-transport-spacer"
-      />
+      {!listening ? (
+        <View
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+          style={{ height: dockHeight, flexShrink: 0 }}
+          testID="consumer-transport-spacer"
+        />
+      ) : null}
       {typeof document !== "undefined" && document.body?.nodeType === 1
         ? createPortal(dock, document.body)
         : dock}

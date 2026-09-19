@@ -1,8 +1,11 @@
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import { View } from "react-native";
-import ConsumerPlayerScreen from "@/app/listen/[workId]";
+import ConsumerPlayerScreen, {
+  LISTENING_CONTROLS_AUTO_HIDE_MS,
+} from "@/app/listen/[workId]";
 import { CurrentSessionBar } from "@/components/CurrentSessionBar";
 import { PlaybackTransport } from "@/components/PlaybackTransport";
+import { LISTENING_SCENE_COPY } from "@/components/ConsumerPlaybackSurface";
 import { getConsumerWork } from "@/content/consumerCatalog";
 import { createSingleTrackProgram } from "@/domain/audio/consumerTypes";
 import { createConsumerAudioMock, deferred } from "./helpers/consumerAudioMock";
@@ -183,7 +186,9 @@ describe("autonomous consumer player", () => {
     async (work) => {
       mockParams = { workId: work.id, outcome: "yoga", duration: "30" };
       const screen = await render(<ConsumerPlayerScreen />);
-      expect(screen.getByRole("header", { name: "Yoga" })).toBeTruthy();
+      expect(
+        screen.getByRole("header", { name: LISTENING_SCENE_COPY }),
+      ).toBeTruthy();
       expect(screen.queryByText(work.title)).toBeNull();
       expect(screen.queryByText(work.sourceFilename!)).toBeNull();
       await waitFor(() =>
@@ -279,7 +284,7 @@ describe("autonomous consumer player", () => {
       remainingMs: 89 * 60_000,
     });
     const screen = await render(<ConsumerPlayerScreen />);
-    expect(screen.getByRole("button", { name: "Pause" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Pausa" })).toBeEnabled();
     expect(screen.getByText("89:00")).toBeTruthy();
     await fireEvent.press(screen.getByText("Timer · 90 min +"));
     expect(mockAudio.controller.prepareSelection).not.toHaveBeenCalled();
@@ -287,14 +292,68 @@ describe("autonomous consumer player", () => {
       mockAudio.controller.startSelectionFromUserGesture,
     ).not.toHaveBeenCalled();
     expect(screen.getByRole("radio", { name: "90 minutes" })).toBeDisabled();
-    await fireEvent.press(screen.getByRole("button", { name: "Pause" }));
+    await fireEvent.press(screen.getByRole("button", { name: "Pausa" }));
     expect(mockAudio.controller.pause).toHaveBeenCalledTimes(1);
     mockAudio.publish({ status: "paused" });
     await screen.rerender(<ConsumerPlayerScreen />);
-    await fireEvent.press(screen.getByRole("button", { name: "Play" }));
+    await fireEvent.press(screen.getByRole("button", { name: "Riprendi" }));
     expect(mockAudio.controller.playFromUserGesture).toHaveBeenCalledTimes(1);
     await fireEvent.press(screen.getByRole("button", { name: "Stop" }));
     expect(mockAudio.controller.stop).toHaveBeenCalledTimes(1);
+  });
+
+  it("auto-hides the real player chrome and restores Pause, Resume and Stop with one scene tap", async () => {
+    jest.useFakeTimers();
+    try {
+      const work = getConsumerWork(mockParams.workId)!;
+      mockAudio.setActive({
+        kind: "single",
+        program: createSingleTrackProgram(work, "massage"),
+        outcome: "massage",
+        durationMinutes: 90,
+      });
+      mockAudio.publish({
+        status: "playing",
+        workId: work.id,
+        remainingMs: 89 * 60_000,
+      });
+      const screen = await render(<ConsumerPlayerScreen />);
+
+      expect(screen.getByText(LISTENING_SCENE_COPY)).toBeTruthy();
+      expect(screen.queryByText("La natura ti renderà consapevole")).toBeNull();
+      expect(screen.getByRole("button", { name: "Pausa" })).toBeEnabled();
+
+      await act(async () => jest.advanceTimersByTime(899));
+      expect(screen.queryByTestId("consumer-listening-scene")).toBeNull();
+      await act(async () => jest.advanceTimersByTime(1));
+      expect(screen.getByTestId("consumer-listening-scene")).toBeTruthy();
+      expect(screen.queryByRole("button", { name: "Pausa" })).toBeNull();
+      expect(screen.queryByRole("button", { name: "Stop" })).toBeNull();
+      expect(screen.queryByText("89:00")).toBeNull();
+
+      await fireEvent.press(screen.getByTestId("consumer-listening-scene"));
+      await fireEvent.press(screen.getByRole("button", { name: "Pausa" }));
+      expect(mockAudio.controller.pause).toHaveBeenCalledTimes(1);
+
+      mockAudio.publish({ status: "paused" });
+      await screen.rerender(<ConsumerPlayerScreen />);
+      await act(async () => jest.advanceTimersByTime(0));
+      await fireEvent.press(screen.getByRole("button", { name: "Riprendi" }));
+      expect(mockAudio.controller.playFromUserGesture).toHaveBeenCalledTimes(1);
+
+      mockAudio.publish({ status: "playing" });
+      await screen.rerender(<ConsumerPlayerScreen />);
+      await act(async () => jest.advanceTimersByTime(0));
+      await act(async () =>
+        jest.advanceTimersByTime(LISTENING_CONTROLS_AUTO_HIDE_MS),
+      );
+      await fireEvent.press(screen.getByTestId("consumer-listening-scene"));
+      await fireEvent.press(screen.getByRole("button", { name: "Stop" }));
+      expect(mockAudio.controller.stop).toHaveBeenCalledTimes(1);
+    } finally {
+      jest.clearAllTimers();
+      jest.useRealTimers();
+    }
   });
 
   it("re-prepares a changed duration without mutating the current timer or starting audio", async () => {

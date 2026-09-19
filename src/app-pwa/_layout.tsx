@@ -14,7 +14,7 @@ import { fontAssets } from "@/design/fontAssets";
 import { useReducedMotionPreference } from "@/design/useReducedMotionPreference";
 import { CurrentSessionBar } from "@/components/CurrentSessionBar";
 import { PwaViewProvider, usePwaView } from "@/pwa-view/PwaViewProvider";
-import { PwaBottomNavigation } from "@/pwa-view/PwaBottomNavigation";
+import { PwaListeningNavigation } from "@/pwa-view/PwaListeningNavigation";
 
 void SplashScreen.preventAutoHideAsync();
 
@@ -109,7 +109,7 @@ function PwaChrome() {
   return (
     <>
       <CurrentSessionBar showReviewCopy={viewMode === "workbench"} />
-      <PwaBottomNavigation />
+      <PwaListeningNavigation />
     </>
   );
 }

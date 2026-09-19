@@ -16,6 +16,9 @@ export interface PlaybackTransportProps {
   playPauseAccessibilityLabel?: string;
   stopAccessibilityLabel?: string;
   primaryLabel?: string;
+  playLabel?: string;
+  pauseLabel?: string;
+  resumeLabel?: string;
   previewOnly?: boolean;
 }
 
@@ -32,8 +35,34 @@ export function PlaybackTransport({
   playPauseAccessibilityLabel,
   stopAccessibilityLabel,
   primaryLabel,
+  playLabel = "Play",
+  pauseLabel = "Pause",
+  resumeLabel = "Play",
   previewOnly = false,
 }: PlaybackTransportProps) {
+  const actionLabel =
+    primaryLabel ??
+    (previewOnly
+      ? "Play this sound"
+      : isPlaying
+        ? pauseLabel
+        : busy
+          ? "Starting…"
+          : canStop
+            ? resumeLabel
+            : playLabel);
+  const accessibleActionLabel =
+    playPauseAccessibilityLabel ??
+    primaryLabel ??
+    (previewOnly
+      ? "Play this sound"
+      : isPlaying
+        ? pauseLabel
+        : busy
+          ? playLabel
+          : canStop
+            ? resumeLabel
+            : playLabel);
   const controls = (
     <View style={styles.row} testID="playback-transport">
       {!previewOnly && (
@@ -59,10 +88,7 @@ export function PlaybackTransport({
       )}
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={
-          playPauseAccessibilityLabel ??
-          (previewOnly ? "Play this sound" : isPlaying ? "Pause" : "Play")
-        }
+        accessibilityLabel={accessibleActionLabel}
         accessibilityHint={
           isPlaying
             ? "Silence now and keep your place"
@@ -82,16 +108,7 @@ export function PlaybackTransport({
         <View style={styles.playDisc}>
           <TransportSymbol kind={isPlaying ? "pause" : "play"} light />
         </View>
-        <Text style={styles.playLabel}>
-          {primaryLabel ??
-            (previewOnly
-              ? "Play this sound"
-              : isPlaying
-                ? "Pause"
-                : busy
-                  ? "Starting…"
-                  : "Play")}
-        </Text>
+        <Text style={styles.playLabel}>{actionLabel}</Text>
       </Pressable>
     </View>
   );

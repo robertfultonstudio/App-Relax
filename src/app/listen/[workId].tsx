@@ -1,11 +1,14 @@
-import { type ReactNode, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Pressable, Text } from "react-native";
 import { useAudioSession } from "@/audio/AudioProvider";
 import { PlaybackCancelledError } from "@/audio/AudioSessionController";
 import { usePreparedSelection } from "@/audio/usePreparedSelection";
 import { ConsumerDurationOptions } from "@/components/ConsumerDurationOptions";
-import { ConsumerPlaybackSurface } from "@/components/ConsumerPlaybackSurface";
+import {
+  ConsumerPlaybackSurface,
+  LISTENING_SCENE_COPY,
+} from "@/components/ConsumerPlaybackSurface";
 import { DownloadControl } from "@/components/DownloadControl";
 import {
   PlaybackTransport,
@@ -22,10 +25,7 @@ import {
   CONSUMER_OUTCOMES,
   type ConsumerOutcomeId,
 } from "@/content/productShell";
-import {
-  getSessionPolicy,
-  sessionContextTitle,
-} from "@/content/sessionPolicies";
+import { getSessionPolicy } from "@/content/sessionPolicies";
 import {
   createSingleTrackProgram,
   type ConsumerAudioWork,
@@ -75,6 +75,8 @@ type PlayerExtensions = {
     transport: ReviewTransport,
   ) => ReactNode;
 };
+
+export const LISTENING_CONTROLS_AUTO_HIDE_MS = 900;
 export default function ConsumerPlayerScreen({
   renderReviewControls,
   createNatureProgram = platformNatureProgramFactory,
@@ -273,6 +275,45 @@ function Player({
     matching &&
     (snapshot.status === "playing" || snapshot.status === "fadingOut");
   const busy = matching && snapshot.status === "preparing";
+  const paused = matching && snapshot.status === "paused";
+  const playbackState = playing ? "playing" : paused ? "paused" : "idle";
+  const [controlState, setControlState] = useState<{
+    playbackState: "idle" | "paused" | "playing";
+    mode: "auto" | "hidden" | "visible";
+  }>(() => ({
+    playbackState,
+    mode: playbackState === "playing" ? "auto" : "visible",
+  }));
+  const controlsSynchronized = controlState.playbackState === playbackState;
+  useEffect(() => {
+    if (controlsSynchronized) return;
+    const timer = setTimeout(
+      () =>
+        setControlState({
+          playbackState,
+          mode: playbackState === "playing" ? "auto" : "visible",
+        }),
+      0,
+    );
+    return () => clearTimeout(timer);
+  }, [controlsSynchronized, playbackState]);
+  useEffect(() => {
+    if (
+      !controlsSynchronized ||
+      playbackState !== "playing" ||
+      controlState.mode !== "auto"
+    )
+      return;
+    const timer = setTimeout(
+      () => setControlState({ playbackState, mode: "hidden" }),
+      LISTENING_CONTROLS_AUTO_HIDE_MS,
+    );
+    return () => clearTimeout(timer);
+  }, [controlState.mode, controlsSynchronized, playbackState]);
+  const immersive =
+    playbackState === "playing" &&
+    controlsSynchronized &&
+    controlState.mode === "hidden";
   const ready = needsPreparation
     ? prepared.ready
     : ["ready", "paused", "completed"].includes(snapshot.status);
@@ -361,11 +402,14 @@ function Player({
   }
   return (
     <EditorialScreen
+      contentStyle={immersive ? { paddingBottom: 0, paddingTop: 0 } : undefined}
+      scrollEnabled={!immersive}
       footer={(() => {
         if (
           hidePersistentTransport ||
           inlineConsumerTransport ||
-          otherSessionActive
+          otherSessionActive ||
+          immersive
         )
           return null;
         const transportProps: PlaybackTransportProps = {
@@ -377,6 +421,9 @@ function Player({
           onPlayPause: playPause,
           onStop: () => void controller.stop().catch(() => undefined),
           playPauseTestID: "consumer-play-pause",
+          playLabel: "Avvia ascolto",
+          pauseLabel: "Pausa",
+          resumeLabel: "Riprendi",
         };
         return renderPersistentTransport ? (
           renderPersistentTransport(transportProps)
@@ -385,8 +432,14 @@ function Player({
         );
       })()}
     >
-      <EditorialHeader label={outcome.toUpperCase()} showBack />
+      {!immersive ? (
+        <EditorialHeader label={outcome.toUpperCase()} showBack />
+      ) : null}
       <ConsumerPlaybackSurface
+        immersive={immersive}
+        onRevealControls={() =>
+          setControlState({ playbackState, mode: "visible" })
+        }
         hideTransport={!inlineConsumerTransport && !otherSessionActive}
         transportAfterControls={inlineConsumerTransport}
         previewTransport={otherSessionActive}
@@ -396,9 +449,11 @@ function Player({
         isPlaying={playing}
         status={
           work
-            ? otherSessionActive && status === "Ready"
-              ? "New session ready"
-              : status
+            ? playbackState === "idle"
+              ? otherSessionActive && status === "Ready"
+                ? "New session ready"
+                : status
+              : undefined
             : "Unavailable"
         }
         preparedSessionNote={
@@ -413,9 +468,11 @@ function Player({
           prepared.retry();
         }}
         note={
-          work
+          work && playbackState === "idle"
             ? "One complete sound repeats for the time you choose."
-            : "Return Home and choose an activity."
+            : work
+              ? ""
+              : "Return Home and choose an activity."
         }
         onPlayPause={playPause}
         onStop={() => void controller.stop().catch(() => undefined)}
@@ -423,7 +480,7 @@ function Player({
         volumeDisabled={!matching || busy}
         outcome={outcome}
         remainingMs={matching ? snapshot.remainingMs : duration * 60000}
-        title={work ? sessionContextTitle(outcome) : "Sound unavailable"}
+        title={work ? LISTENING_SCENE_COPY : "Sound unavailable"}
         volume={snapshot.volume}
         playPauseTestID="consumer-play-pause"
         options={

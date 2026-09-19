@@ -7,9 +7,15 @@ import {
   PWA_HOME_LONG_PRESS_MS,
   PwaBottomNavigation,
 } from "@/pwa-view/PwaBottomNavigation";
+import {
+  isPwaNavigationHidden,
+  PwaListeningNavigation,
+} from "@/pwa-view/PwaListeningNavigation";
+import type { PlaybackStatus } from "@/domain/audio/types";
 
 let mockParams: { review?: string } = {};
 let mockPath = "/listen/white-noise";
+let mockPlaybackStatus: PlaybackStatus = "ready";
 const mockReplace = jest.fn();
 const mockSetParams = jest.fn();
 function installWindowEventTarget() {
@@ -47,6 +53,9 @@ jest.mock("expo-router", () => ({
   usePathname: () => mockPath,
   useRouter: () => ({ replace: mockReplace, setParams: mockSetParams }),
 }));
+jest.mock("@/audio/AudioProvider", () => ({
+  useAudioSession: () => ({ snapshot: { status: mockPlaybackStatus } }),
+}));
 jest.mock("react-native-safe-area-context", () => {
   const ReactActual = jest.requireActual("react");
   const { View: NativeView } = jest.requireActual("react-native");
@@ -81,8 +90,58 @@ function Probe() {
 beforeEach(() => {
   mockParams = {};
   mockPath = "/listen/white-noise";
+  mockPlaybackStatus = "ready";
   mockReplace.mockClear();
   mockSetParams.mockClear();
+});
+
+it.each([
+  ["preparing", true],
+  ["playing", true],
+  ["paused", true],
+  ["fadingOut", true],
+  ["ready", false],
+  ["completed", false],
+] satisfies [PlaybackStatus, boolean][])(
+  "maps %s to navigation hidden=%s",
+  (status, hidden) => {
+    expect(isPwaNavigationHidden(status)).toBe(hidden);
+  },
+);
+
+it("removes Home, Hatha and Settings for playing and paused, then restores them on Ready", async () => {
+  const screen = await render(
+    <PwaViewProvider>
+      <PwaListeningNavigation />
+    </PwaViewProvider>,
+  );
+  expect(screen.getByTestId("pwa-bottom-navigation")).toBeTruthy();
+
+  mockPlaybackStatus = "playing";
+  await screen.rerender(
+    <PwaViewProvider>
+      <PwaListeningNavigation />
+    </PwaViewProvider>,
+  );
+  expect(screen.queryByTestId("pwa-bottom-navigation")).toBeNull();
+
+  mockPlaybackStatus = "paused";
+  await screen.rerender(
+    <PwaViewProvider>
+      <PwaListeningNavigation />
+    </PwaViewProvider>,
+  );
+  expect(screen.queryByRole("tab", { name: "Home" })).toBeNull();
+  expect(screen.queryByRole("tab", { name: "Hatha" })).toBeNull();
+  expect(screen.queryByRole("tab", { name: "Settings" })).toBeNull();
+
+  mockPlaybackStatus = "ready";
+  await screen.rerender(
+    <PwaViewProvider>
+      <PwaListeningNavigation />
+    </PwaViewProvider>,
+  );
+  expect(screen.getByTestId("pwa-bottom-navigation")).toBeTruthy();
 });
 afterEach(async () => {
   await cleanup();

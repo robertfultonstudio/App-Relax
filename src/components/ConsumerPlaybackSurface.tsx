@@ -48,7 +48,11 @@ interface ConsumerPlaybackSurfaceProps {
   transportAfterControls?: boolean;
   previewTransport?: boolean;
   preparedSessionNote?: string;
+  immersive?: boolean;
+  onRevealControls?: () => void;
 }
+
+export const LISTENING_SCENE_COPY = "Un respiro alla volta";
 
 export function ConsumerPlaybackSurface({
   canPlay,
@@ -78,6 +82,8 @@ export function ConsumerPlaybackSurface({
   transportAfterControls = false,
   previewTransport = false,
   preparedSessionNote,
+  immersive = false,
+  onRevealControls,
 }: ConsumerPlaybackSurfaceProps) {
   const { height } = useWindowDimensions();
   const artworkHeight = Math.min(360, Math.max(220, height * 0.42));
@@ -86,6 +92,42 @@ export function ConsumerPlaybackSurface({
   useEffect(() => {
     if (volume > 0) lastAudibleVolume.current = volume;
   }, [volume]);
+
+  if (immersive) {
+    return (
+      <View
+        style={[styles.surface, styles.immersiveSurface, { minHeight: height }]}
+        testID="consumer-playback-surface"
+      >
+        <Image
+          accessible={false}
+          accessibilityIgnoresInvertColors
+          resizeMode="cover"
+          source={M6_PLAYER_PAINTING}
+          style={StyleSheet.absoluteFill}
+        />
+        <View pointerEvents="none" style={styles.immersiveCopyBlock}>
+          <Text style={styles.immersiveBrand}>APP RELAX</Text>
+          <Text
+            accessibilityRole="header"
+            nativeID="consumer-screen-title"
+            style={styles.immersiveTitle}
+            testID="consumer-screen-title"
+          >
+            {title}
+          </Text>
+        </View>
+        <Pressable
+          accessibilityHint="Riporta Pausa e Stop sullo schermo"
+          accessibilityLabel="Mostra controlli di ascolto"
+          accessibilityRole="button"
+          onPress={onRevealControls}
+          style={StyleSheet.absoluteFill}
+          testID="consumer-listening-scene"
+        />
+      </View>
+    );
+  }
 
   const transport = !hideTransport ? (
     <View style={styles.transport} testID="consumer-inline-transport">
@@ -218,7 +260,7 @@ export function ConsumerPlaybackSurface({
         ) : null}
 
         {secondaryOptions}
-        <Text style={styles.note}>{note}</Text>
+        {note ? <Text style={styles.note}>{note}</Text> : null}
       </View>
       {transportAfterControls ? transport : null}
     </View>
@@ -227,6 +269,30 @@ export function ConsumerPlaybackSurface({
 
 const styles = StyleSheet.create({
   surface: { position: "relative" },
+  immersiveSurface: {
+    marginHorizontal: -22,
+    marginTop: -8,
+    overflow: "hidden",
+  },
+  immersiveCopyBlock: {
+    left: 30,
+    position: "absolute",
+    right: 24,
+    top: 34,
+  },
+  immersiveBrand: {
+    color: editorial.ink,
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 13,
+    letterSpacing: 3.2,
+  },
+  immersiveTitle: {
+    color: editorial.ink,
+    fontFamily: fonts.serifItalic,
+    fontSize: 34,
+    lineHeight: 42,
+    marginTop: 24,
+  },
   artwork: {
     marginLeft: -22,
     marginRight: -22,
