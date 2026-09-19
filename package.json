@@ -50,6 +50,7 @@
     "react-test-renderer": "19.2.3",
     "test-renderer": "1.2.0",
     "typescript": "~6.0.3",
+    "ws": "8.21.3",
     "yaml": "2.8.3"
   },
   "scripts": {
@@ -102,6 +103,7 @@
     "qa:validate-boundary": "node scripts/validate-workbench-boundary.mjs",
     "qa:validate-exports": "node scripts/validate-workbench-exports.mjs",
     "pwa:validate": "node scripts/validate-pwa.mjs",
+    "pwa:visual-gate": "node scripts/quality/run-pwa-visual-gate.mjs",
     "pwa:check-local": "node scripts/start-pwa-web-preview.mjs --check",
     "pwa:test-server": "node --test tests/scripts/pwaPreviewServer.test.mjs",
     "pwa:build-decoder": "node scripts/build-pwa-flac-worker.mjs",
@@ -120,7 +122,7 @@
     "ci:eas-archive": "pnpm eas:tool:install && node scripts/create-eas-archive-offline.mjs /tmp/app-relax-eas-archive-ci && node scripts/validate-eas-archive.mjs /tmp/app-relax-eas-archive-ci",
     "ci:security": "pnpm admission:validate && pnpm security:audit && pnpm eas:tool:audit && node scripts/quality/secret-scan.mjs && pnpm assets:validate-rituals && pnpm assets:validate-fonts && pnpm audio:validate-placeholders && pnpm audio:validate-test-pack && pnpm qa:validate-boundary && node scripts/validate-android-permissions.mjs && pnpm ci:eas-config && pnpm ci:eas-archive",
     "ci:mobile-exports": "pnpm export:ios:consumer && pnpm export:android:consumer && pnpm export:validate-native dist/m5-export-ios dist/m5-export-android",
-    "ci:web-exports": "pnpm export:web:consumer && pnpm export:web:qa && pnpm qa:validate-exports && pnpm export:web:pwa && pnpm pwa:validate",
+    "ci:web-exports": "pnpm export:web:consumer && pnpm export:web:qa && pnpm qa:validate-exports && pnpm export:web:pwa && pnpm pwa:validate && pnpm pwa:visual-gate",
     "ci:required": "pnpm ci:clean && pnpm ci:static && pnpm ci:test && pnpm ci:security && pnpm ci:mobile-exports && pnpm ci:web-exports",
     "release:check": "node scripts/release/version.mjs check",
     "release:prepare": "node scripts/release/version.mjs prepare",

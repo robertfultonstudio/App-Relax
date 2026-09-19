@@ -12,12 +12,30 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
+import WebSocket from "ws";
 
 const baseUrl = process.env.APP_RELAX_VISUAL_BASE_URL;
 const screenshotRoot = process.env.APP_RELAX_VISUAL_SCREENSHOT_DIR;
+const visualGateRequired = process.env.APP_RELAX_VISUAL_REQUIRED === "1";
+const visualContractOnly = process.env.APP_RELAX_VISUAL_CONTRACT_ONLY === "1";
+const chromeCandidates = [
+  process.env.APP_RELAX_CHROME_BINARY,
+  "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+  "/usr/bin/google-chrome",
+  "/usr/bin/chromium",
+  "/usr/bin/chromium-browser",
+].filter(Boolean);
 const chromeBinary =
-  process.env.APP_RELAX_CHROME_BINARY ??
-  "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+  chromeCandidates.find((candidate) => existsSync(candidate)) ?? "";
+
+const forbiddenLegacyCopy = [
+  "A little space for you",
+  "Make room for quiet.",
+  "Press Play. Leave the phone behind.",
+  "What do you need right now?",
+  "Start your yoga session",
+  "Relax now",
+];
 
 const delay = (milliseconds) =>
   new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -267,6 +285,109 @@ async function saveScreenshot(protocol, viewport, name) {
   writeFileSync(destination, Buffer.from(shot.data, "base64"));
 }
 
+test("the mandatory visual gate cannot silently skip", () => {
+  if (!visualGateRequired) return;
+  assert.ok(baseUrl, "APP_RELAX_VISUAL_BASE_URL is required");
+  assert.ok(screenshotRoot, "APP_RELAX_VISUAL_SCREENSHOT_DIR is required");
+  assert.ok(chromeBinary, "Chrome/Chromium is required");
+});
+
+test(
+  "first entry bypasses the rejected landing and opens the immersive Home",
+  { skip: !baseUrl },
+  async (context) => {
+    const protocol = await launchChrome(context);
+    const viewport = { width: 390, height: 844 };
+    await protocol.send("Emulation.setDeviceMetricsOverride", {
+      deviceScaleFactor: 1,
+      height: viewport.height,
+      mobile: false,
+      screenHeight: viewport.height,
+      screenWidth: viewport.width,
+      width: viewport.width,
+    });
+    await protocol.send("Page.navigate", { url: new URL("/", baseUrl).href });
+    await waitForCondition(
+      protocol,
+      `document.readyState === "complete" && Boolean(document.body)`,
+      "first entry",
+    );
+    await delay(350);
+    await saveScreenshot(protocol, viewport, "contract/first-entry");
+    const entry = await evaluate(
+      protocol,
+      `({
+        body: document.body.innerText,
+        hasHome: Boolean(document.querySelector('[data-testid="home-full-bleed-artwork"]')),
+        hasRejectedLanding: Boolean(document.querySelector('[data-testid="welcome-screen"]')),
+        path: location.pathname,
+      })`,
+    );
+    assert.equal(
+      entry.hasRejectedLanding,
+      false,
+      "rejected landing resurfaced",
+    );
+    assert.equal(entry.hasHome, true, "immersive Home did not open");
+    assert.equal(entry.path, "/moments", "first entry did not resolve to Home");
+    for (const copy of forbiddenLegacyCopy)
+      assert.ok(!entry.body.includes(copy), `legacy copy resurfaced: ${copy}`);
+  },
+);
+
+test(
+  "every activity uses a full-bleed scene and rejects framed legacy layouts",
+  { skip: !baseUrl },
+  async (context) => {
+    const protocol = await launchChrome(context);
+    const viewport = { width: 390, height: 844 };
+    await protocol.send("Emulation.setDeviceMetricsOverride", {
+      deviceScaleFactor: 1,
+      height: viewport.height,
+      mobile: false,
+      screenHeight: viewport.height,
+      screenWidth: viewport.width,
+      width: viewport.width,
+    });
+    const violations = [];
+    for (const outcome of [
+      "meditation",
+      "yoga",
+      "massage",
+      "relax",
+      "sleep",
+      "focus",
+    ]) {
+      await protocol.send("Page.navigate", {
+        url: new URL(`/outcome/${outcome}?review=0`, baseUrl).href,
+      });
+      await waitForCondition(
+        protocol,
+        `Boolean(document.querySelector('[data-testid="consumer-screen-title"]'))`,
+        `${outcome} activity`,
+      );
+      await saveScreenshot(protocol, viewport, `contract/outcome-${outcome}`);
+      const surface = await evaluate(
+        protocol,
+        `(() => {
+          const artwork = document.querySelector('[data-testid="${outcome}-full-bleed-artwork"], [data-testid="outcome-full-bleed-artwork"]');
+          const rect = artwork?.getBoundingClientRect();
+          return {
+            body: document.body.innerText,
+            fullBleed: Boolean(rect && Math.abs(rect.left) <= 1 && Math.abs(rect.top) <= 1 && Math.abs(rect.width - innerWidth) <= 1 && Math.abs(rect.height - innerHeight) <= 1),
+          };
+        })()`,
+      );
+      if (!surface.fullBleed)
+        violations.push(`${outcome}: artwork is framed instead of full-bleed`);
+      for (const copy of forbiddenLegacyCopy)
+        if (surface.body.includes(copy))
+          violations.push(`${outcome}: legacy copy resurfaced: ${copy}`);
+    }
+    assert.deepEqual(violations, []);
+  },
+);
+
 test(
   "Home, Yoga and Player artwork cover both frozen mobile canvases at runtime",
   { skip: !baseUrl },
@@ -370,7 +491,7 @@ test(
 
 test(
   "captures hydrated Home, Yoga and Player at 200 percent device sharpness",
-  { skip: !baseUrl || !screenshotRoot },
+  { skip: !baseUrl || !screenshotRoot || visualContractOnly },
   async (context) => {
     const viewport = { width: 430, height: 932 };
     const protocol = await launchChrome(context);
@@ -414,7 +535,7 @@ test(
 
 test(
   "captures first-run, returning, Yoga and hydrated Player states at both frozen viewports",
-  { skip: !baseUrl || !screenshotRoot },
+  { skip: !baseUrl || !screenshotRoot || visualContractOnly },
   async (context) => {
     for (const viewport of [
       { width: 390, height: 844 },
